@@ -168,3 +168,17 @@ test("more running jobs than pool connections don't deadlock", { skip }, async (
   assert.notEqual(result, "timeout", "jobs deadlocked waiting for pool connections");
   assert.ok((result as { status: string }[]).every((o) => o.status === "ok"));
 });
+
+test("a failing job's alert points at its pipeline_runs row", { skip }, async () => {
+  const { withRun } = await import("../src/lib/db.js");
+  const alerts: string[] = [];
+  await runJob(db!, {
+    name: "logged-job",
+    run: (d) => withRun(d, "logged-job", "2026-11-13", async () => { throw new Error("Kalshi changed a field"); }),
+  }, async (m) => { alerts.push(m); });
+
+  const { rows } = await db!.query(`select id, status from pipeline_runs where job = 'logged-job'`);
+  assert.equal(rows[0].status, "failed");
+  assert.match(alerts[0] ?? "", new RegExp(`pipeline_runs id ${rows[0].id} \\(slate 2026-11-13\\)`));
+  assert.match(alerts[0] ?? "", /logged-job failed: Kalshi changed a field/);
+});

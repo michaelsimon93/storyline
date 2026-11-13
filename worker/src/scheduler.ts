@@ -9,6 +9,7 @@ import { Cron } from "croner";
 import pg from "pg";
 import type { Db } from "./lib/db.js";
 import type { Alert } from "./lib/alert.js";
+import { alertText } from "./lib/alertText.js";
 
 // Must match storyline_day() in SQL, which owns the ET slate-day rule; croner needs the zone itself.
 export const TIMEZONE = "America/New_York";
@@ -48,6 +49,7 @@ export async function runJob(
 ): Promise<RunOutcome> {
   let lock: pg.Client | undefined;
   let lockLost: unknown;
+  const startedAt = new Date();
   try {
     try {
       lock = await connectLock();
@@ -58,12 +60,18 @@ export async function runJob(
       if (!rows[0]!.got) {
         // At our cadence an overlap is unusual (a stuck run, or a deploy overlapping a long job),
         // so every skip is alerted rather than silently logged.
-        await alert(`job ${job.name} skipped: another copy is still running`);
+        await alert(alertText({
+          severity: "warning", job: job.name, headline: `${job.name} skipped: another copy is still running`,
+          note: "a previous run may be stuck; check pipeline_runs for a row still 'running', or a second worker",
+        }));
         return { status: "skipped" };
       }
     } catch (err) {
       const error = `could not start: ${message(err)}`;
-      await alert(`job ${job.name} ${error}`);
+      await alert(alertText({
+        severity: "failed", job: job.name, headline: `${job.name} ${error}`, error: err, startedAt,
+        note: "the job did not run; usually the database is unreachable (check Supabase status / DATABASE_URL)",
+      }));
       return { status: "failed", error };
     }
 
@@ -72,12 +80,18 @@ export async function runJob(
       outcome = { status: "ok", outputs: await job.run(db) };
     } catch (err) {
       outcome = { status: "failed", error: message(err) };
-      await alert(`job ${job.name} failed: ${outcome.error}`);
+      await alert(alertText({
+        severity: "failed", job: job.name, headline: `${job.name} failed: ${outcome.error}`, error: err, startedAt,
+      }));
     }
     if (lockLost !== undefined) {
       // Postgres dropped the lock with the session, so another copy may have run alongside.
-      await alert(`job ${job.name} lost its lock connection mid-run (${message(lockLost)}); ` +
-        `another copy may have run concurrently`);
+      await alert(alertText({
+        severity: "warning", job: job.name, error: lockLost, startedAt,
+        headline: `${job.name} lost its lock connection mid-run`,
+        note: `the job finished with status ${outcome.status}, but another copy may have run at the same time; ` +
+          "check pipeline_runs for overlapping rows",
+      }));
     }
     return outcome;
   } finally {
@@ -117,7 +131,7 @@ export function startScheduler(db: Db, scheduled: Scheduled[], alert: Alert) {
     new Cron(pattern, { timezone: TIMEZONE, protect: true }, async () => {
       // runJob never throws; the catch is a backstop so a bug can't become an unhandled rejection.
       const p = runJob(db, job, alert).catch(async (err): Promise<RunOutcome> => {
-        await alert(`scheduler error running ${job.name}: ${message(err)}`);
+        await alert(alertText({ severity: "failed", job: job.name, headline: `scheduler error running ${job.name}`, error: err }));
         return { status: "failed", error: message(err) };
       });
       inFlight.add(p);

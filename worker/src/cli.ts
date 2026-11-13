@@ -6,6 +6,7 @@
 import { connect } from "./lib/db.js";
 import { loadConfig } from "./lib/config.js";
 import { webhookAlert } from "./lib/alert.js";
+import { alertText } from "./lib/alertText.js";
 import { ingest } from "./jobs/ingest.js";
 import { scheduledJobs } from "./jobs/index.js";
 import { runJob, startScheduler, type RunOutcome } from "./scheduler.js";
@@ -65,6 +66,9 @@ async function main() {
 main().catch(async (err) => {
   console.error(err);
   // A worker that can't start (bad config, database down) must not crash-loop silently.
-  if (command === "run") await alert(`worker failed to start: ${err instanceof Error ? err.message : err}`);
+  if (command === "run") {
+    await alert(alertText({ severity: "failed", job: "worker", headline: "worker failed to start", error: err,
+      note: "no jobs will run until this is fixed; the error above is usually config or the database" }));
+  }
   process.exit(1);
 });

@@ -35,6 +35,8 @@ export async function withRun<T extends object>(
     );
     return outputs;
   } catch (err) {
+    // Tag the error so the failure alert can point straight at this pipeline_runs row.
+    if (err instanceof Error) Object.assign(err, { pipelineRunId: runId, slateDate });
     await db.query(
       `update pipeline_runs set status='failed', finished_at=now(), error=$2 where id=$1`,
       [runId, err instanceof Error ? err.stack ?? err.message : String(err)],
