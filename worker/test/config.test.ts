@@ -14,6 +14,7 @@ const valid = [
   { key: "snapshot_interval_minutes", value: 15 },
   { key: "max_price_age_seconds", value: 120 },
   { key: "curation_time_et", value: "10:00" },
+  { key: "ingest_schedule_et", value: "0 8-22/2 * * *" },
 ];
 const without = (k: string) => valid.filter((r) => r.key !== k);
 const withValue = (k: string, v: unknown) => valid.map((r) => (r.key === k ? { key: k, value: v } : r));

@@ -17,6 +17,7 @@ const SPEC = {
   snapshotIntervalMinutes: { key: "snapshot_interval_minutes", type: "int" },
   maxPriceAgeSeconds:      { key: "max_price_age_seconds",     type: "int" },
   curationTimeEt:          { key: "curation_time_et",          type: "string" },
+  ingestScheduleEt:        { key: "ingest_schedule_et",        type: "string" },
 } as const;
 
 type Spec = typeof SPEC;

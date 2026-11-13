@@ -23,6 +23,7 @@ select t_err('config: numeric settings must keep a min and max',
 select t_err('config: price band min must stay below max',
   $q$update app_config set value = '80' where key = 'price_band_min'$q$, '%price_band_min%');
 select t_eq('config: max price age is configurable', config_int('max_price_age_seconds'), 120);
+select t_eq('config: ingest schedule is configurable (cron, ET)', config_value('ingest_schedule_et') #>> '{}', '0 8-22/2 * * *');
 
 -- ---------------------------------------------------------------- config: audit history
 update app_config set value = '12' where key = 'cards_per_day';
