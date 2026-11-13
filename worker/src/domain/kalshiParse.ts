@@ -61,3 +61,20 @@ export const PLAYER_PROP_SERIES: Record<string, string> = {
 };
 
 export const GAME_WINNER_SERIES = "KXNBAGAME";
+
+/**
+ * The live part of a Kalshi market: prices, volume, trading status and result. Ingest and the
+ * price poller both write exactly this, so they can't disagree on how a quote is read.
+ */
+export function marketQuote(m: {
+  yes_bid_dollars?: string; yes_ask_dollars?: string; no_bid_dollars?: string; no_ask_dollars?: string;
+  volume_fp?: string; status: string; result: string;
+}) {
+  return {
+    yes_bid: dollarsToCents(m.yes_bid_dollars), yes_ask: dollarsToCents(m.yes_ask_dollars),
+    no_bid: dollarsToCents(m.no_bid_dollars),   no_ask: dollarsToCents(m.no_ask_dollars),
+    volume: Math.round(Number(m.volume_fp ?? 0)),
+    status: m.status,
+    result: m.result === "" ? null : m.result,
+  };
+}

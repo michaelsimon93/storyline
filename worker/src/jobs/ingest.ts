@@ -8,10 +8,7 @@ import * as espn from "../sources/espn.js";
 import * as kalshi from "../sources/kalshi.js";
 import { kalshiFromEspn } from "../domain/nbaTeams.js";
 import { matchPlayer } from "../domain/names.js";
-import {
-  GAME_WINNER_SERIES, PLAYER_PROP_SERIES, dollarsToCents, gameKey, kalshiDateCode,
-  playerNameFromTitle, playerTeamFromTicker, splitTicker, strikeFromMarket,
-} from "../domain/kalshiParse.js";
+import { GAME_WINNER_SERIES, PLAYER_PROP_SERIES, gameKey, kalshiDateCode, playerNameFromTitle, playerTeamFromTicker, splitTicker, strikeFromMarket, marketQuote } from "../domain/kalshiParse.js";
 
 export interface IngestSummary {
   slateDate: string;
@@ -160,11 +157,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
           team_id: isWinner ? teamIdByKalshi.get(rest[0] ?? "") : null,
           stat: isWinner ? null : PLAYER_PROP_SERIES[series],
           strike: isWinner ? null : strikeFromMarket(m),
-          yes_bid: dollarsToCents(m.yes_bid_dollars), yes_ask: dollarsToCents(m.yes_ask_dollars),
-          no_bid: dollarsToCents(m.no_bid_dollars),   no_ask: dollarsToCents(m.no_ask_dollars),
-          volume: Math.round(Number(m.volume_fp ?? 0)),
-          status: m.status,
-          result: m.result === "" ? null : m.result,
+          ...marketQuote(m),
         });
       }
     }
