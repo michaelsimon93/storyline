@@ -103,3 +103,22 @@ test("slate date comes from the database, not a JS re-implementation", { skip },
   assert.equal(await resolveSlateDate(db!), r.d);
   assert.equal(await resolveSlateDate(db!, "2026-11-13"), "2026-11-13");
 });
+
+test("config loads from the database with the seeded values", { skip }, async () => {
+  const { loadConfig } = await import("../src/lib/config.js");
+  const c = await loadConfig(db!);
+  assert.equal(c.cardsPerDay, 10);
+  assert.equal(c.pickStakeCents, 500);
+  assert.equal(c.priceBandMin, 25);
+  assert.equal(c.priceBandMax, 75);
+});
+
+test("feature flags evaluate server-side, allowlist first", { skip }, async () => {
+  const { flagEnabled } = await import("../src/lib/config.js");
+  const me = "11111111-1111-1111-1111-111111111111";
+  await db!.query(`insert into feature_flags (key, description, enabled, rollout_percent, allow_user_ids)
+                   values ('worker_test', 'test', true, 0, array[$1]::uuid[])`, [me]);
+  assert.equal(await flagEnabled(db!, "worker_test", me), true);
+  assert.equal(await flagEnabled(db!, "worker_test", "22222222-2222-2222-2222-222222222222"), false);
+  assert.equal(await flagEnabled(db!, "missing_flag", me), false);
+});
