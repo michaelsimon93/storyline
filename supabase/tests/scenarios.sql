@@ -173,6 +173,10 @@ select t_eq('history shows the move',
   (select string_agg(yes_ask_cents::text, '->' order by captured_at) from market_price_snapshots where ticker = 'SAS-WIN'), '62->61');
 update market_price_snapshots set captured_at = captured_at - interval '20 minutes';
 select t_eq('unchanged but stale: re-snapshotted after the interval', snapshot_prices(), 2);
+-- Regression (review PR #1): markets nobody polls anymore must not be re-snapshotted forever.
+update markets set prices_updated_at = now() - interval '2 hours' where ticker = 'WEMBY-30';
+update market_price_snapshots set captured_at = captured_at - interval '20 minutes';
+select t_eq('a market nobody is polling is not re-snapshotted', snapshot_prices(), 1);
 set role authenticated; select as_user('11111111-1111-1111-1111-111111111111');
 select t_eq('users can read price history', (select count(*) > 0 from market_price_snapshots), true);
 select t_err('users cannot write price history',
@@ -181,6 +185,9 @@ select t_err('users cannot trigger snapshots', $q$select snapshot_prices()$q$, '
 reset role;
 
 -- ---------------------------------------------------------------- permission lockdown
+-- Regression (review PR #1): grants given back must actually work, not just restrictions.
+reset role; set role authenticated; select as_user('11111111-1111-1111-1111-111111111111');
+select t_eq('signed-in user can ask for today''s slate day', storyline_today() = storyline_day(now()), true);
 -- Supabase grants everything to anon/authenticated by default; these prove we revoked it.
 reset role; set role authenticated; select as_user('11111111-1111-1111-1111-111111111111');
 select t_err('user cannot run settle_market', $q$select settle_market('KJ-8')$q$, 'permission denied%');
