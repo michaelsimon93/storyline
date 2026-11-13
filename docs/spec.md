@@ -251,6 +251,8 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 
 **Analytics (no third-party provider):**
 - Use an `events` table in our own database: `user_id`, `event`, `card_id` (nullable), `props` (JSON), `created_at`.
+- **Every `card_view` and `pick_placed` event must carry `card_id`.** Personalization (ADR-019) is built from what users saw as well as what they picked.
+- `flag_exposure` (`flag`, `enabled`) whenever a feature flag changes what a user sees (ADR-018).
 - Events logged in v1, chosen to show how users move through the product:
   - `app_open`
   - `card_view` (with deck position)
@@ -305,6 +307,10 @@ The web app and the worker are one repo with shared TypeScript types (`Card`, `P
 - **Community submissions (later):** users suggest storylines or markets they want to see; accepted submissions earn rewards such as pick credits (free trades).
 - **Adjustable lines (later):** let users choose a different line or price on the ladder instead of only the most even one.
 - **Onboarding (with login):** a short explainer of how prediction markets work.
+
+**Configuration and flags (ADR-018):** deck size, price band, spread limit, stake, grants and intervals live in `app_config` (validated, audited). Risky features ship behind `feature_flags` (allowlist + stable % rollout). No A/B experiment framework until the audience can support it.
+
+**Personalization (ADR-019):** a shared **core deck** for everyone; later, personalized order plus 1–2 **"for you"** cards from a wider pool. Signals: team at publish on every card, and `user_affinities` (seen vs. picked by team, player, stat, storyline type). Explicit preferences arrive with onboarding.
 
 **Future-feature decisions (Nov 13) that shape the data model**
 - **Contests + bonuses:** contests will have separate bankrolls, and Michael can grant bonuses such as a "free $20 trade". The model is **wallets** (every user has a main wallet; contests get their own) plus **pick credits**. A free trade pays **winnings only**: a $20 free trade at 40% that wins pays $30, not $50. A voided free trade comes back as a credit, not as cash.

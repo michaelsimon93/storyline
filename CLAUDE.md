@@ -10,7 +10,7 @@ A change isn't finished until it has tests and CI is green. No exceptions for "s
 | Pure logic (parsing, mapping, matching, math, money) | Unit tests covering normal cases **and** the edge cases that would silently corrupt data | `worker/test/*.test.ts` |
 | External API clients | Tests against **recorded fixtures** with a mocked `fetch`, including error/retry paths. Tests never hit the network. | `worker/test/` + `worker/test/fixtures/` |
 | Worker jobs (ingest, poller, curation, settlement) | Integration test: fixtures in, real Postgres, assert rows written. Must also prove the job is **safe to re-run**. | `worker/test/*.integration.test.ts` |
-| Schema, RLS, SQL functions | A scenario in `supabase/tests/scenarios.sql` that prints `PASS`/`FAIL`. Security rules get a "can't do it" test, not just a "can do it" test. | `supabase/tests/` |
+| Schema, RLS, SQL functions | A scenario in `supabase/tests/scenario_*.sql` that prints `PASS`/`FAIL`. Security rules get a "can't do it" test, not just a "can do it" test. | `supabase/tests/` |
 | Web app (when built) | Component tests for card states; one end-to-end path: open → swipe → pick | `web/` |
 
 Rules of thumb:
@@ -31,6 +31,9 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 - Never commit to `main`. Branch → PR → CI green → merge.
 - **Migrations are frozen once deployed** (listed in `supabase/migrations/DEPLOYED`). Change the schema with a new migration; CI enforces this.
 - New tables and functions are locked down by default. Grant access deliberately, and add a "can't do it" test (ADR-016).
+- **No hard-coded tunables.** Anything we might want to adjust (sizes, thresholds, money amounts, intervals) is an `app_config` row with a type and range, read via `config_int()` in SQL or `loadConfig()` in the worker. No defaults in code (ADR-018).
+- **Risky or user-visible new features ship behind a feature flag**, and the app logs `flag_exposure` when a flag changes what a user sees.
+- **Events that involve a card carry `card_id`.** Personalization depends on it (ADR-019).
 - Business rules live in exactly one place. The 3am-ET slate day is `storyline_day()` in SQL, and the worker asks the database.
 
 ## Other conventions
