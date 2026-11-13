@@ -1,0 +1,671 @@
+{
+ "markets": [
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLABLACK0-25",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Anthony Black: 25+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 24.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0900",
+   "yes_ask_dollars": "0.1100",
+   "no_bid_dollars": "0.8900",
+   "no_ask_dollars": "0.9100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLABLACK0-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Anthony Black: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2500",
+   "yes_ask_dollars": "0.2900",
+   "no_bid_dollars": "0.7100",
+   "no_ask_dollars": "0.7500",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLABLACK0-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Anthony Black: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.5200",
+   "yes_ask_dollars": "0.5700",
+   "no_bid_dollars": "0.4300",
+   "no_ask_dollars": "0.4800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLABLACK0-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Anthony Black: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.8100",
+   "yes_ask_dollars": "0.8500",
+   "no_bid_dollars": "0.1500",
+   "no_ask_dollars": "0.1900",
+   "volume_fp": "0.01"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLDBANE3-30",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Desmond Bane: 30+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 29.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0900",
+   "yes_ask_dollars": "0.1300",
+   "no_bid_dollars": "0.8700",
+   "no_ask_dollars": "0.9100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLDBANE3-25",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Desmond Bane: 25+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 24.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2500",
+   "yes_ask_dollars": "0.2900",
+   "no_bid_dollars": "0.7100",
+   "no_ask_dollars": "0.7500",
+   "volume_fp": "0.01"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLDBANE3-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Desmond Bane: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.4900",
+   "yes_ask_dollars": "0.5500",
+   "no_bid_dollars": "0.4500",
+   "no_ask_dollars": "0.5100",
+   "volume_fp": "6.22"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLDBANE3-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Desmond Bane: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7400",
+   "yes_ask_dollars": "0.8100",
+   "no_bid_dollars": "0.1900",
+   "no_ask_dollars": "0.2600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLJSUGGS4-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Jalen Suggs: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0400",
+   "yes_ask_dollars": "0.1100",
+   "no_bid_dollars": "0.8900",
+   "no_ask_dollars": "0.9600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLJSUGGS4-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Jalen Suggs: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1700",
+   "yes_ask_dollars": "0.2800",
+   "no_bid_dollars": "0.7200",
+   "no_ask_dollars": "0.8300",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLJSUGGS4-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Jalen Suggs: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.5000",
+   "yes_ask_dollars": "0.6000",
+   "no_bid_dollars": "0.4000",
+   "no_ask_dollars": "0.5000",
+   "volume_fp": "5.79"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLWCARTER34-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1100",
+   "yes_ask_dollars": "0.1400",
+   "no_bid_dollars": "0.8600",
+   "no_ask_dollars": "0.8900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLWCARTER34-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.3500",
+   "yes_ask_dollars": "0.3700",
+   "no_bid_dollars": "0.6300",
+   "no_ask_dollars": "0.6500",
+   "volume_fp": "0.01"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLWCARTER34-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.6600",
+   "yes_ask_dollars": "0.7200",
+   "no_bid_dollars": "0.2800",
+   "no_ask_dollars": "0.3400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLFWAGNER22-35",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Franz Wagner: 35+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 34.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1200",
+   "yes_ask_dollars": "0.1500",
+   "no_bid_dollars": "0.8500",
+   "no_ask_dollars": "0.8800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLFWAGNER22-30",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Franz Wagner: 30+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 29.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2800",
+   "yes_ask_dollars": "0.3200",
+   "no_bid_dollars": "0.6800",
+   "no_ask_dollars": "0.7200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLFWAGNER22-25",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Franz Wagner: 25+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 24.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.5200",
+   "yes_ask_dollars": "0.5500",
+   "no_bid_dollars": "0.4500",
+   "no_ask_dollars": "0.4800",
+   "volume_fp": "216.40"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-ORLFWAGNER22-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Franz Wagner: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7400",
+   "yes_ask_dollars": "0.7800",
+   "no_bid_dollars": "0.2200",
+   "no_ask_dollars": "0.2600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILTHERRO11-30",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Tyler Herro: 30+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 29.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1600",
+   "yes_ask_dollars": "0.2000",
+   "no_bid_dollars": "0.8000",
+   "no_ask_dollars": "0.8400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILTHERRO11-25",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Tyler Herro: 25+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 24.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.3400",
+   "yes_ask_dollars": "0.3800",
+   "no_bid_dollars": "0.6200",
+   "no_ask_dollars": "0.6600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILTHERRO11-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Tyler Herro: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.5900",
+   "yes_ask_dollars": "0.6200",
+   "no_bid_dollars": "0.3800",
+   "no_ask_dollars": "0.4100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILTHERRO11-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Tyler Herro: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.8100",
+   "yes_ask_dollars": "0.8400",
+   "no_bid_dollars": "0.1600",
+   "no_ask_dollars": "0.1900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILNAMENT15-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Nate Ament: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0200",
+   "yes_ask_dollars": "0.0700",
+   "no_bid_dollars": "0.9300",
+   "no_ask_dollars": "0.9800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILNAMENT15-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Nate Ament: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1400",
+   "yes_ask_dollars": "0.1800",
+   "no_bid_dollars": "0.8200",
+   "no_ask_dollars": "0.8600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILNAMENT15-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Nate Ament: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4400",
+   "yes_ask_dollars": "0.4500",
+   "no_bid_dollars": "0.5500",
+   "no_ask_dollars": "0.5600",
+   "volume_fp": "69.79"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILMTURNER3-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Myles Turner: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0400",
+   "yes_ask_dollars": "0.0700",
+   "no_bid_dollars": "0.9300",
+   "no_ask_dollars": "0.9600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILMTURNER3-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Myles Turner: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1600",
+   "yes_ask_dollars": "0.2100",
+   "no_bid_dollars": "0.7900",
+   "no_ask_dollars": "0.8400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILMTURNER3-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Myles Turner: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.5000",
+   "yes_ask_dollars": "0.5100",
+   "no_bid_dollars": "0.4900",
+   "no_ask_dollars": "0.5000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILKKUZMA18-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Kyle Kuzma: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0600",
+   "yes_ask_dollars": "0.1000",
+   "no_bid_dollars": "0.9000",
+   "no_ask_dollars": "0.9400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILKKUZMA18-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Kyle Kuzma: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.2200",
+   "yes_ask_dollars": "0.2600",
+   "no_bid_dollars": "0.7400",
+   "no_ask_dollars": "0.7800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILKKUZMA18-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Kyle Kuzma: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.5400",
+   "yes_ask_dollars": "0.5800",
+   "no_bid_dollars": "0.4200",
+   "no_ask_dollars": "0.4600",
+   "volume_fp": "1.65"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILJJAQUEZ24-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.2000",
+   "no_bid_dollars": "0.8000",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILJJAQUEZ24-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4300",
+   "yes_ask_dollars": "0.4600",
+   "no_bid_dollars": "0.5400",
+   "no_ask_dollars": "0.5700",
+   "volume_fp": "146.50"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILJJAQUEZ24-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.7000",
+   "yes_ask_dollars": "0.7800",
+   "no_bid_dollars": "0.2200",
+   "no_ask_dollars": "0.3000",
+   "volume_fp": "32.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILBBURRIES0-20",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Brayden Burries: 20+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 19.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.1300",
+   "no_bid_dollars": "0.8700",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILBBURRIES0-15",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Brayden Burries: 15+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 14.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.2800",
+   "yes_ask_dollars": "0.3200",
+   "no_bid_dollars": "0.6800",
+   "no_ask_dollars": "0.7200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAPTS-26NOV13MILORL-MILBBURRIES0-10",
+   "event_ticker": "KXNBAPTS-26NOV13MILORL",
+   "title": "Brayden Burries: 10+ points",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6200",
+   "yes_ask_dollars": "0.6600",
+   "no_bid_dollars": "0.3400",
+   "no_ask_dollars": "0.3800",
+   "volume_fp": "0.00"
+  }
+ ],
+ "cursor": ""
+}

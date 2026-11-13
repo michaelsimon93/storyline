@@ -7,8 +7,9 @@
   },
   "scripts": {
     "ingest": "tsx src/cli.ts ingest",
-    "test": "node --import tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "node --import tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "node --import tsx --test --test-concurrency=1 \"test/*.integration.test.ts\""
   },
   "dependencies": {
     "pg": "^8.23.1"

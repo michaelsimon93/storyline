@@ -1,0 +1,977 @@
+{
+ "markets": [
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLABLACK0-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Anthony Black: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0100",
+   "yes_ask_dollars": "0.0600",
+   "no_bid_dollars": "0.9400",
+   "no_ask_dollars": "0.9900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLABLACK0-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Anthony Black: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0800",
+   "yes_ask_dollars": "0.1200",
+   "no_bid_dollars": "0.8800",
+   "no_ask_dollars": "0.9200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLABLACK0-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Anthony Black: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2400",
+   "yes_ask_dollars": "0.2900",
+   "no_bid_dollars": "0.7100",
+   "no_ask_dollars": "0.7600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLABLACK0-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Anthony Black: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.5200",
+   "yes_ask_dollars": "0.5400",
+   "no_bid_dollars": "0.4600",
+   "no_ask_dollars": "0.4800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLABLACK0-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Anthony Black: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7800",
+   "yes_ask_dollars": "0.8400",
+   "no_bid_dollars": "0.1600",
+   "no_ask_dollars": "0.2200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLDBANE3-6",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Desmond Bane: 6+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1200",
+   "yes_ask_dollars": "0.1700",
+   "no_bid_dollars": "0.8300",
+   "no_ask_dollars": "0.8800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLDBANE3-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Desmond Bane: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2400",
+   "yes_ask_dollars": "0.3000",
+   "no_bid_dollars": "0.7000",
+   "no_ask_dollars": "0.7600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLDBANE3-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Desmond Bane: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.4400",
+   "yes_ask_dollars": "0.4600",
+   "no_bid_dollars": "0.5400",
+   "no_ask_dollars": "0.5600",
+   "volume_fp": "403.03"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLDBANE3-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Desmond Bane: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.6300",
+   "yes_ask_dollars": "0.7000",
+   "no_bid_dollars": "0.3000",
+   "no_ask_dollars": "0.3700",
+   "volume_fp": "164.18"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLDBANE3-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Desmond Bane: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7900",
+   "yes_ask_dollars": "0.8800",
+   "no_bid_dollars": "0.1200",
+   "no_ask_dollars": "0.2100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLJSUGGS4-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jalen Suggs: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0200",
+   "yes_ask_dollars": "0.0600",
+   "no_bid_dollars": "0.9400",
+   "no_ask_dollars": "0.9800",
+   "volume_fp": "208.32"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLJSUGGS4-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jalen Suggs: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0800",
+   "yes_ask_dollars": "0.1100",
+   "no_bid_dollars": "0.8900",
+   "no_ask_dollars": "0.9200",
+   "volume_fp": "94.07"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLJSUGGS4-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jalen Suggs: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1800",
+   "yes_ask_dollars": "0.2600",
+   "no_bid_dollars": "0.7400",
+   "no_ask_dollars": "0.8200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLJSUGGS4-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jalen Suggs: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.4600",
+   "yes_ask_dollars": "0.4800",
+   "no_bid_dollars": "0.5200",
+   "no_ask_dollars": "0.5400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLJSUGGS4-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jalen Suggs: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7100",
+   "yes_ask_dollars": "0.8200",
+   "no_bid_dollars": "0.1800",
+   "no_ask_dollars": "0.2900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLWCARTER34-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0200",
+   "yes_ask_dollars": "0.0500",
+   "no_bid_dollars": "0.9500",
+   "no_ask_dollars": "0.9800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLWCARTER34-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0600",
+   "yes_ask_dollars": "0.1100",
+   "no_bid_dollars": "0.8900",
+   "no_ask_dollars": "0.9400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLWCARTER34-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1900",
+   "yes_ask_dollars": "0.2800",
+   "no_bid_dollars": "0.7200",
+   "no_ask_dollars": "0.8100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLWCARTER34-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.5300",
+   "yes_ask_dollars": "0.6000",
+   "no_bid_dollars": "0.4000",
+   "no_ask_dollars": "0.4700",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLFWAGNER22-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Franz Wagner: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0100",
+   "yes_ask_dollars": "0.0500",
+   "no_bid_dollars": "0.9500",
+   "no_ask_dollars": "0.9900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLFWAGNER22-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Franz Wagner: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0800",
+   "yes_ask_dollars": "0.1200",
+   "no_bid_dollars": "0.8800",
+   "no_ask_dollars": "0.9200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLFWAGNER22-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Franz Wagner: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2200",
+   "yes_ask_dollars": "0.2700",
+   "no_bid_dollars": "0.7300",
+   "no_ask_dollars": "0.7800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLFWAGNER22-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Franz Wagner: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.4800",
+   "yes_ask_dollars": "0.4900",
+   "no_bid_dollars": "0.5100",
+   "no_ask_dollars": "0.5200",
+   "volume_fp": "332.82"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-ORLFWAGNER22-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Franz Wagner: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7700",
+   "yes_ask_dollars": "0.8500",
+   "no_bid_dollars": "0.1500",
+   "no_ask_dollars": "0.2300",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILTHERRO11-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Tyler Herro: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1200",
+   "yes_ask_dollars": "0.1600",
+   "no_bid_dollars": "0.8400",
+   "no_ask_dollars": "0.8800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILTHERRO11-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Tyler Herro: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.2500",
+   "yes_ask_dollars": "0.2900",
+   "no_bid_dollars": "0.7100",
+   "no_ask_dollars": "0.7500",
+   "volume_fp": "29.08"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILTHERRO11-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Tyler Herro: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4900",
+   "yes_ask_dollars": "0.5100",
+   "no_bid_dollars": "0.4900",
+   "no_ask_dollars": "0.5100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILTHERRO11-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Tyler Herro: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6900",
+   "yes_ask_dollars": "0.7700",
+   "no_bid_dollars": "0.2300",
+   "no_ask_dollars": "0.3100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILTHERRO11-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Tyler Herro: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.8900",
+   "yes_ask_dollars": "0.9500",
+   "no_bid_dollars": "0.0500",
+   "no_ask_dollars": "0.1100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILNAMENT15-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Nate Ament: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0000",
+   "yes_ask_dollars": "0.0500",
+   "no_bid_dollars": "0.9500",
+   "no_ask_dollars": "1.0000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILNAMENT15-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Nate Ament: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0300",
+   "yes_ask_dollars": "0.0900",
+   "no_bid_dollars": "0.9100",
+   "no_ask_dollars": "0.9700",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILNAMENT15-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Nate Ament: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1300",
+   "yes_ask_dollars": "0.1900",
+   "no_bid_dollars": "0.8100",
+   "no_ask_dollars": "0.8700",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILNAMENT15-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Nate Ament: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.3700",
+   "yes_ask_dollars": "0.3800",
+   "no_bid_dollars": "0.6200",
+   "no_ask_dollars": "0.6300",
+   "volume_fp": "161.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILNAMENT15-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Nate Ament: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6800",
+   "yes_ask_dollars": "0.7600",
+   "no_bid_dollars": "0.2400",
+   "no_ask_dollars": "0.3200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILMTURNER3-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Myles Turner: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0200",
+   "yes_ask_dollars": "0.0700",
+   "no_bid_dollars": "0.9300",
+   "no_ask_dollars": "0.9800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILMTURNER3-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Myles Turner: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0700",
+   "yes_ask_dollars": "0.1400",
+   "no_bid_dollars": "0.8600",
+   "no_ask_dollars": "0.9300",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILMTURNER3-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Myles Turner: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1600",
+   "yes_ask_dollars": "0.2900",
+   "no_bid_dollars": "0.7100",
+   "no_ask_dollars": "0.8400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILMTURNER3-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Myles Turner: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4600",
+   "yes_ask_dollars": "0.5100",
+   "no_bid_dollars": "0.4900",
+   "no_ask_dollars": "0.5400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILMTURNER3-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Myles Turner: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6900",
+   "yes_ask_dollars": "0.8200",
+   "no_bid_dollars": "0.1800",
+   "no_ask_dollars": "0.3100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILKKUZMA18-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Kyle Kuzma: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0300",
+   "yes_ask_dollars": "0.0500",
+   "no_bid_dollars": "0.9500",
+   "no_ask_dollars": "0.9700",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILKKUZMA18-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Kyle Kuzma: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0800",
+   "yes_ask_dollars": "0.1100",
+   "no_bid_dollars": "0.8900",
+   "no_ask_dollars": "0.9200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILKKUZMA18-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Kyle Kuzma: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1800",
+   "yes_ask_dollars": "0.2400",
+   "no_bid_dollars": "0.7600",
+   "no_ask_dollars": "0.8200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILKKUZMA18-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Kyle Kuzma: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4500",
+   "yes_ask_dollars": "0.4600",
+   "no_bid_dollars": "0.5400",
+   "no_ask_dollars": "0.5500",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILKKUZMA18-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Kyle Kuzma: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.7400",
+   "yes_ask_dollars": "0.8100",
+   "no_bid_dollars": "0.1900",
+   "no_ask_dollars": "0.2600",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILJJAQUEZ24-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0100",
+   "yes_ask_dollars": "0.0500",
+   "no_bid_dollars": "0.9500",
+   "no_ask_dollars": "0.9900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILJJAQUEZ24-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0200",
+   "yes_ask_dollars": "0.0900",
+   "no_bid_dollars": "0.9100",
+   "no_ask_dollars": "0.9800",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILJJAQUEZ24-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.2000",
+   "no_bid_dollars": "0.8000",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILJJAQUEZ24-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4000",
+   "yes_ask_dollars": "0.4100",
+   "no_bid_dollars": "0.5900",
+   "no_ask_dollars": "0.6000",
+   "volume_fp": "11.60"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILJJAQUEZ24-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6100",
+   "yes_ask_dollars": "0.7500",
+   "no_bid_dollars": "0.2500",
+   "no_ask_dollars": "0.3900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILBBURRIES0-5",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Brayden Burries: 5+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 4.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0100",
+   "yes_ask_dollars": "0.0400",
+   "no_bid_dollars": "0.9600",
+   "no_ask_dollars": "0.9900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILBBURRIES0-4",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Brayden Burries: 4+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0500",
+   "yes_ask_dollars": "0.0700",
+   "no_bid_dollars": "0.9300",
+   "no_ask_dollars": "0.9500",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILBBURRIES0-3",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Brayden Burries: 3+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 2.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.1700",
+   "no_bid_dollars": "0.8300",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILBBURRIES0-2",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Brayden Burries: 2+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.3600",
+   "yes_ask_dollars": "0.3700",
+   "no_bid_dollars": "0.6300",
+   "no_ask_dollars": "0.6400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBA3PT-26NOV13MILORL-MILBBURRIES0-1",
+   "event_ticker": "KXNBA3PT-26NOV13MILORL",
+   "title": "Brayden Burries: 1+ threes",
+   "status": "active",
+   "result": "",
+   "floor_strike": 0.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6500",
+   "yes_ask_dollars": "0.7200",
+   "no_bid_dollars": "0.2800",
+   "no_ask_dollars": "0.3500",
+   "volume_fp": "0.00"
+  }
+ ],
+ "cursor": ""
+}

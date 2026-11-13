@@ -1,0 +1,168 @@
+{
+ "athletes": [
+  {
+   "id": "4432573",
+   "fullName": "Paolo Banchero",
+   "injuries": [
+    {
+     "status": "Out"
+    }
+   ],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4432573.png"
+   }
+  },
+  {
+   "id": "4066320",
+   "fullName": "Desmond Bane",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4066320.png"
+   }
+  },
+  {
+   "id": "4348700",
+   "fullName": "Goga Bitadze",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4348700.png"
+   }
+  },
+  {
+   "id": "4712849",
+   "fullName": "Anthony Black",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4712849.png"
+   }
+  },
+  {
+   "id": "4278572",
+   "fullName": "Jamal Cain",
+   "injuries": [
+    {
+     "status": "Day-To-Day"
+    }
+   ],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4278572.png"
+   }
+  },
+  {
+   "id": "3133635",
+   "fullName": "Jevon Carter",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/3133635.png"
+   }
+  },
+  {
+   "id": "4277847",
+   "fullName": "Wendell Carter Jr.",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4277847.png"
+   }
+  },
+  {
+   "id": "4397204",
+   "fullName": "Colin Castleton",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4397204.png"
+   }
+  },
+  {
+   "id": "4702382",
+   "fullName": "Tristan da Silva",
+   "injuries": [
+    {
+     "status": "Day-To-Day"
+    }
+   ],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4702382.png"
+   }
+  },
+  {
+   "id": "4065654",
+   "fullName": "Jonathan Isaac",
+   "injuries": [
+    {
+     "status": "Out"
+    }
+   ],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4065654.png"
+   }
+  },
+  {
+   "id": "4593034",
+   "fullName": "Alex Morales",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4593034.png"
+   }
+  },
+  {
+   "id": "5107251",
+   "fullName": "Izaiyah Nelson",
+   "injuries": [
+    {
+     "status": "Out"
+    }
+   ],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5107251.png"
+   }
+  },
+  {
+   "id": "5214637",
+   "fullName": "Noah Penda",
+   "injuries": [
+    {
+     "status": "Out"
+    }
+   ],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5214637.png"
+   }
+  },
+  {
+   "id": "5239561",
+   "fullName": "Jase Richardson",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5239561.png"
+   }
+  },
+  {
+   "id": "4432165",
+   "fullName": "Jalen Suggs",
+   "injuries": [
+    {
+     "status": "Out"
+    }
+   ],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4432165.png"
+   }
+  },
+  {
+   "id": "6478",
+   "fullName": "Nikola Vucevic",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/6478.png"
+   }
+  },
+  {
+   "id": "4566434",
+   "fullName": "Franz Wagner",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4566434.png"
+   }
+  }
+ ]
+}

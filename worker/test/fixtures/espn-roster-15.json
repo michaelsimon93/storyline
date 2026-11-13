@@ -1,0 +1,148 @@
+{
+ "athletes": [
+  {
+   "id": "5164559",
+   "fullName": "Nate Ament",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5164559.png"
+   }
+  },
+  {
+   "id": "5082206",
+   "fullName": "Brayden Burries",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5082206.png"
+   }
+  },
+  {
+   "id": "4997526",
+   "fullName": "Ousmane Dieng",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4997526.png"
+   }
+  },
+  {
+   "id": "4397475",
+   "fullName": "AJ Green",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4397475.png"
+   }
+  },
+  {
+   "id": "4395725",
+   "fullName": "Tyler Herro",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4395725.png"
+   }
+  },
+  {
+   "id": "5214640",
+   "fullName": "Kasparas Jakucionis",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5214640.png"
+   }
+  },
+  {
+   "id": "4432848",
+   "fullName": "Jaime Jaquez Jr.",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4432848.png"
+   }
+  },
+  {
+   "id": "4697268",
+   "fullName": "Kam Jones",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4697268.png"
+   }
+  },
+  {
+   "id": "3134907",
+   "fullName": "Kyle Kuzma",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/3134907.png"
+   }
+  },
+  {
+   "id": "2991043",
+   "fullName": "Caris LeVert",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/2991043.png"
+   }
+  },
+  {
+   "id": "5214989",
+   "fullName": "Bogoljub Markovic",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5214989.png"
+   }
+  },
+  {
+   "id": "4397233",
+   "fullName": "Pete Nance",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4397233.png"
+   }
+  },
+  {
+   "id": "4591725",
+   "fullName": "Ryan Rollins",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4591725.png"
+   }
+  },
+  {
+   "id": "4397114",
+   "fullName": "Cormac Ryan",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4397114.png"
+   }
+  },
+  {
+   "id": "4277922",
+   "fullName": "Jericho Sims",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4277922.png"
+   }
+  },
+  {
+   "id": "4277843",
+   "fullName": "Gary Trent Jr.",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/4277843.png"
+   }
+  },
+  {
+   "id": "3133628",
+   "fullName": "Myles Turner",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/3133628.png"
+   }
+  },
+  {
+   "id": "5105623",
+   "fullName": "Kel'el Ware",
+   "injuries": [],
+   "headshot": {
+    "href": "https://a.espncdn.com/i/headshots/nba/players/full/5105623.png"
+   }
+  }
+ ]
+}

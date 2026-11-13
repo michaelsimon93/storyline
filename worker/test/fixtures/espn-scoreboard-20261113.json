@@ -1,0 +1,45 @@
+{
+ "events": [
+  {
+   "id": "401909297",
+   "date": "2026-11-14T00:00Z",
+   "shortName": "MIL @ ORL",
+   "status": {
+    "type": {
+     "name": "STATUS_SCHEDULED"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "id": "19",
+        "abbreviation": "ORL",
+        "displayName": "Orlando Magic"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "id": "15",
+        "abbreviation": "MIL",
+        "displayName": "Milwaukee Bucks"
+       }
+      }
+     ],
+     "broadcasts": [
+      {
+       "market": "away",
+       "names": [
+        "MyMi",
+        "Bucks App"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

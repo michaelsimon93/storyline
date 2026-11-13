@@ -1,0 +1,743 @@
+{
+ "markets": [
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLABLACK0-8",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Anthony Black: 8+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 7.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.1400",
+   "no_bid_dollars": "0.8600",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLABLACK0-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Anthony Black: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.3100",
+   "yes_ask_dollars": "0.3500",
+   "no_bid_dollars": "0.6500",
+   "no_ask_dollars": "0.6900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLABLACK0-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Anthony Black: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.6400",
+   "yes_ask_dollars": "0.6800",
+   "no_bid_dollars": "0.3200",
+   "no_ask_dollars": "0.3600",
+   "volume_fp": "0.01"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLABLACK0-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Anthony Black: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.9200",
+   "yes_ask_dollars": "0.9500",
+   "no_bid_dollars": "0.0500",
+   "no_ask_dollars": "0.0800",
+   "volume_fp": "0.01"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLFWAGNER22-12",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Franz Wagner: 12+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 11.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0800",
+   "yes_ask_dollars": "0.1100",
+   "no_bid_dollars": "0.8900",
+   "no_ask_dollars": "0.9200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILNAMENT15-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Nate Ament: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0000",
+   "yes_ask_dollars": "0.1300",
+   "no_bid_dollars": "0.8700",
+   "no_ask_dollars": "1.0000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILNAMENT15-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Nate Ament: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0600",
+   "yes_ask_dollars": "0.1400",
+   "no_bid_dollars": "0.8600",
+   "no_ask_dollars": "0.9400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILNAMENT15-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Nate Ament: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "b1fab298-d0ea-4cd6-b436-6fe5c8ab071d",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4000",
+   "yes_ask_dollars": "0.4300",
+   "no_bid_dollars": "0.5700",
+   "no_ask_dollars": "0.6000",
+   "volume_fp": "167.06"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLDBANE3-8",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Desmond Bane: 8+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 7.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0100",
+   "yes_ask_dollars": "0.0400",
+   "no_bid_dollars": "0.9600",
+   "no_ask_dollars": "0.9900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLDBANE3-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Desmond Bane: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.1400",
+   "no_bid_dollars": "0.8600",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLDBANE3-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Desmond Bane: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.3600",
+   "yes_ask_dollars": "0.4000",
+   "no_bid_dollars": "0.6000",
+   "no_ask_dollars": "0.6400",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLDBANE3-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Desmond Bane: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "ccb79bb0-64c9-46fe-9442-81a77ede2c47",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7700",
+   "yes_ask_dollars": "0.8500",
+   "no_bid_dollars": "0.1500",
+   "no_ask_dollars": "0.2300",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLJSUGGS4-8",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jalen Suggs: 8+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 7.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0500",
+   "yes_ask_dollars": "0.1000",
+   "no_bid_dollars": "0.9000",
+   "no_ask_dollars": "0.9500",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLJSUGGS4-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jalen Suggs: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2100",
+   "yes_ask_dollars": "0.2700",
+   "no_bid_dollars": "0.7300",
+   "no_ask_dollars": "0.7900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLJSUGGS4-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jalen Suggs: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.5700",
+   "yes_ask_dollars": "0.5900",
+   "no_bid_dollars": "0.4100",
+   "no_ask_dollars": "0.4300",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLJSUGGS4-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jalen Suggs: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c382fa1a-0107-40fb-b0b7-03f1386f8797",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.8500",
+   "yes_ask_dollars": "0.9100",
+   "no_bid_dollars": "0.0900",
+   "no_ask_dollars": "0.1500",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLWCARTER34-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.0000",
+   "yes_ask_dollars": "0.0500",
+   "no_bid_dollars": "0.9500",
+   "no_ask_dollars": "1.0000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLWCARTER34-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.1200",
+   "no_bid_dollars": "0.8800",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLWCARTER34-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Wendell Carter Jr.: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "708d8ae3-92df-416c-9629-917d1d20edd6",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.4900",
+   "yes_ask_dollars": "0.5300",
+   "no_bid_dollars": "0.4700",
+   "no_ask_dollars": "0.5100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLFWAGNER22-10",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Franz Wagner: 10+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 9.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.2100",
+   "yes_ask_dollars": "0.2500",
+   "no_bid_dollars": "0.7500",
+   "no_ask_dollars": "0.7900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLFWAGNER22-8",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Franz Wagner: 8+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 7.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.4300",
+   "yes_ask_dollars": "0.4400",
+   "no_bid_dollars": "0.5600",
+   "no_ask_dollars": "0.5700",
+   "volume_fp": "32.54"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLFWAGNER22-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Franz Wagner: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.6800",
+   "yes_ask_dollars": "0.7200",
+   "no_bid_dollars": "0.2800",
+   "no_ask_dollars": "0.3200",
+   "volume_fp": "0.01"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-ORLFWAGNER22-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Franz Wagner: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "0432f2e8-9b8e-4324-a15d-c40aa0c79842",
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.8900",
+   "yes_ask_dollars": "0.9200",
+   "no_bid_dollars": "0.0800",
+   "no_ask_dollars": "0.1100",
+   "volume_fp": "0.01"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILTHERRO11-8",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Tyler Herro: 8+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 7.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0900",
+   "yes_ask_dollars": "0.1200",
+   "no_bid_dollars": "0.8800",
+   "no_ask_dollars": "0.9100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILTHERRO11-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Tyler Herro: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.2800",
+   "yes_ask_dollars": "0.3200",
+   "no_bid_dollars": "0.6800",
+   "no_ask_dollars": "0.7200",
+   "volume_fp": "14.25"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILTHERRO11-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Tyler Herro: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6100",
+   "yes_ask_dollars": "0.6600",
+   "no_bid_dollars": "0.3400",
+   "no_ask_dollars": "0.3900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILTHERRO11-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Tyler Herro: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "3e3ceeda-5f54-4aa0-9ced-e8ff6cbcadf2",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.9100",
+   "yes_ask_dollars": "0.9500",
+   "no_bid_dollars": "0.0500",
+   "no_ask_dollars": "0.0900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILMTURNER3-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Myles Turner: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0000",
+   "yes_ask_dollars": "0.0700",
+   "no_bid_dollars": "0.9300",
+   "no_ask_dollars": "1.0000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILMTURNER3-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Myles Turner: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0900",
+   "yes_ask_dollars": "0.1400",
+   "no_bid_dollars": "0.8600",
+   "no_ask_dollars": "0.9100",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILMTURNER3-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Myles Turner: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "a1339a5c-be69-4ad2-8db2-8a65c6bf1781",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.5500",
+   "yes_ask_dollars": "0.5700",
+   "no_bid_dollars": "0.4300",
+   "no_ask_dollars": "0.4500",
+   "volume_fp": "104.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILKKUZMA18-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Kyle Kuzma: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0500",
+   "yes_ask_dollars": "0.0800",
+   "no_bid_dollars": "0.9200",
+   "no_ask_dollars": "0.9500",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILKKUZMA18-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Kyle Kuzma: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.2500",
+   "yes_ask_dollars": "0.2900",
+   "no_bid_dollars": "0.7100",
+   "no_ask_dollars": "0.7500",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILKKUZMA18-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Kyle Kuzma: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.6600",
+   "yes_ask_dollars": "0.7200",
+   "no_bid_dollars": "0.2800",
+   "no_ask_dollars": "0.3400",
+   "volume_fp": "265.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILJJAQUEZ24-8",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 8+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 7.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0300",
+   "yes_ask_dollars": "0.0600",
+   "no_bid_dollars": "0.9400",
+   "no_ask_dollars": "0.9700",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILJJAQUEZ24-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1100",
+   "yes_ask_dollars": "0.1700",
+   "no_bid_dollars": "0.8300",
+   "no_ask_dollars": "0.8900",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILJJAQUEZ24-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.4000",
+   "yes_ask_dollars": "0.4500",
+   "no_bid_dollars": "0.5500",
+   "no_ask_dollars": "0.6000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILJJAQUEZ24-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Jaime Jaquez Jr.: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "c122b588-a524-4086-a34a-d74de87ff68e",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.7800",
+   "yes_ask_dollars": "0.8400",
+   "no_bid_dollars": "0.1600",
+   "no_ask_dollars": "0.2200",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILBBURRIES0-8",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Brayden Burries: 8+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 7.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.0300",
+   "yes_ask_dollars": "0.0500",
+   "no_bid_dollars": "0.9500",
+   "no_ask_dollars": "0.9700",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILBBURRIES0-6",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Brayden Burries: 6+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 5.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.1000",
+   "yes_ask_dollars": "0.1200",
+   "no_bid_dollars": "0.8800",
+   "no_ask_dollars": "0.9000",
+   "volume_fp": "0.00"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILBBURRIES0-4",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Brayden Burries: 4+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 3.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.3500",
+   "yes_ask_dollars": "0.3700",
+   "no_bid_dollars": "0.6300",
+   "no_ask_dollars": "0.6500",
+   "volume_fp": "356.79"
+  },
+  {
+   "ticker": "KXNBAAST-26NOV13MILORL-MILBBURRIES0-2",
+   "event_ticker": "KXNBAAST-26NOV13MILORL",
+   "title": "Brayden Burries: 2+ assists",
+   "status": "active",
+   "result": "",
+   "floor_strike": 1.5,
+   "strike_type": "greater",
+   "custom_strike": {
+    "basketball_player": "6452082a-873a-4dbd-bcc7-a70fa7dbcd3a",
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.7600",
+   "yes_ask_dollars": "0.8000",
+   "no_bid_dollars": "0.2000",
+   "no_ask_dollars": "0.2400",
+   "volume_fp": "0.00"
+  }
+ ],
+ "cursor": ""
+}

@@ -1,0 +1,56 @@
+{
+ "markets": [
+  {
+   "ticker": "KXNBAGAME-26NOV13MILORL-ORL",
+   "event_ticker": "KXNBAGAME-26NOV13MILORL",
+   "title": "Orlando wins",
+   "status": "active",
+   "result": "",
+   "floor_strike": null,
+   "strike_type": "structured",
+   "custom_strike": {
+    "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+   },
+   "yes_bid_dollars": "0.7700",
+   "yes_ask_dollars": "0.7800",
+   "no_bid_dollars": "0.2200",
+   "no_ask_dollars": "0.2300",
+   "volume_fp": "40132.98"
+  },
+  {
+   "ticker": "KXNBAGAME-26NOV13MILORL-MIL",
+   "event_ticker": "KXNBAGAME-26NOV13MILORL",
+   "title": "Milwaukee wins",
+   "status": "active",
+   "result": "",
+   "floor_strike": null,
+   "strike_type": "structured",
+   "custom_strike": {
+    "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+   },
+   "yes_bid_dollars": "0.2200",
+   "yes_ask_dollars": "0.2400",
+   "no_bid_dollars": "0.7600",
+   "no_ask_dollars": "0.7800",
+   "volume_fp": "35647.11"
+  },
+  {
+   "ticker": "KXNBAGAME-26NOV17DETSAS-SAS",
+   "event_ticker": "KXNBAGAME-26NOV17DETSAS",
+   "title": "San Antonio wins",
+   "status": "active",
+   "result": "",
+   "floor_strike": null,
+   "strike_type": "structured",
+   "custom_strike": {
+    "basketball_team": "ad36c3e8-4194-4e63-920f-7c50f46191a6"
+   },
+   "yes_bid_dollars": "0.6700",
+   "yes_ask_dollars": "0.7400",
+   "no_bid_dollars": "0.2600",
+   "no_ask_dollars": "0.3300",
+   "volume_fp": "110.39"
+  }
+ ],
+ "cursor": ""
+}
