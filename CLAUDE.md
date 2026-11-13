@@ -36,7 +36,8 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 - **Every PR has an issue.** Check for one before creating it. One issue ≈ one PR; split bigger issues.
 - **Put the issue ID in the branch and the PR:** branch `feat/sto-12-short-name`, and `Fixes STO-12` as the PR description's first line. Linear moves the issue to In Review when the PR opens and Done when it merges.
 - **Product calls go to Michael as `needs-decision`.** Label the issue, state the question and the options in it, and don't build past the open decision.
-- Labels: one area (`db`, `worker`, `curation`, `web`, `infra`) per issue. No cycles or estimates.
+- Labels: one area (`db`, `worker`, `curation`, `web`, `infra`) per issue. No cycles.
+- **Estimates are for Michael's reference only**: how much effort a task would take a team. They never change how work is planned or built. When creating an issue, set points (1 / 2 / 3 / 5 / 8) as a mid-level engineer without AI help would size it, and end the description with `**Estimate: N.**` plus one line on what drives the size.
 
 ### Pull requests
 - **One PR = one concern**, reviewable in ~10 minutes (roughly <400 changed lines excluding tests). If the title needs "and", split it.
