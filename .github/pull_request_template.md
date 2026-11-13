@@ -1,3 +1,5 @@
+Fixes STO-<!-- issue number -->
+
 ## Why
 <!-- The problem or decision this addresses. Link the ADR/spec section if there is one. -->
 
