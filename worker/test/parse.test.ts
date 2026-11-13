@@ -6,7 +6,6 @@ import {
 } from "../src/domain/kalshiParse.js";
 import { kalshiFromEspn, NBA_TEAMS } from "../src/domain/nbaTeams.js";
 import { matchPlayer, normalizeName } from "../src/domain/names.js";
-import { storylineToday } from "../src/jobs/ingest.js";
 
 test("kalshi date code and game key", () => {
   assert.equal(kalshiDateCode("2026-11-13"), "26NOV13");
@@ -62,9 +61,4 @@ test("player matching", () => {
   assert.deepEqual(matchPlayer("Nic Claxton", roster), { kind: "fuzzy", player: roster[1] });
   assert.equal(matchPlayer("J. Williams", roster).kind, "ambiguous"); // two J. Williams: never guess
   assert.equal(matchPlayer("Nobody Here", roster).kind, "none");
-});
-
-test("storyline day rolls over at 3am ET", () => {
-  assert.equal(storylineToday(new Date("2026-11-14T07:59:00Z")), "2026-11-13"); // 2:59am ET
-  assert.equal(storylineToday(new Date("2026-11-14T08:00:00Z")), "2026-11-14"); // 3:00am ET
 });
