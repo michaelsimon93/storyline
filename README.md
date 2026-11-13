@@ -8,7 +8,7 @@ Storyline is a daily, AI-curated deck of NBA player and team cards built on live
 
 It's a rebuild of **Units**, a startup I helped found in the DFS era, reimagined for prediction markets: curation and story over volume, for casual fans rather than power bettors.
 
-> **Status:** planning complete, database built and tested, worker in progress. Built for me and a few friends. Play money only, never real money.
+> **Status:** planning complete, database built and tested, worker ingest running against live data. Built for me and a few friends. Play money only, never real money.
 
 ---
 
@@ -47,14 +47,19 @@ flowchart LR
 | [`docs/decisions/`](docs/decisions/) | Architecture decision records: context, options, decision, consequences |
 | [`supabase/migrations/`](supabase/migrations/) | Database schema, RLS policies, and functions (`place_pick`, `settle_market`, …) |
 | [`supabase/tests/`](supabase/tests/) | Scenario tests, run in CI against Postgres 16 |
-| `worker/` | *(in progress)* Ingest, price polling, curation, settlement |
+| [`worker/`](worker/) | Background jobs (TypeScript). **Ingest** is done: ESPN games and rosters plus Kalshi markets, with player matching. Price polling, curation, and settlement are next. |
 | `web/` | *(next)* Next.js app |
 
-## Running the database tests
+## Running it
 
 ```bash
-# Postgres 16 running locally:
+# Database tests (Postgres 16 running locally)
 PGHOST=localhost PGUSER=postgres ./supabase/tests/run.sh
+
+# Worker
+cd worker && npm install
+npm test                                   # unit tests
+DATABASE_URL=postgres://... npm run ingest # load today's slate
 ```
 
 ## Roadmap
