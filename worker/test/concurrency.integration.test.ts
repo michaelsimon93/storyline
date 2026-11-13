@@ -40,15 +40,18 @@ before(async () => {
 
 after(async () => { await db?.end(); });
 
-/** Run fn inside a transaction on its own connection, acting as the signed-in USER. */
-async function asUser<T>(fn: (c: pg.PoolClient) => Promise<T>, holdMs = 0): Promise<T> {
+/**
+ * Run fn inside a transaction on its own connection, acting as the signed-in USER.
+ * If `holdUntil` is given, the transaction stays open (holding its locks) until it resolves.
+ */
+async function asUser<T>(fn: (c: pg.PoolClient) => Promise<T>, holdUntil?: Promise<void>): Promise<T> {
   const c = await db!.connect();
   try {
     await c.query("begin");
     await c.query("set local role authenticated");
     await c.query(`select set_config('request.jwt.claim.sub', $1, true)`, [USER]);
     const out = await fn(c);
-    if (holdMs) await c.query(`select pg_sleep(${holdMs / 1000})`); // keep the lock held
+    if (holdUntil) await holdUntil;
     await c.query("commit");
     return out;
   } catch (e) {
@@ -59,15 +62,41 @@ async function asUser<T>(fn: (c: pg.PoolClient) => Promise<T>, holdMs = 0): Prom
   }
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Resolves once some backend is blocked waiting on a lock, or after timeoutMs. Returns whether it saw one. */
+async function waitForLockWait(timeoutMs = 3_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { rows } = await db!.query(
+      `select count(*)::int n from pg_stat_activity where wait_event_type = 'Lock' and datname = current_database()`);
+    if (rows[0].n > 0) return true;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  return false;
+}
+
+function gate() {
+  let open!: () => void;
+  const p = new Promise<void>((r) => (open = r));
+  return { p, open };
+}
 
 test("two simultaneous picks on a $5 wallet: exactly one succeeds", { skip }, async () => {
-  // A places its pick and holds the transaction open; B fires while A still holds the lock.
-  const a = asUser((c) => c.query(`select place_pick('${CARD_A}', 'yes')`), 500);
-  await sleep(150);
+  // A places its pick and keeps its transaction open. B fires while A holds the lock.
+  // We release A only after Postgres shows B blocked on the lock: deterministic, no sleeps.
+  const releaseA = gate();
+  let aPicked!: () => void;
+  const aDone = new Promise<void>((r) => (aPicked = r));
+  const a = asUser(async (c) => { const r = await c.query(`select place_pick('${CARD_A}', 'yes')`); aPicked(); return r; }, releaseA.p);
+  await aDone;
   const b = asUser((c) => c.query(`select place_pick('${CARD_B}', 'yes')`));
+  // Observe both outcomes immediately, so an early rejection is never "unhandled".
+  const settled = Promise.allSettled([a, b]);
 
-  const [ra, rb] = await Promise.allSettled([a, b]);
+  const bBlocked = await waitForLockWait();
+  releaseA.open();
+  const [ra, rb] = await settled;
+
+  assert.ok(bBlocked, "B should have waited on A's wallet lock (if not, the lock is missing)");
   assert.equal(ra.status, "fulfilled", "first pick should succeed");
   assert.equal(rb.status, "rejected", "second pick must not also succeed");
   assert.match(String((rb as PromiseRejectedResult).reason), /insufficient_funds/);
@@ -78,16 +107,23 @@ test("two simultaneous picks on a $5 wallet: exactly one succeeds", { skip }, as
   assert.equal(r.balance, 0, "balance can never go negative");
 });
 
-test("double-tap on the same card: one pick, never two stakes", { skip }, async () => {
+test("double-tap on the same card: one pick, one stake", { skip }, async () => {
   await db!.query(`insert into ledger_entries (user_id, wallet_id, type, amount_cents, memo)
                    select user_id, id, 'adjustment', 1000, 'test: top up' from wallets`);
-  const tap = () => asUser((c) => c.query(`select place_pick('${CARD_B}', 'no')`), 200);
-  const results = await Promise.allSettled([tap(), tap()]);
+  const release = gate();
+  const first = asUser((c) => c.query(`select place_pick('${CARD_B}', 'no')`), release.p);
+  const second = asUser((c) => c.query(`select place_pick('${CARD_B}', 'no')`));
+  // Either tap may win the lock; the loser can fail before we release, so observe both now.
+  const settled = Promise.allSettled([first, second]);
+  await waitForLockWait();
+  release.open();
+  const results = await settled;
 
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
   const { rows: [r] } = await db!.query(`
     select (select count(*)::int from picks where card_id = '${CARD_B}') picks,
-           (select count(*)::int from ledger_entries where type = 'pick_stake') stakes`);
+           (select count(*)::int from ledger_entries l join picks p on p.id = l.pick_id
+            where l.type = 'pick_stake' and p.card_id = '${CARD_B}') stakes`);
   assert.equal(r.picks, 1);
-  assert.equal(r.stakes, 2, "one stake per pick: card A's and this one");
+  assert.equal(r.stakes, 1, "exactly one stake for this card");
 });
