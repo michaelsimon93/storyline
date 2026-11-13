@@ -24,6 +24,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Deployed migrations are frozen
         run: bash scripts/check-migrations.test.sh && bash scripts/check-migrations.sh
+      - name: DEPLOYED manifest is append-only (PRs)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          bash scripts/check-deployed-append-only.test.sh
+          bash scripts/check-deployed-append-only.sh "origin/${{ github.base_ref }}"
       - name: Run migration + scenario tests
         run: bash supabase/tests/run.sh
 
@@ -35,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.1.0   # pinned: CI results shouldn't change without a code change
       - name: Start Supabase (database + auth only)
         run: supabase start -x studio,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,postgres-meta
       - name: Run scenario tests against real Supabase
