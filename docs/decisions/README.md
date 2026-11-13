@@ -16,3 +16,4 @@ Short records of the decisions that shaped Storyline: the context, the options c
 | 010 | [Harden the data model for the roadmap now](010-future-proof-data-model.md) |
 | 011 | [Free trades pay winnings only; voids reissue the credit](011-free-trade-payouts.md) |
 | 012 | [In-house analytics via an events table](012-in-house-analytics.md) |
+| 013 | [Testing is part of done](013-testing-strategy.md) |
