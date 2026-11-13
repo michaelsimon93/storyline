@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the schema test suite against a throwaway database.
+# Runs every tests/scenario_*.sql file (in order) against a throwaway database.
 # Usage: PGHOST=... PGPORT=... PGUSER=... ./supabase/tests/run.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -18,7 +18,10 @@ else
   done
 fi
 
-out="$(psql -q -d "$DB" -f tests/scenarios.sql 2>&1 | grep -v '^$')"
+out="$(
+  psql -q -d "$DB" -v ON_ERROR_STOP=1 -f tests/helpers.sql >/dev/null
+  for f in tests/scenario_*.sql; do psql -q -d "$DB" -f "$f" 2>&1; done | grep -v '^$'
+)"
 echo "$out"
 
 pass=$(grep -c '^PASS' <<<"$out" || true)

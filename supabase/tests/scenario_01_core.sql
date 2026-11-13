@@ -1,24 +1,8 @@
--- Storyline schema scenario tests. Run after supabase_stubs.sql + migrations.
--- Every line of output should start with PASS.
+-- Core scenarios: slate day, picks, wallets, settlement, free trades, snapshots, lockdown.
 \set QUIET on
 \pset tuples_only on
 \pset format unaligned
-
-create function t_err(label text, q text, pat text) returns text language plpgsql as $$
-begin
-  execute q;
-  return 'FAIL ' || label || ' (expected error ' || pat || ')';
-exception when others then
-  return case when sqlerrm like pat then 'PASS ' || label
-              else 'FAIL ' || label || ': got ' || sqlerrm end;
-end $$;
-create function t_eq(label text, got anyelement, want anyelement) returns text language sql as $$
-  select case when got is not distinct from want then 'PASS ' || label
-              else 'FAIL ' || label || ': got ' || coalesce(got::text,'null') || ', want ' || coalesce(want::text,'null') end
-$$;
-create function as_user(uid text) returns void language sql as $$
-  select set_config('request.jwt.claim.sub', uid, false) $$;
-grant execute on function t_err(text,text,text), t_eq(text,anyelement,anyelement), as_user(text) to public;
+reset role;
 
 -- ---------------------------------------------------------------- slate day (3am ET rollover, DST-safe)
 select t_eq('2:59am ET is still yesterday', storyline_day('2026-11-14 07:59:00+00'), '2026-11-13'::date);
@@ -46,9 +30,9 @@ insert into markets (ticker,league,game_id,kind,kalshi_series,title,player_id,te
  ('KJ-8',    'nba','00000000-0000-0000-0000-0000000000b1','player_stat','KXNBAREB','Keldon Johnson: 8+ rebounds','00000000-0000-0000-0000-0000000000a3',null,'rebounds',8,50,51,'active',now()-interval '10 minutes'),
  ('SAS-WIN', 'nba','00000000-0000-0000-0000-0000000000b1','game_winner','KXNBAGAME','San Antonio wins',null,1,null,null,62,40,'active',now());
 insert into cards (id,slate_date,sort_key,game_id,subject,player_id,team_id,market_ticker,blurb) values
- ('00000000-0000-0000-0000-0000000000c1',storyline_today(),1,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a1',null,'WEMBY-30','Wemby has hit 30 in 3 straight.'),
- ('00000000-0000-0000-0000-0000000000c2',storyline_today(),2,'00000000-0000-0000-0000-0000000000b2','player','00000000-0000-0000-0000-0000000000a2',null,'CURRY-5','Curry vs the Spurs again.'),
- ('00000000-0000-0000-0000-0000000000c3',storyline_today(),3,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a3',null,'KJ-8','Starting with Sochan out.'),
+ ('00000000-0000-0000-0000-0000000000c1',storyline_today(),1,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a1',1,'WEMBY-30','Wemby has hit 30 in 3 straight.'),
+ ('00000000-0000-0000-0000-0000000000c2',storyline_today(),2,'00000000-0000-0000-0000-0000000000b2','player','00000000-0000-0000-0000-0000000000a2',2,'CURRY-5','Curry vs the Spurs again.'),
+ ('00000000-0000-0000-0000-0000000000c3',storyline_today(),3,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a3',1,'KJ-8','Starting with Sochan out.'),
  ('00000000-0000-0000-0000-0000000000c4',storyline_today(),4,'00000000-0000-0000-0000-0000000000b1','team',null,1,'SAS-WIN','Spurs chasing a 15th straight win.');
 insert into auth.users (id) values ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
 
@@ -59,8 +43,8 @@ select t_err('storyline_type must be a known type',
 select t_eq('storyline types queryable', (select string_agg(storyline_type, ',' order by sort_key) from cards), 'hot_streak,other,other,team_streak');
 select 'PASS league: NBA MIN and NFL MIN coexist' where (select count(*) from teams where kalshi_abbr='MIN') = 2;
 select t_err('one card per player per game',
-  $q$insert into cards (slate_date,sort_key,game_id,subject,player_id,market_ticker,blurb)
-     values (storyline_today(),9,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a1','WEMBY-30','dupe')$q$,
+  $q$insert into cards (slate_date,sort_key,game_id,subject,player_id,team_id,market_ticker,blurb)
+     values (storyline_today(),9,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a1',1,'WEMBY-30','dupe')$q$,
   '%cards_one_per_player%');
 select t_err('team card cannot also name a player',
   $q$insert into cards (slate_date,sort_key,game_id,subject,player_id,team_id,market_ticker,blurb)

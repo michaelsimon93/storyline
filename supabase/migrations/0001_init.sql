@@ -45,6 +45,152 @@ create or replace function storyline_today() returns date
 language sql stable as $$ select storyline_day(now()) $$;
 
 -- =============================================================================
+-- CONFIG & FEATURE FLAGS (ADR-018)
+-- Tunable values live here, not in code, so they change without a deploy.
+-- Every write is validated (type + range) and audited.
+-- =============================================================================
+create table app_config (
+  key          text primary key,
+  value        jsonb not null,
+  value_type   text not null check (value_type in ('int', 'number', 'bool', 'string')),
+  min_value    numeric,
+  max_value    numeric,
+  is_public    boolean not null default false,   -- readable by the app (e.g. stake for the UI)
+  description  text not null,
+  updated_at   timestamptz not null default now()
+);
+
+create table feature_flags (
+  key              text primary key,
+  description      text not null,
+  enabled          boolean not null default false,             -- master switch / kill switch
+  rollout_percent  smallint not null default 0 check (rollout_percent between 0 and 100),
+  allow_user_ids   uuid[] not null default '{}',               -- always on for these users (e.g. Michael)
+  is_public        boolean not null default false,             -- evaluated for the app via my_flags()
+  updated_at       timestamptz not null default now()
+);
+
+-- One audit log for both tables: who changed what, from what, to what.
+create table config_audit (
+  id          bigserial primary key,
+  target      text not null check (target in ('config', 'flag')),
+  key         text not null,
+  old_value   jsonb,
+  new_value   jsonb,
+  changed_by  text not null default current_user,
+  changed_at  timestamptz not null default now()
+);
+
+create or replace function validate_app_config() returns trigger
+language plpgsql as $$
+declare
+  t text := jsonb_typeof(new.value);
+  ok boolean;
+begin
+  ok := case new.value_type
+    when 'int'    then t = 'number' and (new.value)::numeric = trunc((new.value)::numeric)
+    when 'number' then t = 'number'
+    when 'bool'   then t = 'boolean'
+    when 'string' then t = 'string'
+  end;
+  if ok and new.value_type in ('int', 'number') then
+    -- Numeric settings always keep explicit bounds (no "remove the max, then set anything").
+    ok := new.min_value is not null and new.max_value is not null
+      and (new.value)::numeric between new.min_value and new.max_value;
+  end if;
+  if ok and new.value_type = 'int' then
+    ok := (new.value)::numeric between -2147483648 and 2147483647;  -- must fit config_int()
+  end if;
+  if not ok then
+    raise exception 'invalid config %: % (expected % in [%, %])',
+      new.key, new.value, new.value_type, coalesce(new.min_value::text, '-inf'), coalesce(new.max_value::text, 'inf');
+  end if;
+  new.updated_at := now();
+  return new;
+end $$;
+create trigger app_config_validate before insert or update on app_config
+  for each row execute function validate_app_config();
+
+-- Rules that span settings live here too, so the database stays the single source.
+create or replace function validate_app_config_pairs() returns trigger
+language plpgsql as $$
+declare lo numeric; hi numeric;
+begin
+  select (value)::numeric into lo from app_config where key = 'price_band_min';
+  select (value)::numeric into hi from app_config where key = 'price_band_max';
+  if lo is not null and hi is not null and lo >= hi then
+    raise exception 'invalid config: price_band_min (%) must be below price_band_max (%)', lo, hi;
+  end if;
+  return null;
+end $$;
+create constraint trigger app_config_pairs after insert or update on app_config
+  for each row execute function validate_app_config_pairs();
+
+create or replace function audit_config_change() returns trigger
+language plpgsql as $$
+begin
+  -- Whole row (minus the timestamp), so changes to visibility, bounds or rollout are
+  -- recorded too, not just the value.
+  insert into config_audit (target, key, old_value, new_value)
+  values (case tg_table_name when 'app_config' then 'config' else 'flag' end,
+          coalesce(new.key, old.key),
+          case when tg_op <> 'INSERT' then to_jsonb(old) - 'updated_at' end,
+          case when tg_op <> 'DELETE' then to_jsonb(new) - 'updated_at' end);
+  return null;
+end $$;
+create trigger app_config_audit after insert or update or delete on app_config
+  for each row execute function audit_config_change();
+create trigger feature_flags_audit after insert or update or delete on feature_flags
+  for each row execute function audit_config_change();
+
+create or replace function config_value(p_key text) returns jsonb
+language plpgsql stable as $$
+declare v jsonb;
+begin
+  select value into v from app_config where key = p_key;
+  if not found then raise exception 'unknown config: %', p_key; end if;
+  return v;
+end $$;
+
+create or replace function config_int(p_key text) returns integer
+language sql stable as $$ select (config_value(p_key))::int $$;
+
+-- Stable bucket 0-99 per (flag, user). Salted by flag key so flags are independent;
+-- raising rollout_percent only ever adds users, never reshuffles them.
+create or replace function flag_bucket(p_key text, p_user uuid) returns integer
+language sql immutable as $$
+  select (abs(hashtext(p_key || ':' || p_user::text)::bigint) % 100)::int
+$$;
+
+create or replace function flag_enabled(p_key text, p_user uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select f.enabled and (p_user = any(f.allow_user_ids)
+                          or (p_user is not null and flag_bucket(f.key, p_user) < f.rollout_percent))
+    from feature_flags f where f.key = p_key), false)
+$$;
+
+-- What the app calls: public flags, evaluated for the signed-in user only.
+-- The app logs a 'flag_exposure' event when a flag changes what a user sees.
+create or replace function my_flags() returns table (key text, enabled boolean)
+language sql stable security definer set search_path = public as $$
+  select f.key, flag_enabled(f.key, auth.uid()) from feature_flags f where f.is_public
+$$;
+
+insert into app_config (key, value, value_type, min_value, max_value, is_public, description) values
+  ('cards_per_day',             '10',      'int',    1,   30,      false, 'Core deck size per slate'),
+  ('for_you_cards',             '0',       'int',    0,   5,       false, 'Extra personalized cards per user (0 until built)'),
+  ('price_band_min',            '25',      'int',    1,   99,      false, 'Lowest Yes price (%) a card line may have'),
+  ('price_band_max',            '75',      'int',    1,   99,      false, 'Highest Yes price (%) a card line may have'),
+  ('max_spread_cents',          '5',       'int',    1,   50,      false, 'Widest bid/ask spread a card market may have'),
+  ('pick_stake_cents',          '500',     'int',    100, 10000,   true,  'Fixed stake per pick'),
+  ('signup_grant_cents',        '10000',   'int',    0,   1000000, true,  'Starting bankroll'),
+  ('daily_grant_cents',         '1000',    'int',    0,   100000,  true,  'Daily claimable grant (v1.1)'),
+  ('snapshot_interval_minutes', '15',      'int',    1,   240,     false, 'Re-snapshot unchanged prices after this long'),
+  ('max_price_age_seconds',     '120',     'int',    10,  3600,    false, 'Reject picks if the cached price is older than this'),
+  ('curation_time_et',          '"10:00"', 'string', null, null,   false, 'When daily curation runs (ET)');
+
+-- =============================================================================
 -- REFERENCE DATA (written by the worker only)
 -- =============================================================================
 
@@ -135,7 +281,7 @@ create table market_price_snapshots (
 -- Snapshot every freshly observed market whose price changed since its last
 -- snapshot, or whose last snapshot is older than p_min_interval. Called by ingest and the price poller.
 -- Returns the number of snapshots written.
-create or replace function snapshot_prices(p_min_interval interval default interval '15 minutes')
+create or replace function snapshot_prices(p_min_interval interval default null)
 returns integer
 language sql security definer set search_path = public as $$
   with latest as (
@@ -153,7 +299,8 @@ language sql security definer set search_path = public as $$
       -- is polling anymore must not be re-snapshotted forever (review fix, PR #1).
       and (l.ticker is null or m.prices_updated_at > l.captured_at)
       and (l.ticker is null
-           or l.captured_at < now() - p_min_interval
+           or l.captured_at < now() - coalesce(p_min_interval,
+                                                make_interval(mins => config_int('snapshot_interval_minutes')))
            or (l.yes_bid_cents, l.yes_ask_cents, l.no_bid_cents, l.no_ask_cents)
               is distinct from (m.yes_bid_cents, m.yes_ask_cents, m.no_bid_cents, m.no_ask_cents))
     returning 1
@@ -200,10 +347,33 @@ create table cards (
   locks_at         timestamptz,              -- null = game start. Set for in-game cards later.
   curation_run_id  bigint references pipeline_runs(id),
   published_at     timestamptz not null default now(),
-  check (subject <> 'player' or player_id is not null),
+  -- Shared core deck vs. the pool that "for you" cards are drawn from (ADR-019).
+  placement        text not null default 'core' check (placement in ('core', 'pool')),
+  -- team_id = the team the card is about, or for player cards the player's team AT
+  -- PUBLISH. Snapshotted so personalization survives trades (ADR-019).
+  check (subject <> 'player' or (player_id is not null and team_id is not null)),
   check (subject <> 'team'   or (team_id is not null and player_id is null)),
   check (subject <> 'game'   or (team_id is null     and player_id is null))
 );
+-- Team at publish has one source: the player's team when the card is written.
+-- Filled in if missing; a contradicting value is rejected (ADR-019).
+create or replace function set_card_team() returns trigger
+language plpgsql as $$
+declare v_team smallint;
+begin
+  if new.subject = 'player' then
+    select team_id into v_team from players where id = new.player_id;
+    if new.team_id is null then
+      new.team_id := v_team;
+    elsif v_team is not null and new.team_id <> v_team then
+      raise exception 'team_mismatch: card says team %, player % is on team %', new.team_id, new.player_id, v_team;
+    end if;
+  end if;
+  return new;
+end $$;
+create trigger cards_set_team before insert or update of player_id, team_id on cards
+  for each row execute function set_card_team();
+
 create index cards_slate_idx on cards (slate_date, sort_key);
 -- One card per player per game, one per team per game (any number of game cards).
 create unique index cards_one_per_player on cards (game_id, player_id) where subject = 'player';
@@ -333,6 +503,46 @@ join games   g on g.id = c.game_id
 join markets m on m.ticker = c.market_ticker;
 
 -- =============================================================================
+-- PERSONALIZATION SIGNALS (ADR-019)
+-- Per user x dimension: cards seen, cards picked, wins. Built from what users SAW
+-- (card_view events) as well as what they picked, so skips are a signal too.
+-- A view, not a table: nothing to keep in sync. Materialize later if it gets slow.
+-- Worker-only for now (no grant to authenticated).
+-- =============================================================================
+create view user_affinities as
+with seen as (
+  select distinct user_id, card_id from events
+  where event = 'card_view' and user_id is not null and card_id is not null
+), picked as (
+  -- One row per user x card even with several wallets (main + contests).
+  select user_id, card_id, bool_or(status = 'won') as won from picks group by user_id, card_id
+), user_cards as (
+  select coalesce(s.user_id, p.user_id) as user_id,
+         coalesce(s.card_id, p.card_id) as card_id,
+         p.card_id is not null          as picked,
+         coalesce(p.won, false)         as won
+  from seen s full join picked p on p.user_id = s.user_id and p.card_id = s.card_id
+)
+select uc.user_id, d.dimension, d.value,
+       count(*)::int                                   as cards_viewed,   -- a pick implies it was seen
+       count(*) filter (where uc.picked)::int          as picks,
+       count(*) filter (where uc.won)::int             as wins,
+       round(count(*) filter (where uc.picked)::numeric / count(*), 3) as pick_rate
+from user_cards uc
+join cards   c on c.id = uc.card_id
+join markets m on m.ticker = c.market_ticker
+cross join lateral (values
+  ('team',           c.team_id::text),
+  ('player',         c.player_id::text),
+  ('stat',           m.stat),
+  ('market_kind',    m.kind::text),
+  ('subject',        c.subject::text),
+  ('storyline_type', c.storyline_type)
+) as d(dimension, value)
+where d.value is not null
+group by uc.user_id, d.dimension, d.value;
+
+-- =============================================================================
 -- FUNCTIONS: the only way users change data
 -- =============================================================================
 
@@ -353,7 +563,7 @@ begin
   insert into wallets (user_id, kind) values (auth.uid(), 'main') returning id into v_wallet;
 
   insert into ledger_entries (user_id, wallet_id, type, amount_cents, memo)
-  values (auth.uid(), v_wallet, 'signup_grant', 10000, 'Welcome bankroll');
+  values (auth.uid(), v_wallet, 'signup_grant', config_int('signup_grant_cents'), 'Welcome bankroll');
 
   return v_profile;
 exception
@@ -365,7 +575,7 @@ end $$;
 -- Optional params keep the signature stable as features arrive:
 --   p_max_price_cents  v1.1 "price moved" check (v1 clients omit)
 --   p_wallet_id        contests (null = the user's main wallet)
--- v1 stake is fixed at $5; user-chosen stakes and credit-funded picks come later.
+-- Stake comes from app_config (pick_stake_cents); user-chosen stakes come later.
 create or replace function place_pick(
   p_card_id         uuid,
   p_side            pick_side,
@@ -375,7 +585,7 @@ create or replace function place_pick(
 returns picks
 language plpgsql security definer set search_path = public as $$
 declare
-  c_stake   constant integer := 500;
+  c_stake   constant integer := config_int('pick_stake_cents');  -- ADR-018
   v_uid     uuid := auth.uid();
   v_wallet  uuid;
   v_card    record;
@@ -398,7 +608,7 @@ begin
   if v_card.slate_date <> storyline_today() then raise exception 'card_not_today'; end if;
   if v_card.state <> 'open'             then raise exception 'card_not_open:%', v_card.state; end if;
   if v_card.prices_updated_at is null
-     or v_card.prices_updated_at < now() - interval '2 minutes'
+     or v_card.prices_updated_at < now() - make_interval(secs => config_int('max_price_age_seconds'))
                                         then raise exception 'prices_stale'; end if;
 
   v_price := case p_side when 'yes' then v_card.yes_ask_cents else v_card.no_ask_cents end;
@@ -514,6 +724,7 @@ grant execute on function place_pick(uuid, pick_side, smallint, uuid) to authent
 grant execute on function create_profile(text, uuid)                  to authenticated;
 grant execute on function storyline_today()                           to authenticated;
 grant execute on function storyline_day(timestamptz)                  to authenticated;  -- storyline_today() calls it
+grant execute on function my_flags()                                  to authenticated;
 grant execute on function settle_market(text)                          to service_role;
 grant execute on function snapshot_prices(interval)                    to service_role;
 
@@ -534,6 +745,9 @@ alter table pick_credits   enable row level security;
 alter table picks          enable row level security;
 alter table ledger_entries enable row level security;
 alter table events         enable row level security;
+alter table app_config     enable row level security;
+alter table feature_flags  enable row level security;   -- no policies: read via my_flags()
+alter table config_audit   enable row level security;   -- no policies: internal only
 
 create policy read_teams   on teams   for select to authenticated using (true);
 create policy read_players on players for select to authenticated using (true);
@@ -557,9 +771,13 @@ create policy read_own_ledger  on ledger_entries for select to authenticated usi
 
 create policy insert_own_events on events for insert to authenticated with check (user_id = auth.uid());
 
+-- Only settings flagged public are visible to the app.
+create policy read_public_config on app_config for select to authenticated using (is_public);
+
 grant select on teams, players, games, markets, market_price_snapshots, cards, profiles, wallets,
                 pick_credits, picks, ledger_entries to authenticated;
 grant select on card_feed, wallet_balances to authenticated;
+grant select on app_config to authenticated;
 grant update (display_name) on profiles to authenticated;
 grant insert on events to authenticated;
 grant usage on sequence events_id_seq to authenticated;

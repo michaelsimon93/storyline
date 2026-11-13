@@ -21,3 +21,5 @@ Short records of the decisions that shaped Storyline: the context, the options c
 | 015 | [A streak is consecutive card-days with a pick](015-streaks-are-pick-days.md) |
 | 016 | [Explicit privileges, tested against real Supabase](016-defense-in-depth-privileges.md) |
 | 017 | [Keep price history as snapshots](017-price-history.md) |
+| 018 | [Configurable settings and feature flags in the database](018-config-and-feature-flags.md) |
+| 019 | [Personalization: shared core deck, signals from views and picks](019-personalization-groundwork.md) |
