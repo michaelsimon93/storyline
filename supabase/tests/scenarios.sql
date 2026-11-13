@@ -42,6 +42,11 @@ insert into cards (id,slate_date,sort_key,game_id,subject,player_id,team_id,mark
  ('00000000-0000-0000-0000-0000000000c4',storyline_today(),4,'00000000-0000-0000-0000-0000000000b1','team',null,1,'SAS-WIN','Spurs chasing a 15th straight win.');
 insert into auth.users values ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
 
+update cards set storyline_type='hot_streak' where id='00000000-0000-0000-0000-0000000000c1';
+update cards set storyline_type='team_streak' where id='00000000-0000-0000-0000-0000000000c4';
+select t_err('storyline_type must be a known type',
+  $q$update cards set storyline_type='vibes' where id='00000000-0000-0000-0000-0000000000c1'$q$, '%check constraint%');
+select t_eq('storyline types queryable', (select string_agg(storyline_type, ',' order by sort_key) from cards), 'hot_streak,other,other,team_streak');
 select 'PASS league: NBA MIN and NFL MIN coexist' where (select count(*) from teams where kalshi_abbr='MIN') = 2;
 select t_err('one card per player per game',
   $q$insert into cards (slate_date,sort_key,game_id,subject,player_id,market_ticker,blurb)

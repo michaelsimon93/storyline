@@ -143,6 +143,11 @@ create table cards (
   market_ticker    text not null references markets(ticker),     -- the LOCKED line
   blurb            text not null check (char_length(blurb) <= 200),
   blurb_facts      jsonb,                    -- the facts the blurb cites
+  -- The kind of "why" behind the card, set by curation. Lets us measure which
+  -- storylines get read and picked. Plain text + check so the list can evolve.
+  storyline_type   text not null default 'other' check (storyline_type in (
+                     'hot_streak', 'cold_streak', 'revenge', 'milestone', 'injury_opportunity',
+                     'matchup', 'rivalry', 'team_streak', 'clinch', 'news', 'other')),
   is_out           boolean not null default false,  -- set by worker from ESPN / Kalshi pause
   locks_at         timestamptz,              -- null = game start. Set for in-game cards later.
   curation_run_id  bigint references pipeline_runs(id),
