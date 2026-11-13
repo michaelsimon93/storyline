@@ -29,6 +29,21 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 
 ## Workflow
 - Never commit to `main`. Branch → PR → CI green → merge.
+
+### Pull requests
+- **One PR = one concern**, reviewable in ~10 minutes (roughly <400 changed lines excluding tests). If the title needs "and", split it.
+- **Refactors go in their own PR**, before the feature that needs them.
+- **Every commit passes tests on its own.**
+- Stack PRs only when one truly depends on another; keep stacks to 2–3 and merge promptly.
+- **Each schema change gets its own new migration file** (`supabase/migrations/NNNN_name.sql`), even before deploy.
+- Fill in the PR template, especially **Risks & where to look**, which tells the human reviewer what to read closely.
+- Merge stacked PRs with a merge commit (not squash) so the PRs above them don't conflict.
+
+### Reviews (agents in `.claude/agents/`)
+1. **`reviewer`**: independent review against this file plus a security checklist. Runs in a fresh context; never the agent that wrote the code.
+2. **`test-adversary`**: tries to break the change by adding failing tests. Only touches test files.
+3. **Human review** of the "Risks & where to look" spots. The human decides; agents advise.
+
 - **Migrations are frozen once deployed** (listed in `supabase/migrations/DEPLOYED`). Change the schema with a new migration; CI enforces this.
 - New tables and functions are locked down by default. Grant access deliberately, and add a "can't do it" test (ADR-016).
 - **No hard-coded tunables.** Anything we might want to adjust (sizes, thresholds, money amounts, intervals) is an `app_config` row with a type and range, read via `config_int()` in SQL or `loadConfig()` in the worker. No defaults in code (ADR-018).
