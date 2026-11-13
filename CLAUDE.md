@@ -30,6 +30,14 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 ## Workflow
 - Never commit to `main`. Branch → PR → CI green → merge.
 
+### Planning in Linear
+- Work is tracked in Linear (team `STO`, project **Storyline**). Milestones mirror the release plan: v1, v1.1, v2+.
+- **Docs vs. Linear:** `docs/spec.md` and ADRs record *what and why*; Linear tracks *what's next and its status*. Don't copy spec text into issues; link the section.
+- **Every PR has an issue.** Check for one before creating it. One issue ≈ one PR; split bigger issues.
+- **Put the issue ID in the branch and the PR:** branch `feat/sto-12-short-name`, and `Fixes STO-12` as the PR description's first line. Linear moves the issue to In Review when the PR opens and Done when it merges.
+- **Product calls go to Michael as `needs-decision`.** Label the issue, state the question and the options in it, and don't build past the open decision.
+- Labels: one area (`db`, `worker`, `curation`, `web`, `infra`) per issue. No cycles or estimates.
+
 ### Pull requests
 - **One PR = one concern**, reviewable in ~10 minutes (roughly <400 changed lines excluding tests). If the title needs "and", split it.
 - **Refactors go in their own PR**, before the feature that needs them.
