@@ -5,7 +5,7 @@ Short records of the decisions that shaped Storyline: the context, the options c
 | # | Decision |
 |---|---|
 | 001 | [Kalshi as the only market source for v1](001-kalshi-as-market-source.md) |
-| 002 | [Most-even line, locked at publish; prices stay live](002-line-selection-and-locking.md) |
+| 002 | [Most-even line, locked at publish; prices stay live](002-line-selection-and-locking.md) *(line rule superseded by 014)* |
 | 003 | [Only the worker calls Kalshi, ESPN and Claude](003-worker-owns-external-calls.md) |
 | 004 | [Kalshi's result is the source of truth; "Out" locks, never voids](004-kalshi-is-source-of-truth.md) |
 | 005 | [ESPN (undocumented) for tip-off times, stats and context](005-espn-for-schedule-and-context.md) |
@@ -17,3 +17,7 @@ Short records of the decisions that shaped Storyline: the context, the options c
 | 011 | [Free trades pay winnings only; voids reissue the credit](011-free-trade-payouts.md) |
 | 012 | [In-house analytics via an events table](012-in-house-analytics.md) |
 | 013 | [Testing is part of done](013-testing-strategy.md) |
+| 014 | [The story chooses the line; every claim is grounded](014-story-chooses-the-line.md) |
+| 015 | [A streak is consecutive card-days with a pick](015-streaks-are-pick-days.md) |
+| 016 | [Explicit privileges, tested against real Supabase](016-defense-in-depth-privileges.md) |
+| 017 | [Keep price history as snapshots](017-price-history.md) |

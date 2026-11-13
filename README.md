@@ -46,14 +46,14 @@ flowchart LR
 | [`docs/spec.md`](docs/spec.md) | Product spec: scope, card states, bankroll, resulting, release plan, acceptance criteria |
 | [`docs/decisions/`](docs/decisions/) | Architecture decision records: context, options, decision, consequences |
 | [`supabase/migrations/`](supabase/migrations/) | Database schema, RLS policies, and functions (`place_pick`, `settle_market`, …) |
-| [`supabase/tests/`](supabase/tests/) | Scenario tests, run in CI against Postgres 16 |
+| [`supabase/tests/`](supabase/tests/) | Scenario tests, run in CI against Postgres 17 |
 | [`worker/`](worker/) | Background jobs (TypeScript). **Ingest** is done: ESPN games and rosters plus Kalshi markets, with player matching. Price polling, curation, and settlement are next. |
 | `web/` | *(next)* Next.js app |
 
 ## Running it
 
 ```bash
-# Database tests (Postgres 16 running locally)
+# Database tests (Postgres 17 running locally)
 PGHOST=localhost PGUSER=postgres ./supabase/tests/run.sh
 
 # Worker
