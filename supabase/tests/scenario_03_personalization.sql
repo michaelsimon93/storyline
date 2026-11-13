@@ -5,10 +5,18 @@
 \pset format unaligned
 reset role;
 
-select t_err('cards: a player card must record the player''s team at publish',
-  $q$insert into cards (slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb)
-     values (storyline_today(), 50, '00000000-0000-0000-0000-0000000000b2', 'player',
-             '00000000-0000-0000-0000-0000000000a1', 'WEMBY-30', 'no team')$q$, '%check constraint%');
+-- Team at publish has ONE source: the player's team. The database fills it in, and
+-- rejects a contradicting value (review PR #2: a curation bug could write the opponent).
+insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb)
+  values ('00000000-0000-0000-0000-0000000000c8', storyline_today(), 50, '00000000-0000-0000-0000-0000000000b2',
+          'player', '00000000-0000-0000-0000-0000000000a1', 'WEMBY-30', 'team filled in');
+select t_eq('cards: a player card gets the player''s team filled in at publish',
+  (select team_id from cards where id = '00000000-0000-0000-0000-0000000000c8'), 1::smallint);
+delete from cards where id = '00000000-0000-0000-0000-0000000000c8';
+select t_err('cards: a player card can''t claim a different team than the player''s',
+  $q$insert into cards (slate_date, sort_key, game_id, subject, player_id, team_id, market_ticker, blurb)
+     values (storyline_today(), 51, '00000000-0000-0000-0000-0000000000b2', 'player',
+             '00000000-0000-0000-0000-0000000000a1', 2, 'WEMBY-30', 'wrong team')$q$, '%team_mismatch%');
 select t_eq('cards: placement defaults to the shared core deck',
   (select placement from cards where id = '00000000-0000-0000-0000-0000000000c5'), 'core');
 select t_err('cards: placement must be core or pool',
@@ -59,3 +67,18 @@ select t_eq('affinity: by storyline type (viewed, skipped)',
 select t_eq('affinity: by player, with pick rate',
   (select pick_rate from user_affinities where user_id = '55555555-5555-5555-5555-555555555555'
      and dimension = 'player' and value = '00000000-0000-0000-0000-0000000000a6'), 1.0::numeric);
+
+-- Regression (review PR #2): two picks on one card (main + contest wallet) must not make
+-- "won" depend on which row Postgres happens to read first.
+insert into wallets (id, user_id, kind, contest_id) values
+  ('00000000-0000-0000-0000-0000000000d5', '55555555-5555-5555-5555-555555555555', 'contest', '00000000-0000-0000-0000-0000000000e5');
+insert into ledger_entries (user_id, wallet_id, type, amount_cents, memo) values
+  ('55555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-0000000000d5', 'bonus_grant', 1000, 'contest');
+set role authenticated; select as_user('55555555-5555-5555-5555-555555555555');
+select place_pick('00000000-0000-0000-0000-0000000000c6', 'no', null, '00000000-0000-0000-0000-0000000000d5') \g /dev/null
+reset role;
+update markets set result = 'yes' where ticker = 'TC-3';
+select settle_market('TC-3') \g /dev/null
+select t_eq('affinity: a card counts once per user, and as won if any of their picks won',
+  (select cards_viewed || '/' || picks || '/' || wins from user_affinities
+   where user_id = '55555555-5555-5555-5555-555555555555' and dimension = 'stat' and value = 'threes'), '1/1/1');

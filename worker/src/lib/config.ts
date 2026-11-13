@@ -15,6 +15,7 @@ const SPEC = {
   signupGrantCents:        { key: "signup_grant_cents",        type: "int" },
   dailyGrantCents:         { key: "daily_grant_cents",         type: "int" },
   snapshotIntervalMinutes: { key: "snapshot_interval_minutes", type: "int" },
+  maxPriceAgeSeconds:      { key: "max_price_age_seconds",     type: "int" },
   curationTimeEt:          { key: "curation_time_et",          type: "string" },
 } as const;
 
@@ -39,10 +40,8 @@ export function parseConfig(rows: { key: string; value: unknown }[]): Config {
     out[name] = v;
   }
 
-  // Cross-field rule the per-row DB validation can't express.
-  if (problems.length === 0 && (out.priceBandMin as number) >= (out.priceBandMax as number)) {
-    problems.push(`price_band_min (${out.priceBandMin}) must be below price_band_max (${out.priceBandMax})`);
-  }
+  // Range and cross-setting rules (e.g. price band min < max) are enforced by the
+  // database on write, so they are not re-implemented here (single source, ADR-018).
 
   if (problems.length) throw new ConfigError(`Invalid app_config: ${problems.join("; ")}`);
   return out as Config;
