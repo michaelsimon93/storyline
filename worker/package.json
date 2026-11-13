@@ -7,7 +7,7 @@
   },
   "scripts": {
     "ingest": "tsx src/cli.ts ingest",
-    "test": "node --import tsx --test \"test/*.test.ts\"",
+    "test": "node --import tsx --test $(ls test/*.test.ts | grep -v '\\.integration\\.')",
     "typecheck": "tsc --noEmit",
     "test:integration": "node --import tsx --test --test-concurrency=1 \"test/*.integration.test.ts\""
   },
