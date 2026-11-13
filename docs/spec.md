@@ -122,6 +122,8 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 - The server prices each pick from its latest cached ask at the moment of submission, not from what the client displayed. The confirmation always shows the price the user actually got.
 - *(v1.1)* If the server price has moved **more than 3 percentage points** from the price shown, the user sees "Price moved to 49% — still in?" before the pick is placed.
 - Picks lock at **tip-off**, using ESPN's *current* start time, so a postponed game moves its lock time with it.
+- Picks also stop as soon as **ESPN reports the game in progress or final**, even if the scheduled tip-off hasn't passed (early starts, stale schedules). Cards with their own lock time (future in-game cards) follow that time instead.
+- A card is **Out** while Kalshi isn't trading its market (`kalshi_status` other than `active`).
 
 **Card states**
 
