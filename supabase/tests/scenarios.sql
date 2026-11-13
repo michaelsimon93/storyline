@@ -50,7 +50,7 @@ insert into cards (id,slate_date,sort_key,game_id,subject,player_id,team_id,mark
  ('00000000-0000-0000-0000-0000000000c2',storyline_today(),2,'00000000-0000-0000-0000-0000000000b2','player','00000000-0000-0000-0000-0000000000a2',null,'CURRY-5','Curry vs the Spurs again.'),
  ('00000000-0000-0000-0000-0000000000c3',storyline_today(),3,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a3',null,'KJ-8','Starting with Sochan out.'),
  ('00000000-0000-0000-0000-0000000000c4',storyline_today(),4,'00000000-0000-0000-0000-0000000000b1','team',null,1,'SAS-WIN','Spurs chasing a 15th straight win.');
-insert into auth.users values ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
+insert into auth.users (id) values ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
 
 update cards set storyline_type='hot_streak' where id='00000000-0000-0000-0000-0000000000c1';
 update cards set storyline_type='team_streak' where id='00000000-0000-0000-0000-0000000000c4';
