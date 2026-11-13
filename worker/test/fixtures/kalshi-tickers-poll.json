@@ -1,5 +1,5 @@
 {
-  "_note": "Derived from the recorded Nov 13 2026 KXNBAPTS/KXNBAGAME responses (same GET /markets shape). Kalshi rate-limited the dev workspace when recording, so: ORLABLACK0-25's prices moved (9c -> 51c yes bid) and volume rose and MILKKUZMA18-20 is set to status 'closed' to exercise the out-card path. Re-record from GET /markets?tickers=... when possible.",
+  "_note": "Derived from the recorded Nov 13 2026 KXNBAPTS/KXNBAGAME responses (same GET /markets shape). Kalshi rate-limited the dev workspace when recording, so: ORLABLACK0-25's prices moved (9c -> 51c yes bid) and volume rose and MILKKUZMA18-20 is set to status 'closed' with result 'no' to exercise the out-card path. Re-record from GET /markets?tickers=... when possible.",
   "cursor": "",
   "markets": [
     {
@@ -25,7 +25,7 @@
       "event_ticker": "KXNBAPTS-26NOV13MILORL",
       "title": "Kyle Kuzma: 20+ points",
       "status": "closed",
-      "result": "",
+      "result": "no",
       "floor_strike": 19.5,
       "strike_type": "greater",
       "custom_strike": {

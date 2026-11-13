@@ -58,8 +58,9 @@ export async function runJob(
       const { rows } = await lock.query<{ got: boolean }>(
         `select pg_try_advisory_lock(hashtext($1)) as got`, [lockKey(job.name)]);
       if (!rows[0]!.got) {
-        // At our cadence an overlap is unusual (a stuck run, or a deploy overlapping a long job),
-        // so every skip is alerted rather than silently logged.
+        // Another process holds this job's lock: a stuck run, or old and new workers overlapping
+        // during a deploy (expected now and then for the 30s price poller). Alerted for now;
+        // deduping these is STO-36.
         await alert(alertText({
           severity: "warning", job: job.name, headline: `${job.name} skipped: another copy is still running`,
           note: "a previous run may be stuck; check pipeline_runs for a row still 'running', or a second worker",

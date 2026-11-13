@@ -44,3 +44,10 @@ export async function withRun<T extends object>(
     throw err;
   }
 }
+
+/** The database's current time. Used to timestamp data we fetched, so freshness is measured
+ *  on one clock (the staleness checks in SQL compare against the database's now()). */
+export async function dbNow(db: Db): Promise<Date> {
+  const { rows } = await db.query<{ t: Date }>(`select clock_timestamp() as t`);
+  return rows[0]!.t;
+}

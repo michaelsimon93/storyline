@@ -12,17 +12,24 @@ export interface FetchOptions {
   retries?: number;     // attempts after the first
   timeoutMs?: number;
   baseDelayMs?: number; // first backoff delay; doubles each retry
+  /** Total time budget across all attempts and waits. Each attempt's timeout shrinks to fit,
+   *  and a wait (Retry-After included) that would overrun it fails now instead. */
+  deadlineMs?: number;
 }
+
+export class DeadlineError extends Error {}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function fetchJson<T>(url: string, opts: FetchOptions = {}): Promise<T> {
-  const { retries = 4, timeoutMs = 20_000, baseDelayMs = 1_000 } = opts;
+  const { retries = 4, timeoutMs = 20_000, baseDelayMs = 1_000, deadlineMs } = opts;
+  const deadline = deadlineMs === undefined ? Infinity : Date.now() + deadlineMs;
+  const remaining = () => deadline - Date.now();
 
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(url, {
       headers: { "User-Agent": "storyline-worker/0.1", Accept: "application/json" },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, remaining()))),
     });
 
     if (res.ok) return (await res.json()) as T;
@@ -37,6 +44,11 @@ export async function fetchJson<T>(url: string, opts: FetchOptions = {}): Promis
     const delay = Number.isFinite(retryAfter) && retryAfter > 0
       ? retryAfter * 1_000
       : baseDelayMs * 2 ** attempt;
+    if (delay >= remaining()) {
+      throw new DeadlineError(
+        `gave up on ${url} after ${attempt + 1} attempt(s): HTTP ${res.status}, and waiting ` +
+        `${Math.round(delay / 1000)}s more would pass the ${Math.round((deadlineMs ?? 0) / 1000)}s deadline`);
+    }
     await sleep(delay);
   }
 }

@@ -1,6 +1,6 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { fetchJson, HttpError, throttle } from "../src/lib/http.js";
+import { DeadlineError, fetchJson, HttpError, throttle } from "../src/lib/http.js";
 import { installFetch, json } from "./helpers/mockFetch.js";
 
 let restore = () => {};
@@ -57,4 +57,22 @@ test("throttle spaces out calls", async () => {
   const start = Date.now();
   await pace(); await pace(); await pace();
   assert.ok(Date.now() - start >= 95);
+});
+
+test("a deadline caps the total time: a long Retry-After fails now instead of waiting", async () => {
+  sequence(() => json({}, 429, { "retry-after": "30" }), () => json({ ok: 1 }));
+  const start = Date.now();
+  await assert.rejects(fetchJson("https://x.test/a", { deadlineMs: 2_000 }), (e) =>
+    e instanceof DeadlineError && /HTTP 429/.test(e.message) && /2s deadline/.test(e.message));
+  assert.ok(Date.now() - start < 500, "gave up immediately rather than sleeping 30s");
+});
+
+test("a deadline still allows retries that fit inside it", async () => {
+  sequence(() => json({}, 429, { "retry-after": "0.05" }), () => json({ ok: 2 }));
+  assert.deepEqual(await fetchJson("https://x.test/a", { deadlineMs: 2_000 }), { ok: 2 });
+});
+
+test("the poller gives each poll one interval's worth of time on Kalshi", async () => {
+  const { fetchDeadline } = await import("../src/jobs/poller.js");
+  assert.deepEqual(fetchDeadline(30), { deadlineMs: 30_000 });
 });

@@ -145,6 +145,57 @@ test("every poll is logged to pipeline_runs", { skip }, async () => {
   assert.equal(rows[0].outputs.updated, 3);
 });
 
+// ------------------------------------------------------------------ results and stale overwrites
+
+test("the poller never writes results: settlement owns them", { skip }, async () => {
+  // The fixture's closed market carries result 'no'. Kalshi can show a result before it is
+  // final, and can amend it; paying out on it is settlement's job, with its own checks (STO-13).
+  await pollPrices(db!, SLATE);
+  const { rows } = await db!.query(`select result from markets where ticker = $1`, [CLOSED]);
+  assert.equal(rows[0].result, null);
+});
+
+test("ingest doesn't overwrite fresher prices the poller wrote while it was running", { skip }, async () => {
+  // Ingest reads Kalshi early, then spends a while on ESPN rosters before writing markets.
+  // A poll that lands in between has newer data, which ingest must not replace.
+  const inner = installFetch(pollRoute(), slateRoutes);
+  const innerFetch = globalThis.fetch;
+  let polled = false;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (!polled && /\/roster$/.test(new URL(href).pathname)) {
+      polled = true;
+      globalThis.fetch = innerFetch;            // the poll itself uses the plain mocks
+      await pollPrices(db!, SLATE);
+      globalThis.fetch = wrapped;
+    }
+    return innerFetch(input);
+  }) as typeof fetch;
+  const wrapped = globalThis.fetch;
+  try {
+    await ingest(db!, SLATE);
+  } finally {
+    inner.restore();
+    useFetch(pollRoute());
+  }
+  assert.ok(polled, "the poll ran in the middle of ingest");
+  const m = await market(MOVED);
+  assert.deepEqual([m.yes_bid_cents, m.yes_ask_cents], [51, 53], "ingest replaced the poller's newer prices with stale ones");
+  assert.equal((await market(CLOSED)).kalshi_status, "closed", "ingest reverted a newer status");
+});
+
+test("ingest never clears a result settlement has written", { skip }, async () => {
+  await db!.query(`update markets set result = 'yes' where ticker = $1`, [WINNER]);
+  try {
+    useFetch();
+    await ingest(db!, SLATE);
+    const { rows } = await db!.query(`select result from markets where ticker = $1`, [WINNER]);
+    assert.equal(rows[0].result, "yes");
+  } finally {
+    await db!.query(`update markets set result = null where ticker = $1`, [WINNER]);
+  }
+});
+
 // ------------------------------------------------------------------ no deadlock with ingest
 // Ingest and the poller both write market rows. If they locked rows in different orders, a
 // run of each could deadlock. Both lock in ticker order. The proof: while another session

@@ -3,12 +3,15 @@
 // is an upsert, so a second run refreshes rather than duplicates.
 
 import type { Db } from "../lib/db.js";
-import { withRun } from "../lib/db.js";
+import { dbNow, withRun } from "../lib/db.js";
 import * as espn from "../sources/espn.js";
 import * as kalshi from "../sources/kalshi.js";
 import { kalshiFromEspn } from "../domain/nbaTeams.js";
 import { matchPlayer } from "../domain/names.js";
-import { GAME_WINNER_SERIES, PLAYER_PROP_SERIES, gameKey, kalshiDateCode, playerNameFromTitle, playerTeamFromTicker, splitTicker, strikeFromMarket, marketQuote } from "../domain/kalshiParse.js";
+import {
+  GAME_WINNER_SERIES, PLAYER_PROP_SERIES, gameKey, kalshiDateCode, marketQuote,
+  playerNameFromTitle, playerTeamFromTicker, splitTicker, strikeFromMarket,
+} from "../domain/kalshiParse.js";
 
 export interface IngestSummary {
   slateDate: string;
@@ -81,6 +84,10 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     // ---------------------------------------------------------------- markets (Kalshi)
     const seriesList = [...Object.keys(PLAYER_PROP_SERIES), GAME_WINNER_SERIES];
     const marketsBySeries = new Map<string, kalshi.KalshiMarket[]>();
+    // When we read Kalshi, on the database's clock (the clock the staleness checks use).
+    // Market rows are only updated if this is newer than what they hold, so a price poll that
+    // lands while ingest is busy with ESPN isn't overwritten (STO-9).
+    const kalshiFetchedAt = await dbNow(db);
     for (const series of seriesList) {
       const all = await kalshi.listMarkets(series);
       const tonight = all.filter((m) => gameIdByKey.has(splitTicker(m.ticker).gameKey));
@@ -164,20 +171,23 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     await db.query(
       `insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, team_id, stat, strike,
                             yes_bid_cents, yes_ask_cents, no_bid_cents, no_ask_cents, volume, kalshi_status,
-                            result, prices_updated_at, updated_at)
+                            prices_updated_at, updated_at)
        select m.ticker, 'nba', m.game_id, m.kind::market_kind, m.series, m.title, m.player_id, m.team_id, m.stat, m.strike,
-              m.yes_bid, m.yes_ask, m.no_bid, m.no_ask, m.volume, m.status, m.result, now(), now()
+              m.yes_bid, m.yes_ask, m.no_bid, m.no_ask, m.volume, m.status, $2, now()
        from jsonb_to_recordset($1) as m(ticker text, game_id uuid, kind text, series text, title text, player_id uuid,
             team_id smallint, stat text, strike numeric, yes_bid smallint, yes_ask smallint, no_bid smallint,
-            no_ask smallint, volume integer, status text, result text)
+            no_ask smallint, volume integer, status text)
        -- Ticker order, same as the price poller, so the two can't deadlock on market rows.
        order by m.ticker
        on conflict (ticker) do update
          set yes_bid_cents = excluded.yes_bid_cents, yes_ask_cents = excluded.yes_ask_cents,
              no_bid_cents = excluded.no_bid_cents,   no_ask_cents = excluded.no_ask_cents,
-             volume = excluded.volume, kalshi_status = excluded.kalshi_status, result = excluded.result,
-             prices_updated_at = now(), updated_at = now()`,
-      [JSON.stringify(marketRows)],
+             volume = excluded.volume, kalshi_status = excluded.kalshi_status,
+             prices_updated_at = excluded.prices_updated_at, updated_at = now()
+         -- Never replace newer data (e.g. a poll that ran while ingest was fetching rosters).
+         -- Results are never written here: settlement owns them.
+         where markets.prices_updated_at is null or markets.prices_updated_at < excluded.prices_updated_at`,
+      [JSON.stringify(marketRows), kalshiFetchedAt],
     );
 
     // Price history: snapshot anything that moved (rule lives in snapshot_prices()).
