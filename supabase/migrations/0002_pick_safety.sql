@@ -3,7 +3,9 @@
 --      when the clock passes the scheduled tip-off (early starts, stale schedules). Cards with
 --      their own lock time (future in-game cards) are unaffected.
 --   2. A card is "out" while Kalshi isn't trading its market (kalshi_status <> 'active').
---   3. place_pick share-locks the market so a pick and settlement can't interleave.
+--   3. place_pick share-locks the market so a pick and settlement can't interleave, taking
+--      locks in the order market -> wallet (ADR-020) to avoid deadlocks with settlement.
+--   4. A final or canceled game locks every card, including in-game cards.
 
 create or replace view card_feed
 with (security_invoker = true) as
@@ -18,7 +20,7 @@ select
     when m.result is not null                                      then 'settled'::card_state
     -- Pre-game cards follow the game: ESPN's status beats the scheduled tip-off time.
     when c.locks_at is null and g.status = 'in_progress'           then 'live'::card_state
-    when c.locks_at is null and g.status in ('final', 'canceled')  then 'locked'::card_state
+    when g.status in ('final', 'canceled')                        then 'locked'::card_state  -- every card, in-game too
     when now() >= coalesce(c.locks_at, g.tip_off_at)
          and g.status = 'in_progress'                              then 'live'::card_state   -- v1 UI: "Locked"
     when now() >= coalesce(c.locks_at, g.tip_off_at)               then 'locked'::card_state
@@ -48,20 +50,22 @@ declare
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
 
-  -- Resolve + lock the wallet: serializes concurrent picks from the same wallet,
-  -- so two fast taps can't both pass the balance check.
-  select id into v_wallet from wallets
-  where user_id = v_uid
-    and (case when p_wallet_id is null then kind = 'main' else id = p_wallet_id end)
-  for update;
-  if not found then raise exception 'no_wallet'; end if;
-
   -- Share-lock the card's market BEFORE reading its state. Any write to that market row
   -- (the worker recording the result, a price update) waits until this pick commits, so
   -- settlement can never miss an in-flight pick; and if a result is being written right
   -- now, we wait for it and then see the market as settled. (0002, test-adversary finding)
   perform 1 from markets m join cards c on c.market_ticker = m.ticker
   where c.id = p_card_id for share of m;
+
+  -- Lock order is ALWAYS market, then wallet (ADR-020). Settlement holds market rows and
+  -- then touches wallets (ledger entries reference them), so the reverse order deadlocks.
+  -- FOR NO KEY UPDATE still serializes two picks from one wallet (no double spend), but
+  -- does not block the key-share locks that ledger inserts take on the wallet row.
+  select id into v_wallet from wallets
+  where user_id = v_uid
+    and (case when p_wallet_id is null then kind = 'main' else id = p_wallet_id end)
+  for no key update;
+  if not found then raise exception 'no_wallet'; end if;
 
   select * into v_card from card_feed where id = p_card_id;
   if not found                          then raise exception 'card_not_found'; end if;

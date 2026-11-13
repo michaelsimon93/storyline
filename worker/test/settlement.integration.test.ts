@@ -10,6 +10,8 @@ import { freshDb } from "./helpers/testDb.js";
 const U = "a5000000-0000-0000-0000-0000000000f1";
 const CARD_1 = "a5000000-0000-0000-0000-0000000000c1";
 const CARD_2 = "a5000000-0000-0000-0000-0000000000c2";
+const CARD_3 = "a5000000-0000-0000-0000-0000000000c3";
+const CARD_4 = "a5000000-0000-0000-0000-0000000000c4";
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
 
 let db: Db | null = null;
@@ -29,6 +31,16 @@ before(async () => {
     insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb) values
       ('${CARD_1}', storyline_today(), 1, 'a5000000-0000-0000-0000-0000000000e1', 'player', 'a5000000-0000-0000-0000-0000000000b1', 'S1', 'a'),
       ('${CARD_2}', storyline_today(), 2, 'a5000000-0000-0000-0000-0000000000e1', 'player', 'a5000000-0000-0000-0000-0000000000b2', 'S2', 'b');
+    insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, kalshi_status, prices_updated_at) values
+      ('S3','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAREB','P1: 8+','a5000000-0000-0000-0000-0000000000b1','rebounds',8,40,61,'active',now()),
+      ('S4','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAREB','P2: 8+','a5000000-0000-0000-0000-0000000000b2','rebounds',8,40,61,'active',now());
+    insert into players (id, league, full_name, team_id, kalshi_player_id) values
+      ('a5000000-0000-0000-0000-0000000000b3','nba','P3',2,'k3'), ('a5000000-0000-0000-0000-0000000000b4','nba','P4',2,'k4');
+    update markets set player_id = 'a5000000-0000-0000-0000-0000000000b3' where ticker = 'S3';
+    update markets set player_id = 'a5000000-0000-0000-0000-0000000000b4' where ticker = 'S4';
+    insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb) values
+      ('${CARD_3}', storyline_today(), 3, 'a5000000-0000-0000-0000-0000000000e1', 'player', 'a5000000-0000-0000-0000-0000000000b3', 'S3', 'c'),
+      ('${CARD_4}', storyline_today(), 4, 'a5000000-0000-0000-0000-0000000000e1', 'player', 'a5000000-0000-0000-0000-0000000000b4', 'S4', 'd');
     insert into auth.users (id) values ('${U}');`);
   await inTx(async (c) => { await c.query(`select create_profile('Settler')`); }, true);
 });
@@ -55,11 +67,13 @@ async function inTx<T>(fn: (c: pg.PoolClient) => Promise<T>, asUser = false, hol
   }
 }
 
-async function waitForLockWait(timeoutMs = 3_000): Promise<boolean> {
+/** Resolves true once a backend whose query matches `pattern` is blocked on a lock. */
+async function waitForLockWait(pattern = "%", timeoutMs = 3_000): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const { rows } = await db!.query(
-      `select count(*)::int n from pg_stat_activity where wait_event_type = 'Lock' and datname = current_database()`);
+      `select count(*)::int n from pg_stat_activity
+       where wait_event_type = 'Lock' and datname = current_database() and query ilike $1`, [pattern]);
     if (rows[0].n > 0) return true;
     await new Promise((r) => setTimeout(r, 20));
   }
@@ -83,7 +97,7 @@ test("two settlement runs at the same moment pay exactly once", { skip }, async 
   await aDone;
   const b = inTx((c) => c.query<{ n: number }>(`select settle_market('S1') n`));
   const settled = Promise.allSettled([a, b]);
-  const blocked = await waitForLockWait();
+  const blocked = await waitForLockWait("%settle_market%");
   release.open();
   const [ra, rb] = await settled;
 
@@ -114,7 +128,7 @@ test("a pick racing settlement is never left open on a resolved market", { skip 
     return c.query<{ n: number }>(`select settle_market('S2') n`);
   });
   const settled = Promise.allSettled([pick, worker]);
-  const workerWaited = await waitForLockWait();
+  const workerWaited = await waitForLockWait("%update markets%");
   releasePick.open();
   const [rp, rw] = await settled;
 
@@ -125,4 +139,32 @@ test("a pick racing settlement is never left open on a resolved market", { skip 
     select count(*)::int open from picks p join markets m on m.ticker = p.market_ticker
     where p.status = 'open' and m.result is not null`);
   assert.equal(r.open, 0, "no open picks on a resolved market");
+});
+
+test("no deadlock when settlement and a pick touch the same wallet and market", { skip }, async () => {
+  // Review finding (PR A): the worker records results for a game's markets, then settles.
+  // Meanwhile the user taps a card on one of those markets. If place_pick held the wallet
+  // and waited on the market while settlement held the market and needed the wallet
+  // (ledger entries reference wallets), Postgres would kill one of them as a deadlock.
+  await inTx((c) => c.query(`select place_pick('${CARD_3}', 'yes')`), true);   // open pick on S3
+
+  const resume = gate();
+  let resultsWritten!: () => void;
+  const written = new Promise<void>((r) => (resultsWritten = r));
+  const worker = inTx(async (c) => {
+    await c.query(`update markets set result = 'yes' where ticker in ('S3', 'S4')`);
+    resultsWritten();
+    await resume.p;                                   // pause holding both market rows
+    return c.query<{ n: number }>(`select settle_market('S3') n`);
+  });
+  await written;
+  const pick = inTx((c) => c.query(`select place_pick('${CARD_4}', 'yes')`), true);  // waits on S4
+  const settled = Promise.allSettled([worker, pick]);
+  assert.ok(await waitForLockWait("%place_pick%"), "the pick waits for the result being written");
+  resume.open();
+  const [rw, rp] = await settled;
+
+  assert.equal(rw.status, "fulfilled", `settlement must not be a deadlock victim: ${rw.status === "rejected" ? rw.reason : ""}`);
+  assert.equal(rp.status, "rejected", "a pick on a market that just settled is refused");
+  assert.match(String((rp as PromiseRejectedResult).reason), /card_not_open:settled/, "refused as settled, not as a deadlock");
 });
