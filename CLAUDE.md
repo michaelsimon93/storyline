@@ -44,6 +44,7 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 2. **`test-adversary`**: tries to break the change by adding failing tests. Only touches test files.
 3. **Human review** of the "Risks & where to look" spots. The human decides; agents advise.
 
+### Schema and code rules
 - **Migrations are frozen once deployed** (listed in `supabase/migrations/DEPLOYED`). Change the schema with a new migration; CI enforces this.
 - New tables and functions are locked down by default. Grant access deliberately, and add a "can't do it" test (ADR-016).
 - **No hard-coded tunables.** Anything we might want to adjust (sizes, thresholds, money amounts, intervals) is an `app_config` row with a type and range, read via `config_int()` in SQL or `loadConfig()` in the worker. No defaults in code (ADR-018).
