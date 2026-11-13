@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
@@ -22,14 +22,37 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
+      - name: Deployed migrations are frozen
+        run: bash scripts/check-migrations.test.sh && bash scripts/check-migrations.sh
       - name: Run migration + scenario tests
+        run: bash supabase/tests/run.sh
+
+  real-supabase:
+    # Same scenario tests, but against a real local Supabase stack, so differences
+    # between our stand-ins and Supabase (auth, default privileges) can't hide bugs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start Supabase (database + auth only)
+        run: supabase start -x studio,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,postgres-meta
+      - name: Run scenario tests against real Supabase
+        env:
+          REAL_SUPABASE: "1"
+          PGHOST: 127.0.0.1
+          PGPORT: "54322"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
         run: bash supabase/tests/run.sh
 
   worker:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]

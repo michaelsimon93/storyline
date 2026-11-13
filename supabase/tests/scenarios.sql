@@ -18,6 +18,16 @@ create function t_eq(label text, got anyelement, want anyelement) returns text l
 $$;
 create function as_user(uid text) returns void language sql as $$
   select set_config('request.jwt.claim.sub', uid, false) $$;
+grant execute on function t_err(text,text,text), t_eq(text,anyelement,anyelement), as_user(text) to public;
+
+-- ---------------------------------------------------------------- slate day (3am ET rollover, DST-safe)
+select t_eq('2:59am ET is still yesterday', storyline_day('2026-11-14 07:59:00+00'), '2026-11-13'::date);
+select t_eq('3:00am ET rolls over',          storyline_day('2026-11-14 08:00:00+00'), '2026-11-14'::date);
+select t_eq('DST spring-forward: 1:59am EST', storyline_day('2026-03-08 06:59:00+00'), '2026-03-07'::date);
+select t_eq('DST spring-forward: 3:00am EDT', storyline_day('2026-03-08 07:00:00+00'), '2026-03-08'::date);
+select t_eq('DST fall-back: 2:30am EST',     storyline_day('2026-11-01 07:30:00+00'), '2026-10-31'::date);
+select t_eq('DST fall-back: 3:00am EST',     storyline_day('2026-11-01 08:00:00+00'), '2026-11-01'::date);
+select t_eq('storyline_today() = storyline_day(now())', storyline_today(), storyline_day(now()));
 
 -- ---------------------------------------------------------------- seed (worker)
 insert into teams (id,league,name,kalshi_abbr,espn_abbr,espn_id) values
@@ -149,3 +159,41 @@ update markets set result='scalar' where ticker='CURRY-5';
 select settle_market('CURRY-5') \g /dev/null
 select t_eq('void free trade: no cash', (select balance_cents from wallet_balances where user_id='11111111-1111-1111-1111-111111111111' and kind='main'), 13663);
 select t_eq('void free trade: credit reissued', (select count(*) from pick_credits where reason like 'reissued:%'), 1::bigint);
+
+-- ---------------------------------------------------------------- price snapshots (line movement)
+reset role;
+update markets set result = null where ticker in ('SAS-WIN', 'WEMBY-30');   -- two live markets, two settled
+select t_eq('first snapshot captures every live market', snapshot_prices(), 2);
+select t_eq('settled markets are not snapshotted',
+  (select count(*)::int from market_price_snapshots where ticker in ('KJ-8', 'CURRY-5')), 0);
+select t_eq('unchanged prices: no new snapshots', snapshot_prices(), 0);
+update markets set yes_ask_cents = 61, prices_updated_at = now() where ticker = 'SAS-WIN';
+select t_eq('a price move is captured', snapshot_prices(), 1);
+select t_eq('history shows the move',
+  (select string_agg(yes_ask_cents::text, '->' order by captured_at) from market_price_snapshots where ticker = 'SAS-WIN'), '62->61');
+update market_price_snapshots set captured_at = captured_at - interval '20 minutes';
+select t_eq('unchanged but stale: re-snapshotted after the interval', snapshot_prices(), 2);
+set role authenticated; select as_user('11111111-1111-1111-1111-111111111111');
+select t_eq('users can read price history', (select count(*) > 0 from market_price_snapshots), true);
+select t_err('users cannot write price history',
+  $q$insert into market_price_snapshots (ticker, yes_ask_cents) values ('SAS-WIN', 1)$q$, 'permission denied%');
+select t_err('users cannot trigger snapshots', $q$select snapshot_prices()$q$, 'permission denied%');
+reset role;
+
+-- ---------------------------------------------------------------- permission lockdown
+-- Supabase grants everything to anon/authenticated by default; these prove we revoked it.
+reset role; set role authenticated; select as_user('11111111-1111-1111-1111-111111111111');
+select t_err('user cannot run settle_market', $q$select settle_market('KJ-8')$q$, 'permission denied%');
+select t_err('user cannot insert a pick directly',
+  $q$insert into picks (user_id,wallet_id,card_id,market_ticker,side,price_cents,stake_cents,contracts)
+     select user_id,id,'00000000-0000-0000-0000-0000000000c1','WEMBY-30','yes',1,500,500 from wallets limit 1$q$, 'permission denied%');
+select t_err('user cannot change prices', $q$update markets set yes_ask_cents = 1$q$, 'permission denied%');
+select t_err('user cannot delete ledger rows', $q$delete from ledger_entries$q$, 'permission denied%');
+select t_err('user cannot grant themselves credits',
+  $q$insert into pick_credits (wallet_id,amount_cents,reason) select id,100000,'x' from wallets limit 1$q$, 'permission denied%');
+select t_err('user cannot read pipeline runs', $q$select * from pipeline_runs$q$, 'permission denied%');
+reset role; set role anon;
+select t_err('signed-out visitor cannot read cards', $q$select * from cards$q$, 'permission denied%');
+select t_err('signed-out visitor cannot place picks',
+  $q$select place_pick('00000000-0000-0000-0000-0000000000c1','yes')$q$, 'permission denied%');
+reset role;

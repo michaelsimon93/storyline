@@ -33,10 +33,16 @@ create type card_state    as enum ('open', 'out', 'locked', 'live', 'settled');
 -- -----------------------------------------------------------------------------
 -- "Today" for Storyline: the slate day rolls over at 03:00 America/New_York.
 -- -----------------------------------------------------------------------------
-create or replace function storyline_today() returns date
-language sql stable as $$
-  select ((now() at time zone 'America/New_York') - interval '3 hours')::date
+-- The ONE definition of this rule. The worker and app ask the database rather
+-- than re-implementing it, so the rule can't drift between languages.
+-- Wall-clock arithmetic in America/New_York, so DST transitions are handled.
+create or replace function storyline_day(ts timestamptz) returns date
+language sql immutable as $$
+  select ((ts at time zone 'America/New_York') - interval '3 hours')::date
 $$;
+
+create or replace function storyline_today() returns date
+language sql stable as $$ select storyline_day(now()) $$;
 
 -- =============================================================================
 -- REFERENCE DATA (written by the worker only)
@@ -112,6 +118,44 @@ create table markets (
   check (kind <> 'team_stat'   or (team_id   is not null and stat is not null))
 );
 create index markets_ladder_idx on markets (game_id, player_id, stat);
+
+-- Price history, for line-movement storylines ("38% → 61% since the injury news")
+-- and for checking whether curated markets are the ones that move.
+create table market_price_snapshots (
+  ticker         text not null references markets(ticker) on delete cascade,
+  captured_at    timestamptz not null default now(),
+  yes_bid_cents  smallint,
+  yes_ask_cents  smallint,
+  no_bid_cents   smallint,
+  no_ask_cents   smallint,
+  volume         integer,
+  primary key (ticker, captured_at)
+);
+
+-- Snapshot every market whose price changed since its last snapshot, or whose
+-- last snapshot is older than p_min_interval. Called by ingest and the price poller.
+-- Returns the number of snapshots written.
+create or replace function snapshot_prices(p_min_interval interval default interval '15 minutes')
+returns integer
+language sql security definer set search_path = public as $$
+  with latest as (
+    select distinct on (ticker) ticker, captured_at, yes_bid_cents, yes_ask_cents, no_bid_cents, no_ask_cents
+    from market_price_snapshots
+    order by ticker, captured_at desc
+  ), ins as (
+    insert into market_price_snapshots (ticker, yes_bid_cents, yes_ask_cents, no_bid_cents, no_ask_cents, volume)
+    select m.ticker, m.yes_bid_cents, m.yes_ask_cents, m.no_bid_cents, m.no_ask_cents, m.volume
+    from markets m
+    left join latest l on l.ticker = m.ticker
+    where m.result is null
+      and (l.ticker is null
+           or l.captured_at < now() - p_min_interval
+           or (l.yes_bid_cents, l.yes_ask_cents, l.no_bid_cents, l.no_ask_cents)
+              is distinct from (m.yes_bid_cents, m.yes_ask_cents, m.no_bid_cents, m.no_ask_cents))
+    returning 1
+  )
+  select count(*)::int from ins
+$$;
 
 -- =============================================================================
 -- CURATION
@@ -446,12 +490,27 @@ begin
   return v_count;
 end $$;
 
-revoke all on function place_pick(uuid, pick_side, smallint, uuid) from public;
-revoke all on function create_profile(text, uuid)                  from public;
-revoke all on function settle_market(text)                          from public;
+
+-- =============================================================================
+-- PRIVILEGE LOCKDOWN
+-- Supabase grants ALL on every table, function and sequence in public to anon and
+-- authenticated by default. RLS alone would then be the only barrier, and an
+-- UPDATE/DELETE blocked by RLS "succeeds" silently on zero rows. So: revoke
+-- everything, then grant back exactly what the app needs. Defense in depth.
+-- =============================================================================
+revoke all on all tables    in schema public from anon, authenticated;
+revoke all on all sequences in schema public from anon, authenticated;
+revoke all on all functions in schema public from public, anon, authenticated;
+alter default privileges in schema public revoke all on tables    from anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
+alter default privileges in schema public revoke all on functions from public, anon, authenticated;
+
+-- The app's entire write surface: two functions. Signed-out visitors get nothing.
 grant execute on function place_pick(uuid, pick_side, smallint, uuid) to authenticated;
 grant execute on function create_profile(text, uuid)                  to authenticated;
+grant execute on function storyline_today()                           to authenticated;
 grant execute on function settle_market(text)                          to service_role;
+grant execute on function snapshot_prices(interval)                    to service_role;
 
 -- =============================================================================
 -- ROW LEVEL SECURITY
@@ -461,6 +520,7 @@ alter table teams          enable row level security;
 alter table players        enable row level security;
 alter table games          enable row level security;
 alter table markets        enable row level security;
+alter table market_price_snapshots enable row level security;
 alter table pipeline_runs  enable row level security;   -- no policies: internal only
 alter table cards          enable row level security;
 alter table profiles       enable row level security;
@@ -474,6 +534,7 @@ create policy read_teams   on teams   for select to authenticated using (true);
 create policy read_players on players for select to authenticated using (true);
 create policy read_games   on games   for select to authenticated using (true);
 create policy read_markets on markets for select to authenticated using (true);
+create policy read_snapshots on market_price_snapshots for select to authenticated using (true);
 create policy read_cards   on cards   for select to authenticated using (true);
 
 -- Display names are public (leaderboard, follows). Only your own is editable.
@@ -491,7 +552,7 @@ create policy read_own_ledger  on ledger_entries for select to authenticated usi
 
 create policy insert_own_events on events for insert to authenticated with check (user_id = auth.uid());
 
-grant select on teams, players, games, markets, cards, profiles, wallets,
+grant select on teams, players, games, markets, market_price_snapshots, cards, profiles, wallets,
                 pick_credits, picks, ledger_entries to authenticated;
 grant select on card_feed, wallet_balances to authenticated;
 grant update (display_name) on profiles to authenticated;
