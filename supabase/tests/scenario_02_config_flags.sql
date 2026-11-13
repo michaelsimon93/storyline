@@ -13,12 +13,27 @@ select t_err('config: int setting rejects text',
 select t_err('config: int setting rejects out-of-range',
   $q$update app_config set value = '0' where key = 'cards_per_day'$q$, '%invalid config%');
 select t_err('config: reading an unknown key fails loudly', $q$select config_int('no_such_key')$q$, '%unknown config%');
+-- Regressions (review PR #2)
+select t_err('config: int setting rejects a decimal',
+  $q$update app_config set value = '10.5' where key = 'cards_per_day'$q$, '%invalid config%');
+select t_err('config: int setting must fit a 32-bit integer, even with no max',
+  $q$update app_config set max_value = null, value = '3000000000' where key = 'signup_grant_cents'$q$, '%invalid config%');
+select t_err('config: numeric settings must keep a min and max',
+  $q$update app_config set max_value = null where key = 'cards_per_day'$q$, '%invalid config%');
+select t_err('config: price band min must stay below max',
+  $q$update app_config set value = '80' where key = 'price_band_min'$q$, '%price_band_min%');
+select t_eq('config: max price age is configurable', config_int('max_price_age_seconds'), 120);
 
 -- ---------------------------------------------------------------- config: audit history
 update app_config set value = '12' where key = 'cards_per_day';
 select t_eq('config: every change is recorded with old -> new',
-  (select old_value::text || '->' || new_value::text from config_audit
+  (select (old_value->>'value') || '->' || (new_value->>'value') from config_audit
    where key = 'cards_per_day' order by id desc limit 1), '10->12');
+update app_config set is_public = true where key = 'cards_per_day';
+select t_eq('config: visibility changes are audited too (not just the value)',
+  (select (old_value->>'is_public') || '->' || (new_value->>'is_public') from config_audit
+   where key = 'cards_per_day' order by id desc limit 1), 'false->true');
+update app_config set is_public = false where key = 'cards_per_day';
 update app_config set value = '10' where key = 'cards_per_day';
 
 -- ---------------------------------------------------------------- config: money reads from config

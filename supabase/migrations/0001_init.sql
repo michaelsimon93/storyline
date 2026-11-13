@@ -94,8 +94,12 @@ begin
     when 'string' then t = 'string'
   end;
   if ok and new.value_type in ('int', 'number') then
-    ok := (new.min_value is null or (new.value)::numeric >= new.min_value)
-      and (new.max_value is null or (new.value)::numeric <= new.max_value);
+    -- Numeric settings always keep explicit bounds (no "remove the max, then set anything").
+    ok := new.min_value is not null and new.max_value is not null
+      and (new.value)::numeric between new.min_value and new.max_value;
+  end if;
+  if ok and new.value_type = 'int' then
+    ok := (new.value)::numeric between -2147483648 and 2147483647;  -- must fit config_int()
   end if;
   if not ok then
     raise exception 'invalid config %: % (expected % in [%, %])',
@@ -107,20 +111,31 @@ end $$;
 create trigger app_config_validate before insert or update on app_config
   for each row execute function validate_app_config();
 
+-- Rules that span settings live here too, so the database stays the single source.
+create or replace function validate_app_config_pairs() returns trigger
+language plpgsql as $$
+declare lo numeric; hi numeric;
+begin
+  select (value)::numeric into lo from app_config where key = 'price_band_min';
+  select (value)::numeric into hi from app_config where key = 'price_band_max';
+  if lo is not null and hi is not null and lo >= hi then
+    raise exception 'invalid config: price_band_min (%) must be below price_band_max (%)', lo, hi;
+  end if;
+  return null;
+end $$;
+create constraint trigger app_config_pairs after insert or update on app_config
+  for each row execute function validate_app_config_pairs();
+
 create or replace function audit_config_change() returns trigger
 language plpgsql as $$
 begin
-  if tg_table_name = 'app_config' then
-    insert into config_audit (target, key, old_value, new_value)
-    values ('config', coalesce(new.key, old.key),
-            case when tg_op <> 'INSERT' then old.value end,
-            case when tg_op <> 'DELETE' then new.value end);
-  else
-    insert into config_audit (target, key, old_value, new_value)
-    values ('flag', coalesce(new.key, old.key),
-            case when tg_op <> 'INSERT' then to_jsonb(old) - 'updated_at' end,
-            case when tg_op <> 'DELETE' then to_jsonb(new) - 'updated_at' end);
-  end if;
+  -- Whole row (minus the timestamp), so changes to visibility, bounds or rollout are
+  -- recorded too, not just the value.
+  insert into config_audit (target, key, old_value, new_value)
+  values (case tg_table_name when 'app_config' then 'config' else 'flag' end,
+          coalesce(new.key, old.key),
+          case when tg_op <> 'INSERT' then to_jsonb(old) - 'updated_at' end,
+          case when tg_op <> 'DELETE' then to_jsonb(new) - 'updated_at' end);
   return null;
 end $$;
 create trigger app_config_audit after insert or update or delete on app_config
@@ -172,6 +187,7 @@ insert into app_config (key, value, value_type, min_value, max_value, is_public,
   ('signup_grant_cents',        '10000',   'int',    0,   1000000, true,  'Starting bankroll'),
   ('daily_grant_cents',         '1000',    'int',    0,   100000,  true,  'Daily claimable grant (v1.1)'),
   ('snapshot_interval_minutes', '15',      'int',    1,   240,     false, 'Re-snapshot unchanged prices after this long'),
+  ('max_price_age_seconds',     '120',     'int',    10,  3600,    false, 'Reject picks if the cached price is older than this'),
   ('curation_time_et',          '"10:00"', 'string', null, null,   false, 'When daily curation runs (ET)');
 
 -- =============================================================================
@@ -339,6 +355,25 @@ create table cards (
   check (subject <> 'team'   or (team_id is not null and player_id is null)),
   check (subject <> 'game'   or (team_id is null     and player_id is null))
 );
+-- Team at publish has one source: the player's team when the card is written.
+-- Filled in if missing; a contradicting value is rejected (ADR-019).
+create or replace function set_card_team() returns trigger
+language plpgsql as $$
+declare v_team smallint;
+begin
+  if new.subject = 'player' then
+    select team_id into v_team from players where id = new.player_id;
+    if new.team_id is null then
+      new.team_id := v_team;
+    elsif v_team is not null and new.team_id <> v_team then
+      raise exception 'team_mismatch: card says team %, player % is on team %', new.team_id, new.player_id, v_team;
+    end if;
+  end if;
+  return new;
+end $$;
+create trigger cards_set_team before insert or update of player_id, team_id on cards
+  for each row execute function set_card_team();
+
 create index cards_slate_idx on cards (slate_date, sort_key);
 -- One card per player per game, one per team per game (any number of game cards).
 create unique index cards_one_per_player on cards (game_id, player_id) where subject = 'player';
@@ -479,12 +514,13 @@ with seen as (
   select distinct user_id, card_id from events
   where event = 'card_view' and user_id is not null and card_id is not null
 ), picked as (
-  select distinct on (user_id, card_id) user_id, card_id, status from picks
+  -- One row per user x card even with several wallets (main + contests).
+  select user_id, card_id, bool_or(status = 'won') as won from picks group by user_id, card_id
 ), user_cards as (
   select coalesce(s.user_id, p.user_id) as user_id,
          coalesce(s.card_id, p.card_id) as card_id,
          p.card_id is not null          as picked,
-         p.status = 'won'               as won
+         coalesce(p.won, false)         as won
   from seen s full join picked p on p.user_id = s.user_id and p.card_id = s.card_id
 )
 select uc.user_id, d.dimension, d.value,
@@ -572,7 +608,7 @@ begin
   if v_card.slate_date <> storyline_today() then raise exception 'card_not_today'; end if;
   if v_card.state <> 'open'             then raise exception 'card_not_open:%', v_card.state; end if;
   if v_card.prices_updated_at is null
-     or v_card.prices_updated_at < now() - interval '2 minutes'
+     or v_card.prices_updated_at < now() - make_interval(secs => config_int('max_price_age_seconds'))
                                         then raise exception 'prices_stale'; end if;
 
   v_price := case p_side when 'yes' then v_card.yes_ask_cents else v_card.no_ask_cents end;

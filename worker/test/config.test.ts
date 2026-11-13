@@ -12,6 +12,7 @@ const valid = [
   { key: "signup_grant_cents", value: 10000 },
   { key: "daily_grant_cents", value: 1000 },
   { key: "snapshot_interval_minutes", value: 15 },
+  { key: "max_price_age_seconds", value: 120 },
   { key: "curation_time_et", value: "10:00" },
 ];
 const without = (k: string) => valid.filter((r) => r.key !== k);
@@ -38,8 +39,4 @@ test("reports every problem at once, not just the first", () => {
   const bad = withValue("cards_per_day", "ten").filter((r) => r.key !== "max_spread_cents");
   assert.throws(() => parseConfig(bad), (e: unknown) =>
     e instanceof Error && /cards_per_day/.test(e.message) && /max_spread_cents/.test(e.message));
-});
-
-test("cross-field rule: price band min must be below max", () => {
-  assert.throws(() => parseConfig(withValue("price_band_min", 80)), /must be below price_band_max/);
 });
