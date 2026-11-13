@@ -24,6 +24,15 @@ select t_err('config: price band min must stay below max',
   $q$update app_config set value = '80' where key = 'price_band_min'$q$, '%price_band_min%');
 select t_eq('config: max price age is configurable', config_int('max_price_age_seconds'), 120);
 select t_eq('config: ingest schedule is configurable (cron, ET)', config_value('ingest_schedule_et') #>> '{}', '0 8-22/2 * * *');
+select t_err('config: a schedule with a seconds field is rejected (would run every second)',
+  $q$update app_config set value = '"* * * * * *"' where key = 'ingest_schedule_et'$q$, '%5-field cron%');
+select t_err('config: a schedule that is not cron is rejected',
+  $q$update app_config set value = '"every morning"' where key = 'ingest_schedule_et'$q$, '%5-field cron%');
+select t_err('config: a schedule must stay a string',
+  $q$update app_config set value = '8', value_type = 'int', min_value = 0, max_value = 23 where key = 'ingest_schedule_et'$q$, '%5-field cron%');
+update app_config set value = '"30 9 * * 1-5"' where key = 'ingest_schedule_et';
+select t_eq('config: a valid schedule change is accepted', config_value('ingest_schedule_et') #>> '{}', '30 9 * * 1-5');
+update app_config set value = '"0 8-22/2 * * *"' where key = 'ingest_schedule_et';
 
 -- ---------------------------------------------------------------- config: audit history
 update app_config set value = '12' where key = 'cards_per_day';

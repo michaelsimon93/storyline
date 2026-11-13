@@ -1,20 +1,26 @@
 // Worker entry point.
 //   npm start                        always-on: run every job on its schedule (STO-8)
 //   npm run job -- <name>            run one job now, under the same lock + alerting
-//   npm run ingest [-- YYYY-MM-DD]   one-off ingest for a specific date (bypasses the scheduler)
+//   npm run ingest [-- YYYY-MM-DD]   one-off ingest for a specific date, under the ingest lock
 
 import { connect } from "./lib/db.js";
 import { loadConfig } from "./lib/config.js";
 import { webhookAlert } from "./lib/alert.js";
 import { ingest } from "./jobs/ingest.js";
 import { scheduledJobs } from "./jobs/index.js";
-import { runJob, startScheduler } from "./scheduler.js";
+import { runJob, startScheduler, type RunOutcome } from "./scheduler.js";
 
 const [command, arg] = process.argv.slice(2);
+const alert = webhookAlert();
+
+/** One-off commands exit non-zero unless the job actually ran and succeeded. */
+function report(outcome: RunOutcome) {
+  console.log(JSON.stringify(outcome, null, 2));
+  if (outcome.status !== "ok") process.exitCode = 1;
+}
 
 async function main() {
   const db = connect();
-  const alert = webhookAlert();
 
   switch (command) {
     case "run": {
@@ -25,7 +31,10 @@ async function main() {
       }
       // Railway sends SIGTERM on deploy: finish running jobs, then exit. The advisory locks
       // make an overlapping new instance skip any job this one is still running.
+      let stopping = false;
       const shutdown = async (signal: string) => {
+        if (stopping) return;            // a second signal must not end the pool twice
+        stopping = true;
         console.log(`${signal}: stopping scheduler, waiting for running jobs`);
         await scheduler.stop();
         await db.end();
@@ -39,13 +48,12 @@ async function main() {
       const config = await loadConfig(db);
       const entry = scheduledJobs(config).find((s) => s.job.name === arg);
       if (!entry) throw new Error(`Unknown job: ${arg}`);
-      console.log(JSON.stringify(await runJob(db, entry.job, alert), null, 2));
+      report(await runJob(db, entry.job, alert));
       break;
     }
     case "ingest": {
-      const started = Date.now();
-      const summary = await ingest(db, arg);
-      console.log(JSON.stringify({ ...summary, seconds: (Date.now() - started) / 1000 }, null, 2));
+      // Same lock as the scheduled ingest, so a manual run can't overlap a scheduled one.
+      report(await runJob(db, { name: "ingest", run: (d) => ingest(d, arg) }, alert));
       break;
     }
     default:
@@ -54,7 +62,9 @@ async function main() {
   await db.end();
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
+  // A worker that can't start (bad config, database down) must not crash-loop silently.
+  if (command === "run") await alert(`worker failed to start: ${err instanceof Error ? err.message : err}`);
   process.exit(1);
 });
