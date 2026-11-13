@@ -44,7 +44,7 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 - **Refactors go in their own PR**, before the feature that needs them.
 - **Every commit passes tests on its own.**
 - Stack PRs only when one truly depends on another; keep stacks to 2–3 and merge promptly.
-- **Each schema change gets its own new migration file** (`supabase/migrations/NNNN_name.sql`), even before deploy.
+- **Each schema change gets its own new migration file**, named with a UTC timestamp (`supabase/migrations/YYYYMMDDHHMMSS_name.sql`), even before deploy. Timestamps (not 0003, 0004…) keep parallel branches from colliding.
 - Fill in the PR template, especially **Risks & where to look**, which tells the human reviewer what to read closely.
 - Merge stacked PRs with a merge commit (not squash) so the PRs above them don't conflict.
 

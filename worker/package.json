@@ -6,12 +6,15 @@
     "node": ">=20"
   },
   "scripts": {
+    "start": "tsx src/cli.ts run",
+    "job": "tsx src/cli.ts job",
     "ingest": "tsx src/cli.ts ingest",
     "test": "node --import tsx --test $(ls test/*.test.ts | grep -v '\\.integration\\.')",
     "typecheck": "tsc --noEmit",
     "test:integration": "node --import tsx --test --test-concurrency=1 \"test/*.integration.test.ts\""
   },
   "dependencies": {
+    "croner": "^11.0.0",
     "pg": "^8.23.1"
   },
   "devDependencies": {
