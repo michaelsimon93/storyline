@@ -262,8 +262,8 @@ create table market_price_snapshots (
   primary key (ticker, captured_at)
 );
 
--- Snapshot every market whose price changed since its last snapshot, or whose
--- last snapshot is older than p_min_interval. Called by ingest and the price poller.
+-- Snapshot every freshly observed market whose price changed since its last
+-- snapshot, or whose last snapshot is older than p_min_interval. Called by ingest and the price poller.
 -- Returns the number of snapshots written.
 create or replace function snapshot_prices(p_min_interval interval default null)
 returns integer
@@ -278,6 +278,10 @@ language sql security definer set search_path = public as $$
     from markets m
     left join latest l on l.ticker = m.ticker
     where m.result is null
+      and m.prices_updated_at is not null
+      -- Only markets with a NEW observation since their last snapshot; markets nobody
+      -- is polling anymore must not be re-snapshotted forever (review fix, PR #1).
+      and (l.ticker is null or m.prices_updated_at > l.captured_at)
       and (l.ticker is null
            or l.captured_at < now() - coalesce(p_min_interval,
                                                 make_interval(mins => config_int('snapshot_interval_minutes')))
@@ -683,6 +687,7 @@ alter default privileges in schema public revoke all on functions from public, a
 grant execute on function place_pick(uuid, pick_side, smallint, uuid) to authenticated;
 grant execute on function create_profile(text, uuid)                  to authenticated;
 grant execute on function storyline_today()                           to authenticated;
+grant execute on function storyline_day(timestamptz)                  to authenticated;  -- storyline_today() calls it
 grant execute on function my_flags()                                  to authenticated;
 grant execute on function settle_market(text)                          to service_role;
 grant execute on function snapshot_prices(interval)                    to service_role;
