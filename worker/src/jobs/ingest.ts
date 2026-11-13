@@ -19,16 +19,21 @@ export interface IngestSummary {
   markets: Record<string, number>;
   players: { total: number; exact: number; fuzzy: number; unmatched: string[]; ambiguous: string[] };
   outOrDoubtful: string[];
+  snapshots: number;
 }
 
-/** The Storyline day: ET calendar date, rolling over at 03:00 ET (matches storyline_today()). */
-export function storylineToday(now = new Date()): string {
-  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-  et.setHours(et.getHours() - 3);
-  return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, "0")}-${String(et.getDate()).padStart(2, "0")}`;
+/**
+ * The Storyline day, from the database's storyline_today() (3am ET rollover).
+ * Deliberately not re-implemented here: one definition, no drift (ADR-013 follow-up).
+ */
+export async function resolveSlateDate(db: Db, explicit?: string): Promise<string> {
+  if (explicit) return explicit;
+  const { rows } = await db.query<{ d: string }>(`select storyline_today()::text as d`);
+  return rows[0]!.d;
 }
 
-export async function ingest(db: Db, slateDate = storylineToday()): Promise<IngestSummary> {
+export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
+  const slateDate = await resolveSlateDate(db, date);
   return withRun(db, "ingest", slateDate, async () => {
     const dateCode = kalshiDateCode(slateDate);
 
@@ -37,7 +42,7 @@ export async function ingest(db: Db, slateDate = storylineToday()): Promise<Inge
     const summary: IngestSummary = {
       slateDate, games: games.length, markets: {},
       players: { total: 0, exact: 0, fuzzy: 0, unmatched: [], ambiguous: [] },
-      outOrDoubtful: [],
+      outOrDoubtful: [], snapshots: 0,
     };
     if (games.length === 0) return summary;
 
@@ -179,6 +184,10 @@ export async function ingest(db: Db, slateDate = storylineToday()): Promise<Inge
              prices_updated_at = now(), updated_at = now()`,
       [JSON.stringify(marketRows)],
     );
+
+    // Price history: snapshot anything that moved (rule lives in snapshot_prices()).
+    const snap = await db.query<{ n: number }>(`select snapshot_prices() as n`);
+    summary.snapshots = snap.rows[0]!.n;
 
     return summary;
   });

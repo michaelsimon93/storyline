@@ -25,11 +25,20 @@ export async function freshDb(name: string): Promise<Db | null> {
   const url = adminUrl.replace(/^(\w+:\/\/[^/]*\/)([^?]*)/, `$1${name}`);
   const setup = new pg.Client({ connectionString: url });
   await setup.connect();
-  await setup.query(readFileSync(join(SUPABASE, "tests", "supabase_stubs.sql"), "utf8"));
-  for (const f of readdirSync(join(SUPABASE, "migrations")).sort()) {
-    await setup.query(readFileSync(join(SUPABASE, "migrations", f), "utf8"));
+  try {
+    await setup.query(readFileSync(join(SUPABASE, "tests", "supabase_stubs.sql"), "utf8"));
+    for (const f of migrationFiles()) {
+      await setup.query(readFileSync(join(SUPABASE, "migrations", f), "utf8"));
+    }
+  } finally {
+    // Always close: a failed setup must fail the test, not hang the process.
+    await setup.end();
   }
-  await setup.end();
 
   return connect(url);
+}
+
+/** Only *.sql files, in order. The migrations folder also holds the DEPLOYED manifest. */
+export function migrationFiles(): string[] {
+  return readdirSync(join(SUPABASE, "migrations")).filter((f) => f.endsWith(".sql")).sort();
 }

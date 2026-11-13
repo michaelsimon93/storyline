@@ -1,6 +1,6 @@
 # ADR-002: Most-even line, locked at publish; prices stay live
 
-**Status:** Accepted · **Date:** 2026-11-13
+**Status:** Line-selection rule superseded by [ADR-014](014-story-chooses-the-line.md); locking still applies · **Date:** 2026-11-13
 
 ## Context
 Each player/stat has a ladder of Yes/No markets. A card shows one line. The product should feel like a prediction market, not a sportsbook.

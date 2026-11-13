@@ -3,7 +3,7 @@
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { ingest } from "../src/jobs/ingest.js";
+import { ingest, resolveSlateDate } from "../src/jobs/ingest.js";
 import type { Db } from "../src/lib/db.js";
 import { freshDb } from "./helpers/testDb.js";
 import { installFetch, slateRoutes } from "./helpers/mockFetch.js";
@@ -30,6 +30,7 @@ test("ingests the MIL @ ORL slate", { skip }, async () => {
   assert.equal(s.players.unmatched.length, 0, `unmatched: ${s.players.unmatched}`);
   assert.equal(s.players.exact + s.players.fuzzy, s.players.total);
   assert.ok(s.outOrDoubtful.some((x) => x.startsWith("Jalen Suggs")), "Suggs flagged as Out");
+  assert.equal(s.snapshots, 211, "first run snapshots every market");
 
   const { rows: [g] } = await db!.query(`
     select g.kalshi_game_key, g.tip_off_at, a.kalshi_abbr away, h.kalshi_abbr home, g.broadcasts
@@ -78,6 +79,8 @@ test("re-running is safe: no duplicates, prices refresh", { skip }, async () => 
     from markets where ticker = 'KXNBAPTS-26NOV13MILORL-ORLABLACK0-25'`);
   assert.equal(m.yes_ask_cents, 11, "price restored from source");
   assert.equal(m.fresh, true);
+  const { rows: [h] } = await db!.query(`select count(*)::int n from market_price_snapshots`);
+  assert.equal(h.n, 211, "unchanged prices on re-run add no snapshots");
 });
 
 test("every run is logged to pipeline_runs", { skip }, async () => {
@@ -93,4 +96,10 @@ test("a failed run is logged as failed, with the error", { skip }, async () => {
   const { rows: [r] } = await db!.query(`select status, error from pipeline_runs order by id desc limit 1`);
   assert.equal(r.status, "failed");
   assert.match(r.error, /HTTP 404/);
+});
+
+test("slate date comes from the database, not a JS re-implementation", { skip }, async () => {
+  const { rows: [r] } = await db!.query(`select storyline_today()::text d`);
+  assert.equal(await resolveSlateDate(db!), r.d);
+  assert.equal(await resolveSlateDate(db!, "2026-11-13"), "2026-11-13");
 });

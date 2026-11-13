@@ -66,7 +66,7 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 
 **Steps**
 1. **Gather:** today's games from ESPN, and every open prop market for those games from Kalshi.
-2. **Pick the line:** for each player + stat, choose the strike where the Yes and No prices are **closest to even** (minimize |yes_ask − no_ask|).
+2. **Candidate lines:** for each player + stat, keep every strike on the ladder priced within the **price band (default 25–75%)**. The story picks the line (step 6), not the price (ADR-014).
 3. **Filter:**
    - Bid/ask spread ≤ 5¢
    - Player matched to ESPN
@@ -74,7 +74,7 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
    - No starters-only rule: relevant bench players are eligible. Kalshi only lists props for rotation players (about 13 per game), so its own listings act as the "real role" filter.
 4. **Enrich:** for each candidate, attach ESPN context: last 5–10 games, home/away split, season series vs. opponent, teammate injuries, recent news.
 5. **Shortlist:** take the top ~30 candidates by liquidity and data completeness.
-6. **Curate and write (Claude API):** Claude chooses the final **N cards** (default **N = 10**, configurable) and writes a blurb for each, following these rules:
+6. **Curate and write (Claude API):** Claude chooses the final **N cards** (default **N = 10**, configurable). For each one it picks the storyline, then **the strike that best fits that storyline** from the in-band ladder, and writes a blurb that cites fact IDs. Rules:
    - At most 1 card per player
    - Spread across games and stat types
    - Favor the strongest storylines
@@ -83,13 +83,14 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 
 **Blurb rules**
 - ≤ 200 characters.
-- Must reference at least one concrete fact taken from the supplied context, such as a stat, streak, matchup, or injury. **No invented stats.**
+- **Every claim is grounded:** the model receives facts with IDs (stats *and* news: suspensions, injury returns, trades, matchups) and must cite the fact ID behind each claim. A validator rejects uncited claims. A number isn't required; "back from suspension" is a valid storyline (ADR-014).
 - Written about the player and the stat's storyline, not as betting advice. No "lock", "hammer", "smash".
 - Tone: punchy, fan-first, entertaining.
 
 **Acceptance criteria**
 - [ ] The pipeline publishes N cards by 11:00 ET on a normal game day without manual steps.
-- [ ] Every blurb is ≤ 200 characters and contains at least one number that appears in its source context.
+- [ ] Every blurb is ≤ 200 characters, and every claim cites a fact ID present in its source context.
+- [ ] Each card's line is within the price band at publish time.
 - [ ] No two cards share a player.
 - [ ] Each run stores its inputs (candidates + context) and Claude's outputs, so Michael's feedback can be traced to what the model saw.
 - [ ] On a day with no NBA games, the pipeline does nothing and the app shows "No games today."
@@ -300,7 +301,7 @@ The web app and the worker are one repo with shared TypeScript types (`Card`, `P
 - **Leaderboard (later):** scoring will combine winnings, streaks, referrals, and other factors. The exact formula is TBD.
 
 - **Consensus split (later):** "62% of Storyline users picked Yes" on each card. This comes from our own pick data, so it needs no new data source.
-- **Streaks (later):** a daily-engagement streak (proven at Units: 100+ day streaks). Calculated from `app_open` / `card_view` events and pick history.
+- **Streaks (later):** consecutive slate days with cards on which the user made **at least one pick**. Days without cards don't break a streak (ADR-015).
 - **Community submissions (later):** users suggest storylines or markets they want to see; accepted submissions earn rewards such as pick credits (free trades).
 - **Adjustable lines (later):** let users choose a different line or price on the ladder instead of only the most even one.
 - **Onboarding (with login):** a short explainer of how prediction markets work.

@@ -1,0 +1,4 @@
+# Migrations that have been applied to production. Once listed here, a migration
+# is frozen: CI fails if its contents change or it is deleted. Change the schema
+# with a NEW migration instead. Format: <sha256>  <filename>
+# (Empty until the first production deploy.)

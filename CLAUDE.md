@@ -16,7 +16,8 @@ A change isn't finished until it has tests and CI is green. No exceptions for "s
 Rules of thumb:
 - **Write the failing case first** for anything involving money, results, or matching.
 - **Bugs get a regression test** before the fix.
-- **Don't mock the database.** Use real Postgres; the stubs in `supabase/tests/supabase_stubs.sql` stand in for Supabase's auth layer.
+- **Don't mock the database.** Use real Postgres; the stubs in `supabase/tests/supabase_stubs.sql` stand in for Supabase's auth layer and mirror its default privileges. CI also runs the SQL tests against a real local Supabase.
+- **Concurrency claims need a concurrency test**, and the test must be shown to fail when the protection is removed.
 - Keep fixtures small: trimmed real responses, not synthetic guesses.
 
 ## Running tests
@@ -25,6 +26,12 @@ PGHOST=localhost PGUSER=postgres ./supabase/tests/run.sh          # schema
 cd worker && npm test                                             # unit
 cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run test:integration
 ```
+
+## Workflow
+- Never commit to `main`. Branch → PR → CI green → merge.
+- **Migrations are frozen once deployed** (listed in `supabase/migrations/DEPLOYED`). Change the schema with a new migration; CI enforces this.
+- New tables and functions are locked down by default. Grant access deliberately, and add a "can't do it" test (ADR-016).
+- Business rules live in exactly one place. The 3am-ET slate day is `storyline_day()` in SQL, and the worker asks the database.
 
 ## Other conventions
 - Money is integer cents. Prices are integer cents 1–99.
