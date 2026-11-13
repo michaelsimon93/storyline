@@ -36,3 +36,23 @@ export async function listMarkets(seriesTicker: string, status = "open"): Promis
   } while (cursor);
   return out;
 }
+
+// Kalshi accepts up to 100 tickers per request on GET /markets?tickers=...
+// (an API limit, not a tunable).
+const MAX_TICKERS_PER_REQUEST = 100;
+
+/**
+ * Specific markets by ticker, in any status. Unlike listMarkets(status: "open"), this also
+ * returns markets Kalshi has paused, closed or settled, which the poller needs to see.
+ */
+export async function getMarkets(tickers: string[]): Promise<KalshiMarket[]> {
+  const out: KalshiMarket[] = [];
+  for (let i = 0; i < tickers.length; i += MAX_TICKERS_PER_REQUEST) {
+    const batch = tickers.slice(i, i + MAX_TICKERS_PER_REQUEST);
+    await pace();
+    const qs = new URLSearchParams({ tickers: batch.join(","), limit: String(batch.length) });
+    const page = await fetchJson<{ markets: KalshiMarket[] }>(`${BASE}/markets?${qs}`);
+    out.push(...page.markets);
+  }
+  return out;
+}

@@ -170,6 +170,8 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
        from jsonb_to_recordset($1) as m(ticker text, game_id uuid, kind text, series text, title text, player_id uuid,
             team_id smallint, stat text, strike numeric, yes_bid smallint, yes_ask smallint, no_bid smallint,
             no_ask smallint, volume integer, status text, result text)
+       -- Ticker order, same as the price poller, so the two can't deadlock on market rows.
+       order by m.ticker
        on conflict (ticker) do update
          set yes_bid_cents = excluded.yes_bid_cents, yes_ask_cents = excluded.yes_ask_cents,
              no_bid_cents = excluded.no_bid_cents,   no_ask_cents = excluded.no_ask_cents,

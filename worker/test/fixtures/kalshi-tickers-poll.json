@@ -1,0 +1,59 @@
+{
+  "_note": "Derived from the recorded Nov 13 2026 KXNBAPTS/KXNBAGAME responses (same GET /markets shape). Kalshi rate-limited the dev workspace when recording, so: ORLABLACK0-25's prices moved (9c -> 51c yes bid) and volume rose and MILKKUZMA18-20 is set to status 'closed' to exercise the out-card path. Re-record from GET /markets?tickers=... when possible.",
+  "cursor": "",
+  "markets": [
+    {
+      "ticker": "KXNBAPTS-26NOV13MILORL-ORLABLACK0-25",
+      "event_ticker": "KXNBAPTS-26NOV13MILORL",
+      "title": "Anthony Black: 25+ points",
+      "status": "active",
+      "result": "",
+      "floor_strike": 24.5,
+      "strike_type": "greater",
+      "custom_strike": {
+        "basketball_player": "60bb439a-df6a-4fea-8312-4caa6a2c0fbe",
+        "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+      },
+      "yes_bid_dollars": "0.5100",
+      "yes_ask_dollars": "0.5300",
+      "no_bid_dollars": "0.4700",
+      "no_ask_dollars": "0.4900",
+      "volume_fp": "250.00"
+    },
+    {
+      "ticker": "KXNBAPTS-26NOV13MILORL-MILKKUZMA18-20",
+      "event_ticker": "KXNBAPTS-26NOV13MILORL",
+      "title": "Kyle Kuzma: 20+ points",
+      "status": "closed",
+      "result": "",
+      "floor_strike": 19.5,
+      "strike_type": "greater",
+      "custom_strike": {
+        "basketball_player": "29359ac2-6049-4cf0-a4da-d8b5cc354ad5",
+        "basketball_team": "5dc3fe01-79a4-4f2f-a953-d922ea4a6dd3"
+      },
+      "yes_bid_dollars": "0.0600",
+      "yes_ask_dollars": "0.1000",
+      "no_bid_dollars": "0.9000",
+      "no_ask_dollars": "0.9400",
+      "volume_fp": "0.00"
+    },
+    {
+      "ticker": "KXNBAGAME-26NOV13MILORL-ORL",
+      "event_ticker": "KXNBAGAME-26NOV13MILORL",
+      "title": "Orlando wins",
+      "status": "active",
+      "result": "",
+      "floor_strike": null,
+      "strike_type": "structured",
+      "custom_strike": {
+        "basketball_team": "00c3e69d-d9b9-4ac3-bf79-19707fe43637"
+      },
+      "yes_bid_dollars": "0.7700",
+      "yes_ask_dollars": "0.7800",
+      "no_bid_dollars": "0.2200",
+      "no_ask_dollars": "0.2300",
+      "volume_fp": "40132.98"
+    }
+  ]
+}

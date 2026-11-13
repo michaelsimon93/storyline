@@ -121,14 +121,30 @@ export function nextRunEt(pattern: string, from: Date): Date | null {
   return next;
 }
 
-export interface Scheduled { job: Job; pattern: string }
+/**
+ * A job runs either on a cron pattern in ET, or every N seconds (cron can't go below a minute,
+ * and the price poller needs ~30s).
+ */
+export type Scheduled =
+  | { job: Job; pattern: string; everySeconds?: never }
+  | { job: Job; everySeconds: number; pattern?: never };
+
+const EVERY_SECOND = "* * * * * *";
+const cronFor = (s: Scheduled) => s.pattern ?? EVERY_SECOND;
 
 export function startScheduler(db: Db, scheduled: Scheduled[], alert: Alert) {
-  validateSchedules(Object.fromEntries(scheduled.map((s) => [s.job.name, s.pattern])));
+  validateSchedules(Object.fromEntries(scheduled.filter((s) => s.pattern).map((s) => [s.job.name, s.pattern!])));
+  for (const s of scheduled) {
+    if (s.everySeconds !== undefined && !(Number.isInteger(s.everySeconds) && s.everySeconds >= 1)) {
+      throw new Error(`Invalid interval for ${s.job.name}: ${s.everySeconds}s`);
+    }
+  }
   const inFlight = new Set<Promise<RunOutcome>>();
 
-  const crons = scheduled.map(({ job, pattern }) =>
-    new Cron(pattern, { timezone: TIMEZONE, protect: true }, async () => {
+  // protect: a run still going when the next is due is skipped in-process (no overlap).
+  // interval: croner's minimum gap between runs, for every-N-seconds jobs.
+  const crons = scheduled.map((s) => { const { job } = s; return (
+    new Cron(cronFor(s), { timezone: TIMEZONE, protect: true, interval: s.everySeconds }, async () => {
       // runJob never throws; the catch is a backstop so a bug can't become an unhandled rejection.
       const p = runJob(db, job, alert).catch(async (err): Promise<RunOutcome> => {
         await alert(alertText({ severity: "failed", job: job.name, headline: `scheduler error running ${job.name}`, error: err }));
@@ -136,7 +152,7 @@ export function startScheduler(db: Db, scheduled: Scheduled[], alert: Alert) {
       });
       inFlight.add(p);
       try { await p; } finally { inFlight.delete(p); }
-    }));
+    })); });
 
   return {
     nextRuns: () => scheduled.map(({ job }, i) => ({ job: job.name, next: crons[i]!.nextRun() })),

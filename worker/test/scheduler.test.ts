@@ -73,3 +73,10 @@ test("alerts redact credentials and stay under the webhook's size limit", () => 
   assert.ok(long.length < 2000, `Discord rejects > 2000 chars (got ${long.length})`);
   assert.match(long, /truncated/);
 });
+
+test("the job registry schedules ingest by cron and the price poller by config interval", async () => {
+  const { scheduledJobs } = await import("../src/jobs/index.js");
+  const jobs = scheduledJobs({ ingestScheduleEt: "0 8-22/2 * * *", pollerIntervalSeconds: 30 } as never);
+  assert.deepEqual(jobs.map((s) => [s.job.name, s.pattern ?? null, s.everySeconds ?? null]),
+    [["ingest", "0 8-22/2 * * *", null], ["price_poll", null, 30]]);
+});

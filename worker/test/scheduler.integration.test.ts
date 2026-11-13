@@ -182,3 +182,20 @@ test("a failing job's alert points at its pipeline_runs row", { skip }, async ()
   assert.match(alerts[0] ?? "", new RegExp(`pipeline_runs id ${rows[0].id} \\(slate 2026-11-13\\)`));
   assert.match(alerts[0] ?? "", /logged-job failed: Kalshi changed a field/);
 });
+
+test("an every-N-seconds job (the price poller) runs repeatedly at its interval", { skip }, async () => {
+  let runs = 0;
+  const scheduler = startScheduler(db!, [
+    { job: { name: "every-second", run: async () => { runs++; return {}; } }, everySeconds: 1 },
+  ], noAlert);
+  await new Promise((r) => setTimeout(r, 3_300));
+  await scheduler.stop();
+  assert.ok(runs >= 2 && runs <= 4, `ran ${runs}x in ~3.3s at a 1s interval`);
+});
+
+test("an invalid interval fails at startup", { skip }, async () => {
+  for (const everySeconds of [0, -5, 1.5]) {
+    assert.throws(() => startScheduler(db!, [{ job: { name: "bad", run: async () => ({}) }, everySeconds }], noAlert),
+      /Invalid interval for bad/);
+  }
+});
