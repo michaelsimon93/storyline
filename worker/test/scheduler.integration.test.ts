@@ -182,3 +182,24 @@ test("a failing job's alert points at its pipeline_runs row", { skip }, async ()
   assert.match(alerts[0] ?? "", new RegExp(`pipeline_runs id ${rows[0].id} \\(slate 2026-11-13\\)`));
   assert.match(alerts[0] ?? "", /logged-job failed: Kalshi changed a field/);
 });
+
+test("an every-N-seconds job (the price poller) waits its interval between runs", { skip }, async () => {
+  // 2s, not 1s: croner only applies `interval` above 1, so a 1s test can't tell whether the
+  // interval is honored. Without it the job would fire every second (and hammer Kalshi).
+  const starts: number[] = [];
+  const scheduler = startScheduler(db!, [
+    { job: { name: "every-2s", run: async () => { starts.push(Date.now()); return {}; } }, everySeconds: 2 },
+  ], noAlert);
+  await new Promise((r) => setTimeout(r, 5_500));
+  await scheduler.stop();
+  const gaps = starts.slice(1).map((t, i) => t - starts[i]!);
+  assert.ok(starts.length >= 2 && starts.length <= 3, `ran ${starts.length}x in 5.5s at a 2s interval`);
+  assert.ok(gaps.every((g) => g >= 1_800), `gaps between runs: ${gaps.join(", ")}ms`);
+});
+
+test("an invalid interval fails at startup", { skip }, async () => {
+  for (const everySeconds of [0, -5, 1.5]) {
+    assert.throws(() => startScheduler(db!, [{ job: { name: "bad", run: async () => ({}) }, everySeconds }], noAlert),
+      /Invalid interval for bad/);
+  }
+});

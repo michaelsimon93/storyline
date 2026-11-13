@@ -33,6 +33,9 @@ select t_err('config: a schedule must stay a string',
 update app_config set value = '"30 9 * * 1-5"' where key = 'ingest_schedule_et';
 select t_eq('config: a valid schedule change is accepted', config_value('ingest_schedule_et') #>> '{}', '30 9 * * 1-5');
 update app_config set value = '"0 8-22/2 * * *"' where key = 'ingest_schedule_et';
+select t_eq('config: price poll interval is configurable', config_int('poller_interval_seconds'), 30);
+select t_err('config: price poll interval can''t exceed 50s (prices must stay under a minute old)',
+  $q$update app_config set value = '60' where key = 'poller_interval_seconds'$q$, '%poller_interval_seconds%');
 
 -- ---------------------------------------------------------------- config: audit history
 update app_config set value = '12' where key = 'cards_per_day';

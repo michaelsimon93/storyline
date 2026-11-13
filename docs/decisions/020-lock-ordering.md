@@ -19,6 +19,8 @@ The first version of PR A locked **wallet, then market**. The independent review
 2. **The wallet lock is `FOR NO KEY UPDATE`**, not `FOR UPDATE`. It still serializes two picks from the same wallet, but it doesn't conflict with the key-share locks that ledger inserts take, so settlement never waits on a pick's wallet lock.
 
 Either measure alone prevents this deadlock; both together are defense in depth. Any future code that locks markets and wallets (settlement job, cash-out, admin re-resulting) must follow the same order.
+3. **Market rows are locked in ticker order** by any job that writes several at once (added with the price poller, STO-9). Ingest and the poller both do this, so they can wait on each other but never deadlock. Tests hold the lowest ticker and check that the job hasn't locked a higher one first.
+4. **Newer market data always wins.** Ingest and the poller stamp `prices_updated_at` with when they read Kalshi (database clock) and only update rows holding older data, so a slow ingest can't overwrite a poll that landed mid-run. Neither writes `result`: settlement alone reads results (ADR-004).
 
 ## Consequences
 - A result write waits for any in-flight pick on that market (milliseconds); a pick that arrives while a result is being written waits, then sees the card as settled.

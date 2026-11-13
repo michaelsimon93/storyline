@@ -18,6 +18,7 @@ const SPEC = {
   maxPriceAgeSeconds:      { key: "max_price_age_seconds",     type: "int" },
   curationTimeEt:          { key: "curation_time_et",          type: "string" },
   ingestScheduleEt:        { key: "ingest_schedule_et",        type: "string" },
+  pollerIntervalSeconds:   { key: "poller_interval_seconds",   type: "int" },
 } as const;
 
 type Spec = typeof SPEC;

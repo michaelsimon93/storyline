@@ -1,7 +1,7 @@
 // Kalshi public market data (no API key). Calls are spaced out and retried with
 // backoff, since Kalshi returns 429 after a handful of rapid requests (ADR-003).
 
-import { fetchJson, throttle } from "../lib/http.js";
+import { fetchJson, throttle, type FetchOptions } from "../lib/http.js";
 
 const BASE = "https://external-api.kalshi.com/trade-api/v2";
 const pace = throttle(700); // ~1.4 req/s, comfortably under what we've seen trigger 429s
@@ -34,5 +34,25 @@ export async function listMarkets(seriesTicker: string, status = "open"): Promis
     out.push(...page.markets);
     cursor = page.cursor ?? "";
   } while (cursor);
+  return out;
+}
+
+// Kalshi accepts up to 100 tickers per request on GET /markets?tickers=...
+// (an API limit, not a tunable).
+const MAX_TICKERS_PER_REQUEST = 100;
+
+/**
+ * Specific markets by ticker, in any status. Unlike listMarkets(status: "open"), this also
+ * returns markets Kalshi has paused, closed or settled, which the poller needs to see.
+ */
+export async function getMarkets(tickers: string[], opts: FetchOptions = {}): Promise<KalshiMarket[]> {
+  const out: KalshiMarket[] = [];
+  for (let i = 0; i < tickers.length; i += MAX_TICKERS_PER_REQUEST) {
+    const batch = tickers.slice(i, i + MAX_TICKERS_PER_REQUEST);
+    await pace();
+    const qs = new URLSearchParams({ tickers: batch.join(","), limit: String(batch.length) });
+    const page = await fetchJson<{ markets: KalshiMarket[] }>(`${BASE}/markets?${qs}`, opts);
+    out.push(...page.markets);
+  }
   return out;
 }

@@ -62,3 +62,16 @@ test("player matching", () => {
   assert.equal(matchPlayer("J. Williams", roster).kind, "ambiguous"); // two J. Williams: never guess
   assert.equal(matchPlayer("Nobody Here", roster).kind, "none");
 });
+
+test("a Kalshi quote becomes integer cents and a whole-number volume, and never carries a result", async () => {
+  const { marketQuote } = await import("../src/domain/kalshiParse.js");
+  assert.deepEqual(marketQuote({
+    yes_bid_dollars: "0.4300", yes_ask_dollars: "0.4500", no_bid_dollars: "0.5500", no_ask_dollars: "0.5700",
+    volume_fp: "1234.00", status: "active",
+  }), { yes_bid: 43, yes_ask: 45, no_bid: 55, no_ask: 57, volume: 1234, status: "active" });
+  // Kalshi's result is ignored even when present: settlement owns results (STO-13, ADR-004).
+  const settled = marketQuote({ status: "finalized", result: "yes" } as { status: string });
+  assert.equal("result" in settled, false);
+  assert.equal(settled.yes_bid, null, "missing prices stay null, not 0");
+  assert.equal(settled.volume, 0);
+});
