@@ -27,9 +27,9 @@ before(async () => {
     insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, kalshi_status, prices_updated_at) values
       ('M1','nba','00000000-0000-0000-0000-0000000000e1','player_stat','KXNBAPTS','Player One: 20+ points','00000000-0000-0000-0000-0000000000b1','points',20,50,51,'active',now()),
       ('M2','nba','00000000-0000-0000-0000-0000000000e1','player_stat','KXNBAPTS','Player Two: 20+ points','00000000-0000-0000-0000-0000000000b2','points',20,50,51,'active',now());
-    insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb) values
-      ('${CARD_A}', storyline_today(), 1, '00000000-0000-0000-0000-0000000000e1', 'player', '00000000-0000-0000-0000-0000000000b1', 'M1', 'a'),
-      ('${CARD_B}', storyline_today(), 2, '00000000-0000-0000-0000-0000000000e1', 'player', '00000000-0000-0000-0000-0000000000b2', 'M2', 'b');
+    insert into cards (id, slate_date, sort_key, game_id, subject, player_id, team_id, market_ticker, blurb) values
+      ('${CARD_A}', storyline_today(), 1, '00000000-0000-0000-0000-0000000000e1', 'player', '00000000-0000-0000-0000-0000000000b1', 1, 'M1', 'a'),
+      ('${CARD_B}', storyline_today(), 2, '00000000-0000-0000-0000-0000000000e1', 'player', '00000000-0000-0000-0000-0000000000b2', 2, 'M2', 'b');
     insert into auth.users (id) values ('${USER}');`);
 
   // Sign up through the real function, then drain the wallet to exactly $5.
