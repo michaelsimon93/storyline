@@ -2,6 +2,8 @@
 
 **Every card is a story. Every story has a line.**
 
+Sports prediction markets list thousands of markets a night (props, game lines, team markets, futures), and none of them tell a fan which ones matter or *why*. Storyline **curates** the few worth caring about each day and gives each one a reason: **the right markets, for the right fan, at the right time.**
+
 Storyline is a daily, AI-curated deck of NBA player and team cards built on live [Kalshi](https://kalshi.com) prediction markets. Each card pairs a short "why care" storyline (a hot streak, a revenge game, a backup stepping in for an injured starter) with a single Yes/No market and its live price. You swipe through the deck and make play-money picks. Results come straight from the market.
 
 It's a rebuild of **Units**, a startup I helped found in the DFS era, reimagined for prediction markets: curation and story over volume, for casual fans rather than power bettors.
@@ -40,6 +42,7 @@ flowchart LR
 
 | Path | What's there |
 |---|---|
+| [`docs/product.md`](docs/product.md) | **Why Storyline exists:** the problem, the bet, the three product layers, principles, risks |
 | [`docs/spec.md`](docs/spec.md) | Product spec: scope, card states, bankroll, resulting, release plan, acceptance criteria |
 | [`docs/decisions/`](docs/decisions/) | Architecture decision records: context, options, decision, consequences |
 | [`supabase/migrations/`](supabase/migrations/) | Database schema, RLS policies, and functions (`place_pick`, `settle_market`, …) |

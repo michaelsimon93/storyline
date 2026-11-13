@@ -259,6 +259,7 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 - Added in v1.1: `price_moved_prompt` (+ accepted/declined), `grant_claimed`, `grant_expired`.
 - Display names are visible to all users (needed for the leaderboard and for following friends later). Picks stay private in v1. Friends seeing each other's picks comes with the follow feature.
 - Analysis is plain SQL queries. There are no dashboards in v1.
+- **Primary v1 signal is the morning read habit** (opens + how much of the pack gets viewed), not just picks. Units showed many fans read daily without picking. `card_view` carries the deck position so pack completion can be measured.
 **Stack (decided Nov 13)**
 
 | Layer | Choice | Why |
@@ -299,6 +300,8 @@ The web app and the worker are one repo with shared TypeScript types (`Card`, `P
 - **Leaderboard (later):** scoring will combine winnings, streaks, referrals, and other factors. The exact formula is TBD.
 
 - **Consensus split (later):** "62% of Storyline users picked Yes" on each card. This comes from our own pick data, so it needs no new data source.
+- **Streaks (later):** a daily-engagement streak (proven at Units: 100+ day streaks). Calculated from `app_open` / `card_view` events and pick history.
+- **Community submissions (later):** users suggest storylines or markets they want to see; accepted submissions earn rewards such as pick credits (free trades).
 - **Adjustable lines (later):** let users choose a different line or price on the ladder instead of only the most even one.
 - **Onboarding (with login):** a short explainer of how prediction markets work.
 
