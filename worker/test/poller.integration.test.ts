@@ -8,6 +8,7 @@ import { pollPrices } from "../src/jobs/poller.js";
 import type { Db } from "../src/lib/db.js";
 import { freshDb } from "./helpers/testDb.js";
 import { fixture, installFetch, json, slateRoutes, type Route } from "./helpers/mockFetch.js";
+import { idOf, idsOf } from "./helpers/markets.js";
 
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
 const SLATE = "2026-11-13";
@@ -20,6 +21,36 @@ const NOT_CARDED = "KXNBAPTS-26NOV13MILORL-ORLABLACK0-20";
 let db: Db | null = null;
 let calls: string[] = [];
 let restore = () => {};
+
+/**
+ * Give the carded markets fixed ids in the REVERSE of their ticker order, written highest id
+ * first so the lowest id also sits last on disk. Ticker order, physical order and id order then
+ * all disagree, so the lock-order tests can tell them apart every time, not by luck.
+ */
+const FIXED_IDS = ["a0000000-0000-4000-8000-000000000001", "b0000000-0000-4000-8000-000000000002",
+                   "c0000000-0000-4000-8000-000000000003"];
+async function rekeyCarded(d: Db) {
+  const byTicker = [...CARDED].sort();                 // lowest ticker gets the highest id
+  const plan = byTicker.map((t, i) => ({ ticker: t, id: FIXED_IDS[FIXED_IDS.length - 1 - i]! }));
+  const c = await d.connect();
+  try {
+    await c.query("begin");
+    for (const { ticker, id } of plan) {               // highest id first → lowest id last on disk
+      const old = await idOf(d, ticker);
+      const { rows: [row] } = await c.query(`delete from markets where id = $1 returning *`, [old]);
+      await c.query(`insert into markets select (json_populate_record(null::markets, $1::json)).*`,
+        [JSON.stringify({ ...row, id })]);
+      await c.query(`insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'market', $1, $2)`,
+        [ticker, id]);
+    }
+    await c.query("commit");
+  } catch (e) {
+    await c.query("rollback");
+    throw e;
+  } finally {
+    c.release();
+  }
+}
 
 /** Kalshi's GET /markets?tickers=... answered from the derived fixture, filtered to the request. */
 function pollRoute(drop: string[] = []): Route {
@@ -42,12 +73,13 @@ before(async () => {
   if (!db) return;
   useFetch();
   await ingest(db, SLATE);
+  await rekeyCarded(db);
   await db.query(`
-    insert into cards (slate_date, sort_key, game_id, subject, player_id, team_id, market_ticker, blurb)
-    select $1, row_number() over (order by ticker), game_id,
+    insert into cards (slate_date, sort_key, game_id, subject, player_id, team_id, market_id, blurb)
+    select $1, row_number() over (order by id), game_id,
            case when kind = 'game_winner' then 'team' else 'player' end::subject_type,
-           player_id, case when kind = 'game_winner' then team_id end, ticker, 'story'
-    from markets where ticker = any($2)`, [SLATE, CARDED]);
+           player_id, case when kind = 'game_winner' then team_id end, id, 'story'
+    from markets where id = any($2)`, [SLATE, await idsOf(db, CARDED)]);
 });
 beforeEach(() => useFetch(pollRoute()));
 after(async () => { restore(); await db?.end(); });
@@ -60,7 +92,7 @@ async function gameNotStarted() {
 
 const market = async (ticker: string) =>
   (await db!.query(`select yes_bid_cents, yes_ask_cents, volume, status, prices_updated_at
-                    from markets where ticker = $1`, [ticker])).rows[0];
+                    from markets where id = $1`, [await idOf(db!, ticker)])).rows[0];
 
 test("refreshes prices, volume and status of every carded market in one request", { skip }, async () => {
   const before = await market(MOVED);
@@ -85,23 +117,23 @@ test("refreshes prices, volume and status of every carded market in one request"
 test("a market Kalshi closes shows as an out card", { skip }, async () => {
   await gameNotStarted();
   await pollPrices(db!, SLATE);
-  const { rows } = await db!.query(`select state from card_feed where market_ticker = $1`, [CLOSED]);
+  const { rows } = await db!.query(`select state from card_feed where market_id = $1`, [await idOf(db!, CLOSED)]);
   assert.equal(rows[0].state, "out");
 });
 
 test("prices are marked fresh on every poll, even when nothing moved", { skip }, async () => {
   await pollPrices(db!, SLATE);
-  await db!.query(`update markets set prices_updated_at = now() - interval '5 minutes' where ticker = $1`, [WINNER]);
+  await db!.query(`update markets set prices_updated_at = now() - interval '5 minutes' where id = $1`, [await idOf(db!, WINNER)]);
   await pollPrices(db!, SLATE);
   const { rows } = await db!.query(
-    `select extract(epoch from now() - prices_updated_at) as age from markets where ticker = $1`, [WINNER]);
+    `select extract(epoch from now() - prices_updated_at) as age from markets where id = $1`, [await idOf(db!, WINNER)]);
   assert.ok(Number(rows[0].age) < 5, `price age after a poll: ${rows[0].age}s`);
 });
 
 test("re-running is safe: no duplicate price history for unchanged prices", { skip }, async () => {
   await pollPrices(db!, SLATE);
   const count = async () => Number((await db!.query(
-    `select count(*) from market_price_snapshots where ticker = any($1)`, [CARDED])).rows[0].count);
+    `select count(*) from market_price_snapshots where market_id = any($1)`, [await idsOf(db!, CARDED)])).rows[0].count);
   const n = await count();
   const s = await pollPrices(db!, SLATE);
   assert.equal(s.snapshots, 0);
@@ -127,13 +159,13 @@ test("a rate limit slows the poll down instead of failing it", { skip }, async (
 
 test("a carded market Kalshi doesn't return fails the run, after updating the rest", { skip }, async () => {
   useFetch(pollRoute([WINNER]));
-  await db!.query(`update markets set prices_updated_at = now() - interval '5 minutes' where ticker = $1`, [MOVED]);
+  await db!.query(`update markets set prices_updated_at = now() - interval '5 minutes' where id = $1`, [await idOf(db!, MOVED)]);
   await assert.rejects(pollPrices(db!, SLATE), new RegExp(`no data for 1 carded market\\(s\\): ${WINNER}`));
 
   const { rows } = await db!.query(`select status from pipeline_runs where job = 'price_poll' order by id desc limit 1`);
   assert.equal(rows[0].status, "failed");
   const { rows: [m] } = await db!.query(
-    `select extract(epoch from now() - prices_updated_at) as age from markets where ticker = $1`, [MOVED]);
+    `select extract(epoch from now() - prices_updated_at) as age from markets where id = $1`, [await idOf(db!, MOVED)]);
   assert.ok(Number(m.age) < 5, "the markets Kalshi did return were still refreshed");
 });
 
@@ -153,7 +185,7 @@ test("a status word we don't know turns the card out and fails the run loudly", 
   await assert.rejects(pollPrices(db!, SLATE),
     new RegExp(`unknown Kalshi status for 1 market\\(s\\), treated as paused: ${WINNER} \\("suspended_for_review"\\)`));
   assert.equal((await market(WINNER)).status, "paused");
-  const { rows } = await db!.query(`select state from card_feed where market_ticker = $1`, [WINNER]);
+  const { rows } = await db!.query(`select state from card_feed where market_id = $1`, [await idOf(db!, WINNER)]);
   assert.equal(rows[0].state, "out");
   useFetch(pollRoute());
   await pollPrices(db!, SLATE);                 // Kalshi back to normal: the card reopens
@@ -181,7 +213,7 @@ test("the poller never writes results: settlement owns them", { skip }, async ()
   // The fixture's closed market carries result 'no'. Kalshi can show a result before it is
   // final, and can amend it; paying out on it is settlement's job, with its own checks (STO-13).
   await pollPrices(db!, SLATE);
-  const { rows } = await db!.query(`select result from markets where ticker = $1`, [CLOSED]);
+  const { rows } = await db!.query(`select result from markets where id = $1`, [await idOf(db!, CLOSED)]);
   assert.equal(rows[0].result, null);
 });
 
@@ -215,14 +247,14 @@ test("ingest doesn't overwrite fresher prices the poller wrote while it was runn
 });
 
 test("ingest never clears a result settlement has written", { skip }, async () => {
-  await db!.query(`update markets set result = 'yes' where ticker = $1`, [WINNER]);
+  await db!.query(`update markets set result = 'yes' where id = $1`, [await idOf(db!, WINNER)]);
   try {
     useFetch();
     await ingest(db!, SLATE);
-    const { rows } = await db!.query(`select result from markets where ticker = $1`, [WINNER]);
+    const { rows } = await db!.query(`select result from markets where id = $1`, [await idOf(db!, WINNER)]);
     assert.equal(rows[0].result, "yes");
   } finally {
-    await db!.query(`update markets set result = null where ticker = $1`, [WINNER]);
+    await db!.query(`update markets set result = null where id = $1`, [await idOf(db!, WINNER)]);
   }
 });
 
@@ -237,7 +269,7 @@ test("ingest reports an unknown Kalshi status loudly instead of quietly storing 
   };
   useFetch(renamed);
   await gameNotStarted();
-  await db!.query(`update markets set prices_updated_at = now() - interval '1 hour' where ticker = $1`, [WINNER]);
+  await db!.query(`update markets set prices_updated_at = now() - interval '1 hour' where id = $1`, [await idOf(db!, WINNER)]);
   await assert.rejects(ingest(db!, SLATE),
     /unknown Kalshi status for 2 market\(s\), treated as paused: KXNBAGAME-26NOV13MILORL-MIL \("open"\), KXNBAGAME-26NOV13MILORL-ORL \("open"\)/);
   assert.equal((await market(WINNER)).status, "paused", "everything else was still written");
@@ -256,9 +288,9 @@ test("the worker's status list matches the market_status enum in the database", 
 
 // ------------------------------------------------------------------ no deadlock with ingest
 // Ingest and the poller both write market rows. If they locked rows in different orders, a
-// run of each could deadlock. Both lock in ticker order. The proof: while another session
-// holds the lowest carded ticker, the poller must be waiting on it *without* having locked
-// any higher ticker first.
+// run of each could deadlock. Both lock in market-id order (ADR-020 rule 3). The proof: while
+// another session holds the lowest market id, the job must be waiting on it *without* having
+// locked a higher id first.
 
 async function waitForLockWait(timeoutMs = 5_000): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
@@ -271,22 +303,30 @@ async function waitForLockWait(timeoutMs = 5_000): Promise<boolean> {
   return false;
 }
 
-async function assertLocksInTickerOrder(run: () => Promise<unknown>, lowest: string, highest: string) {
+/**
+ * Hold one market row, run the job, and when it's waiting on that row check exactly which of the
+ * job's rows it has already locked: in market-id order that must be every row with a smaller id
+ * and nothing else. Any other order (ticker order, disk order) locks a different set.
+ */
+async function assertLocksInIdOrder(run: () => Promise<unknown>, touched: string[], blocked: string) {
   const blocker = await db!.connect();
   const probe = await db!.connect();
   try {
     await blocker.query("begin");
-    await blocker.query(`select 1 from markets where ticker = $1 for no key update`, [lowest]);
+    await blocker.query(`select 1 from markets where id = $1 for no key update`, [blocked]);
     const running = run();
     void running.catch(() => {});
-    assert.ok(await waitForLockWait(), "the job should be waiting on the lowest ticker");
+    assert.ok(await waitForLockWait(), "the job should be waiting on the blocked market");
     await probe.query("begin");
-    const free = await probe.query(`select 1 from markets where ticker = $1 for no key update nowait`, [highest])
-      .then(() => true, () => false);
+    const { rows } = await probe.query<{ id: string }>(
+      `select id from markets where id = any($1) and id <> $2 for no key update skip locked`, [touched, blocked]);
     await probe.query("rollback");
     await blocker.query("commit");
     await running;
-    assert.ok(free, `${highest} was locked before ${lowest}: rows aren't locked in ticker order`);
+    const free = new Set(rows.map((r) => r.id));
+    const locked = touched.filter((id) => id !== blocked && !free.has(id)).sort();
+    const expected = touched.filter((id) => id < blocked).sort();
+    assert.deepEqual(locked, expected, "while waiting, exactly the rows with smaller ids are locked");
   } finally {
     await blocker.query("rollback").catch(() => {});
     blocker.release();
@@ -294,15 +334,17 @@ async function assertLocksInTickerOrder(run: () => Promise<unknown>, lowest: str
   }
 }
 
-test("the poller locks market rows in ticker order", { skip }, async () => {
-  const sorted = [...CARDED].sort();
-  // Rewrite the lowest row so it sits last on disk. A plain UPDATE scans in physical order, so
-  // without the explicit ORDER BY ... FOR NO KEY UPDATE it would lock the higher tickers first.
-  await db!.query(`update markets set updated_at = now() where ticker = $1`, [sorted[0]]);
-  await assertLocksInTickerOrder(() => pollPrices(db!, SLATE), sorted[0]!, sorted.at(-1)!);
+test("the poller locks market rows in market-id order", { skip }, async () => {
+  const ids = (await idsOf(db!, CARDED)).sort();       // = FIXED_IDS
+  assert.deepEqual(ids, FIXED_IDS);
+  // Polls rewrite rows in id order; put them back in reverse on disk (highest id first).
+  for (const id of [...ids].reverse()) await db!.query(`update markets set updated_at = now() where id = $1`, [id]);
+  await assertLocksInIdOrder(() => pollPrices(db!, SLATE), ids, ids[1]!);
 });
 
-test("ingest locks market rows in ticker order", { skip }, async () => {
-  const { rows } = await db!.query(`select min(ticker) lo, max(ticker) hi from markets`);
-  await assertLocksInTickerOrder(() => ingest(db!, SLATE), rows[0].lo, rows[0].hi);
+test("ingest locks market rows in market-id order", { skip }, async () => {
+  const { rows } = await db!.query<{ id: string }>(
+    `select x.market_id as id from external_ids x where x.source = 'kalshi' and x.kind = 'market' order by 1`);
+  const ids = rows.map((r) => r.id);
+  await assertLocksInIdOrder(() => ingest(db!, SLATE), ids, ids[Math.floor(ids.length / 2)]!);
 });

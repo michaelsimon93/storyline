@@ -40,37 +40,48 @@ export function fetchDeadline(intervalSeconds: number) {
 export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
   const slateDate = await resolveSlateDate(db, date);
   return withRun(db, "price_poll", slateDate, async () => {
-    const { rows } = await db.query<{ ticker: string }>(
-      `select distinct market_ticker as ticker from cards where slate_date = $1 order by 1`, [slateDate]);
-    const tickers = rows.map((r) => r.ticker);
-    const summary: PollSummary = { slate_date: slateDate, carded: tickers.length, updated: 0, not_open: [], snapshots: 0 };
+    // Today's carded markets with their Kalshi tickers (ADR-021). A carded market with no Kalshi
+    // ticker can't be priced by this poller; it's reported below, never silently skipped.
+    const { rows } = await db.query<{ market_id: string; ticker: string | null }>(
+      `select distinct c.market_id, x.external_id as ticker
+         from cards c
+         left join external_ids x on x.market_id = c.market_id and x.source = $2 and x.kind = 'market'
+        where c.slate_date = $1
+        order by 2`, [slateDate, kalshi.SOURCE]);
+    const unpriceable = rows.filter((r) => r.ticker === null).map((r) => r.market_id).sort();
+    const idByTicker = new Map(rows.filter((r) => r.ticker !== null).map((r) => [r.ticker!, r.market_id]));
+    const tickers = [...idByTicker.keys()];
+    const summary: PollSummary = { slate_date: slateDate, carded: rows.length, updated: 0, not_open: [], snapshots: 0 };
+    if (unpriceable.length && !tickers.length) {
+      throw new Error(`${unpriceable.length} carded market(s) have no Kalshi ticker, so nothing prices them: ${unpriceable.join(", ")}`);
+    }
     if (!tickers.length) return summary;   // no deck yet today (curation runs at 10am)
 
     const fetchedAt = await dbNow(db);
     const markets = await kalshi.getMarkets(tickers, fetchDeadline(await pollIntervalSeconds(db)));
     const quotes = markets
-      .filter((m) => tickers.includes(m.ticker))
-      .map((m) => ({ ticker: m.ticker, ...marketQuote(m) }));
+      .filter((m) => idByTicker.has(m.ticker))
+      .map((m) => ({ market_id: idByTicker.get(m.ticker)!, ticker: m.ticker, ...marketQuote(m) }));
 
-    // Lock rows in ticker order before updating. Ingest writes markets in the same order, so
+    // Lock rows in market-id order before updating (ADR-020 rule 3). Ingest does the same, so
     // the two jobs can wait on each other but never deadlock.
-    const updated = await db.query<{ ticker: string }>(
+    const updated = await db.query<{ id: string }>(
       `with q as (
-         select * from jsonb_to_recordset($1) as q(ticker text, yes_bid smallint, yes_ask smallint,
+         select * from jsonb_to_recordset($1) as q(market_id uuid, yes_bid smallint, yes_ask smallint,
            no_bid smallint, no_ask smallint, volume integer, status market_status)
        ), locked as (
-         select m.ticker from markets m join q using (ticker) order by m.ticker for no key update of m
+         select m.id from markets m join q on q.market_id = m.id order by m.id for no key update of m
        )
        update markets m
           set yes_bid_cents = q.yes_bid, yes_ask_cents = q.yes_ask,
               no_bid_cents = q.no_bid,   no_ask_cents = q.no_ask,
               volume = q.volume, status = q.status,
               prices_updated_at = $2, updated_at = now()
-         from q join locked using (ticker)
-        where m.ticker = q.ticker
+         from q join locked l on l.id = q.market_id
+        where m.id = q.market_id
           -- Never replace newer data (ingest may have written while this request was out).
           and (m.prices_updated_at is null or m.prices_updated_at < $2)
-       returning m.ticker`,
+       returning m.id`,
       [JSON.stringify(quotes), fetchedAt],
     );
     summary.updated = updated.rowCount ?? 0;
@@ -85,6 +96,9 @@ export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
     const returned = new Set(quotes.map((q) => q.ticker));
     const missing = tickers.filter((t) => !returned.has(t));
     const problems: string[] = [];
+    if (unpriceable.length) {
+      problems.push(`${unpriceable.length} carded market(s) have no Kalshi ticker, so nothing prices them: ${unpriceable.join(", ")}`);
+    }
     if (missing.length) {
       problems.push(`Kalshi returned no data for ${missing.length} carded market(s): ${missing.join(", ")}`);
     }

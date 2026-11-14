@@ -158,7 +158,6 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
           ticker: m.ticker,
           game_id: gameIdByKey.get(key),
           kind: isWinner ? "game_winner" : "player_stat",
-          series,
           title: m.title,
           player_id: isWinner ? null : playerIdByKalshi.get(m.custom_strike?.basketball_player ?? ""),
           team_id: isWinner ? teamIdByKalshi.get(rest[0] ?? "") : null,
@@ -168,26 +167,58 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
         });
       }
     }
+    // Markets are keyed by our own id and identified by what they are (game, kind, player or
+    // team, stat, line: markets_identity). Kalshi's ticker is attached in external_ids (ADR-021).
+    // Every step is idempotent and safe if another run races it: conflicts are no-ops.
+    const incoming = `incoming as (
+         select * from jsonb_to_recordset($1) as m(ticker text, game_id uuid, kind text, title text,
+           player_id uuid, team_id smallint, stat text, strike numeric, yes_bid smallint, yes_ask smallint,
+           no_bid smallint, no_ask smallint, volume integer, status market_status))`;
+    const rowsJson = JSON.stringify(marketRows);
+    // 1. Create markets we've never seen. One that already exists (even if its Kalshi id was
+    //    lost) is left alone, so a Kalshi market can never become two Storyline markets.
     await db.query(
-      `insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, team_id, stat, strike,
+      `with ${incoming}
+       insert into markets (league, game_id, kind, title, player_id, team_id, stat, strike,
                             yes_bid_cents, yes_ask_cents, no_bid_cents, no_ask_cents, volume, status,
                             prices_updated_at, updated_at)
-       select m.ticker, 'nba', m.game_id, m.kind::market_kind, m.series, m.title, m.player_id, m.team_id, m.stat, m.strike,
-              m.yes_bid, m.yes_ask, m.no_bid, m.no_ask, m.volume, m.status::market_status, $2, now()
-       from jsonb_to_recordset($1) as m(ticker text, game_id uuid, kind text, series text, title text, player_id uuid,
-            team_id smallint, stat text, strike numeric, yes_bid smallint, yes_ask smallint, no_bid smallint,
-            no_ask smallint, volume integer, status text)
-       -- Ticker order, same as the price poller, so the two can't deadlock on market rows.
-       order by m.ticker
-       on conflict (ticker) do update
-         set yes_bid_cents = excluded.yes_bid_cents, yes_ask_cents = excluded.yes_ask_cents,
-             no_bid_cents = excluded.no_bid_cents,   no_ask_cents = excluded.no_ask_cents,
-             volume = excluded.volume, status = excluded.status,
-             prices_updated_at = excluded.prices_updated_at, updated_at = now()
-         -- Never replace newer data (e.g. a poll that ran while ingest was fetching rosters).
-         -- Results are never written here: settlement owns them.
-         where markets.prices_updated_at is null or markets.prices_updated_at < excluded.prices_updated_at`,
-      [JSON.stringify(marketRows), kalshiFetchedAt],
+       select 'nba', game_id, kind::market_kind, title, player_id, team_id, stat, strike,
+              yes_bid, yes_ask, no_bid, no_ask, volume, status, $2, now()
+       from incoming
+       on conflict (game_id, kind, player_id, team_id, stat, strike) do nothing`,
+      [rowsJson, kalshiFetchedAt],
+    );
+    // 2. Attach each Kalshi ticker to its market (new, or one whose id went missing).
+    await db.query(
+      `with ${incoming}
+       insert into external_ids (source, kind, external_id, market_id)
+       select $2, 'market', i.ticker, mk.id
+       from incoming i
+       join markets mk on (mk.game_id, mk.kind, mk.player_id, mk.team_id, mk.stat, mk.strike)
+                          is not distinct from (i.game_id, i.kind::market_kind, i.player_id, i.team_id, i.stat, i.strike)
+       on conflict (source, kind, external_id) do nothing`,
+      [rowsJson, kalshi.SOURCE],
+    );
+    // 3. Refresh prices and status of markets we know, in market-id order like the price poller
+    //    (ADR-020 rule 3); newer data always wins (rule 4). Results are settlement's (ADR-004).
+    await db.query(
+      `with ${incoming},
+       known as (
+         select x.market_id, m.* from incoming m
+         join external_ids x on x.source = $3 and x.kind = 'market' and x.external_id = m.ticker
+       ), locked as (
+         select mk.id from markets mk join known k on k.market_id = mk.id order by mk.id for no key update of mk
+       )
+       update markets mk
+          set yes_bid_cents = k.yes_bid, yes_ask_cents = k.yes_ask,
+              no_bid_cents = k.no_bid,   no_ask_cents = k.no_ask,
+              volume = k.volume, status = k.status,
+              prices_updated_at = $2, updated_at = now()
+         from known k join locked l on l.id = k.market_id
+        where mk.id = k.market_id
+          -- Never replace newer data (e.g. a poll that ran while ingest was fetching rosters).
+          and (mk.prices_updated_at is null or mk.prices_updated_at < $2)`,
+      [rowsJson, kalshiFetchedAt, kalshi.SOURCE],
     );
 
     // Price history: snapshot anything that moved (rule lives in snapshot_prices()).

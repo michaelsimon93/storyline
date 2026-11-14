@@ -18,3 +18,7 @@ $$;
 create function as_user(uid text) returns void language sql as $$
   select set_config('request.jwt.claim.sub', uid, false) $$;
 grant execute on function t_err(text,text,text), t_eq(text,anyelement,anyelement), as_user(text) to public;
+-- A stable market id from a readable test label: mid('WEMBY-30'). Markets have Storyline's own
+-- uuids (ADR-021); tests keep their labels and derive ids from them.
+create function mid(label text) returns uuid language sql immutable as $$ select md5(label)::uuid $$;
+grant execute on function mid(text) to public;

@@ -29,7 +29,12 @@ Nothing is deployed yet, so changing this now costs only code.
    side (an unknown market status → `paused`, so cards go out) and reports them loudly.
 4. **Provider IDs live in one cross-reference table**, as (source, kind, external ID → our ID),
    unique per source and kind. Adding a provider adds rows, not columns.
-5. **Guardrail: no speculative frameworks.** Build only abstractions with a real provider
+5. **A market is identified by what it is**: game, kind, player or team, stat and line
+   (`markets_identity`), not by who lists it. Provider IDs attach to that market. A lost or
+   re-sent provider ID re-attaches instead of creating a duplicate, racing runs are no-ops
+   instead of errors, and two providers listing the same market map to one Storyline market.
+   (Found by the test adversary on STO-38.)
+6. **Guardrail: no speculative frameworks.** Build only abstractions with a real provider
    behind them. One adapter each for Kalshi and ESPN; no generic plugin system.
 
 Kalshi's status mapping follows its documented lifecycle. A determined result can still be
@@ -43,7 +48,8 @@ Three PRs, each one concern, all before settlement (STO-13) and curation (STO-10
 3. STO-39: team, player and game provider IDs move to the cross-reference table.
 
 Also in scope, so nothing provider-specific is left behind:
-- `markets.kalshi_series` moves to the cross-reference table with the ticker (STO-38).
+- `markets.kalshi_series` is dropped (STO-38): it's the first part of Kalshi's ticker, and the
+  market's own `kind` and `stat` already say what it measures.
 - `markets.result` uses Kalshi's word `scalar` for a void market. Settlement (STO-13) maps
   results into our own vocabulary when it starts reading them.
 - `markets.title` stays: it's display text, and the provider's wording is the content.

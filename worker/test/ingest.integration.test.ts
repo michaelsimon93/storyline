@@ -7,6 +7,7 @@ import { ingest, resolveSlateDate } from "../src/jobs/ingest.js";
 import type { Db } from "../src/lib/db.js";
 import { freshDb } from "./helpers/testDb.js";
 import { installFetch, slateRoutes } from "./helpers/mockFetch.js";
+import { idOf } from "./helpers/markets.js";
 
 let db: Db | null = null;
 let restore = () => {};
@@ -44,7 +45,7 @@ test("ingests the MIL @ ORL slate", { skip }, async () => {
 test("markets are written with correct kind, stat, strike and cents", { skip }, async () => {
   const { rows } = await db!.query(`
     select kind, stat, strike::float, yes_ask_cents, no_ask_cents, player_id, team_id
-    from markets where ticker = 'KXNBAPTS-26NOV13MILORL-ORLABLACK0-25'`);
+    from markets where id = $1`, [await idOf(db!, "KXNBAPTS-26NOV13MILORL-ORLABLACK0-25")]);
   const m = rows[0];
   assert.equal(m.kind, "player_stat");
   assert.equal(m.stat, "points");
@@ -59,24 +60,28 @@ test("markets are written with correct kind, stat, strike and cents", { skip }, 
 });
 
 test("markets from other nights are ignored", { skip }, async () => {
-  const { rows } = await db!.query(`select count(*)::int n from markets where ticker not like '%26NOV13MILORL%'`);
+  const { rows } = await db!.query(`select count(*)::int n from external_ids where kind = 'market' and external_id not like '%26NOV13MILORL%'`);
   assert.equal(rows[0].n, 0);
+  const { rows: [all] } = await db!.query(`select (select count(*) from markets)::int m, (select count(*) from external_ids where kind = 'market')::int x`);
+  assert.equal(all.m, all.x, "every market has exactly one Kalshi id");
 });
 
 test("re-running is safe: no duplicates, prices refresh", { skip }, async () => {
   const counts = async () => (await db!.query(`
     select (select count(*) from games)::int g, (select count(*) from markets)::int m,
+           (select count(*) from external_ids)::int x,
            (select count(*) from players)::int p, (select count(*) from teams)::int t`)).rows[0];
   const before1 = await counts();
 
+  const blackId = await idOf(db!, "KXNBAPTS-26NOV13MILORL-ORLABLACK0-25");
   await db!.query(`update markets set yes_ask_cents = 99, prices_updated_at = now() - interval '1 hour'
-                   where ticker = 'KXNBAPTS-26NOV13MILORL-ORLABLACK0-25'`);
+                   where id = $1`, [blackId]);
   await ingest(db!, "2026-11-13");
 
   assert.deepEqual(await counts(), before1);
   const { rows: [m] } = await db!.query(`
     select yes_ask_cents, prices_updated_at > now() - interval '1 minute' fresh
-    from markets where ticker = 'KXNBAPTS-26NOV13MILORL-ORLABLACK0-25'`);
+    from markets where id = $1`, [blackId]);
   assert.equal(m.yes_ask_cents, 11, "price restored from source");
   assert.equal(m.fresh, true);
   const { rows: [h] } = await db!.query(`select count(*)::int n from market_price_snapshots`);

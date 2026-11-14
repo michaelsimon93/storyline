@@ -52,13 +52,13 @@ update app_config set value = '10' where key = 'cards_per_day';
 -- ---------------------------------------------------------------- config: money reads from config
 insert into players (id, league, full_name, team_id, kalshi_player_id)
   values ('00000000-0000-0000-0000-0000000000a5', 'nba', 'Config Tester', 2, 'k5');
-insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike,
+insert into markets (id, league, game_id, kind, title, player_id, stat, strike,
                      yes_ask_cents, no_ask_cents, status, prices_updated_at)
-  values ('CFG-10', 'nba', '00000000-0000-0000-0000-0000000000b1', 'player_stat', 'KXNBAPTS',
+  values (mid('CFG-10'), 'nba', '00000000-0000-0000-0000-0000000000b1', 'player_stat',
           'Config Tester: 10+ points', '00000000-0000-0000-0000-0000000000a5', 'points', 10, 50, 51, 'open', now());
-insert into cards (id, slate_date, sort_key, game_id, subject, player_id, team_id, market_ticker, blurb)
+insert into cards (id, slate_date, sort_key, game_id, subject, player_id, team_id, market_id, blurb)
   values ('00000000-0000-0000-0000-0000000000c5', storyline_today(), 5, '00000000-0000-0000-0000-0000000000b1',
-          'player', '00000000-0000-0000-0000-0000000000a5', 2, 'CFG-10', 'config test');
+          'player', '00000000-0000-0000-0000-0000000000a5', 2, mid('CFG-10'), 'config test');
 update app_config set value = '300' where key = 'pick_stake_cents';
 set role authenticated; select as_user('11111111-1111-1111-1111-111111111111');
 select t_eq('config: stake comes from config ($3)',

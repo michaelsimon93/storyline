@@ -4,6 +4,9 @@
 import { fetchJson, throttle, type FetchOptions } from "../lib/http.js";
 
 const BASE = "https://external-api.kalshi.com/trade-api/v2";
+
+/** This provider's name in external_ids (ADR-021). A Kalshi market's external ID is its ticker. */
+export const SOURCE = "kalshi";
 const pace = throttle(700); // ~1.4 req/s, comfortably under what we've seen trigger 429s
 
 export interface KalshiMarket {

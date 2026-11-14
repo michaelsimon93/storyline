@@ -17,20 +17,20 @@ insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_
   ('a4000000-0000-0000-0000-0000000000e1', 'nba', 'a4e1', 'A4G1', storyline_today(), 1, 2, now() + interval '2 hours', 'in_progress'),
   ('a4000000-0000-0000-0000-0000000000e2', 'nba', 'a4e2', 'A4G2', storyline_today(), 1, 2, now() + interval '6 hours', 'scheduled'),
   ('a4000000-0000-0000-0000-0000000000e3', 'nba', 'a4e3', 'A4G3', storyline_today(), 1, 2, now() + interval '6 hours', 'final');
-insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike,
+insert into markets (id, league, game_id, kind, title, player_id, stat, strike,
                      yes_ask_cents, no_ask_cents, status, prices_updated_at) values
-  ('A4-EARLY',  'nba', 'a4000000-0000-0000-0000-0000000000e1', 'player_stat', 'KXNBAPTS', 'Early Starter: 20+', 'a4000000-0000-0000-0000-0000000000b1', 'points', 20, 50, 51, 'open', now()),
-  ('A4-PAUSED', 'nba', 'a4000000-0000-0000-0000-0000000000e2', 'player_stat', 'KXNBAPTS', 'Paused Market: 20+', 'a4000000-0000-0000-0000-0000000000b2', 'points', 20, 50, 51, 'closed', now()),
-  ('A4-OK',     'nba', 'a4000000-0000-0000-0000-0000000000e2', 'player_stat', 'KXNBAPTS', 'Normal Card: 20+',   'a4000000-0000-0000-0000-0000000000b3', 'points', 20, 50, 51, 'open', now()),
-  ('A4-INGAME', 'nba', 'a4000000-0000-0000-0000-0000000000e1', 'player_stat', 'KXNBAPTS', 'In-Game Card: 20+',  'a4000000-0000-0000-0000-0000000000b4', 'points', 20, 50, 51, 'open', now()),
-  ('A4-FINAL',  'nba', 'a4000000-0000-0000-0000-0000000000e3', 'player_stat', 'KXNBAPTS', 'Final Early: 20+',   'a4000000-0000-0000-0000-0000000000b5', 'points', 20, 50, 51, 'open', now());
-insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb, locks_at) values
-  ('a4000000-0000-0000-0000-0000000000c1', storyline_today(), 41, 'a4000000-0000-0000-0000-0000000000e1', 'player', 'a4000000-0000-0000-0000-0000000000b1', 'A4-EARLY',  'early', null),
-  ('a4000000-0000-0000-0000-0000000000c2', storyline_today(), 42, 'a4000000-0000-0000-0000-0000000000e2', 'player', 'a4000000-0000-0000-0000-0000000000b2', 'A4-PAUSED', 'paused', null),
-  ('a4000000-0000-0000-0000-0000000000c3', storyline_today(), 43, 'a4000000-0000-0000-0000-0000000000e2', 'player', 'a4000000-0000-0000-0000-0000000000b3', 'A4-OK',     'ok', null),
+  (mid('A4-EARLY'),  'nba', 'a4000000-0000-0000-0000-0000000000e1', 'player_stat', 'Early Starter: 20+', 'a4000000-0000-0000-0000-0000000000b1', 'points', 20, 50, 51, 'open', now()),
+  (mid('A4-PAUSED'), 'nba', 'a4000000-0000-0000-0000-0000000000e2', 'player_stat', 'Paused Market: 20+', 'a4000000-0000-0000-0000-0000000000b2', 'points', 20, 50, 51, 'closed', now()),
+  (mid('A4-OK'),     'nba', 'a4000000-0000-0000-0000-0000000000e2', 'player_stat', 'Normal Card: 20+',   'a4000000-0000-0000-0000-0000000000b3', 'points', 20, 50, 51, 'open', now()),
+  (mid('A4-INGAME'), 'nba', 'a4000000-0000-0000-0000-0000000000e1', 'player_stat', 'In-Game Card: 20+',  'a4000000-0000-0000-0000-0000000000b4', 'points', 20, 50, 51, 'open', now()),
+  (mid('A4-FINAL'),  'nba', 'a4000000-0000-0000-0000-0000000000e3', 'player_stat', 'Final Early: 20+',   'a4000000-0000-0000-0000-0000000000b5', 'points', 20, 50, 51, 'open', now());
+insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_id, blurb, locks_at) values
+  ('a4000000-0000-0000-0000-0000000000c1', storyline_today(), 41, 'a4000000-0000-0000-0000-0000000000e1', 'player', 'a4000000-0000-0000-0000-0000000000b1', mid('A4-EARLY'),  'early', null),
+  ('a4000000-0000-0000-0000-0000000000c2', storyline_today(), 42, 'a4000000-0000-0000-0000-0000000000e2', 'player', 'a4000000-0000-0000-0000-0000000000b2', mid('A4-PAUSED'), 'paused', null),
+  ('a4000000-0000-0000-0000-0000000000c3', storyline_today(), 43, 'a4000000-0000-0000-0000-0000000000e2', 'player', 'a4000000-0000-0000-0000-0000000000b3', mid('A4-OK'),     'ok', null),
   -- An in-game card has its own lock time, so an in-progress game must NOT lock it.
-  ('a4000000-0000-0000-0000-0000000000c4', storyline_today(), 44, 'a4000000-0000-0000-0000-0000000000e1', 'player', 'a4000000-0000-0000-0000-0000000000b4', 'A4-INGAME', 'in-game', now() + interval '1 hour'),
-  ('a4000000-0000-0000-0000-0000000000c5', storyline_today(), 45, 'a4000000-0000-0000-0000-0000000000e3', 'player', 'a4000000-0000-0000-0000-0000000000b5', 'A4-FINAL',  'final', null);
+  ('a4000000-0000-0000-0000-0000000000c4', storyline_today(), 44, 'a4000000-0000-0000-0000-0000000000e1', 'player', 'a4000000-0000-0000-0000-0000000000b4', mid('A4-INGAME'), 'in-game', now() + interval '1 hour'),
+  ('a4000000-0000-0000-0000-0000000000c5', storyline_today(), 45, 'a4000000-0000-0000-0000-0000000000e3', 'player', 'a4000000-0000-0000-0000-0000000000b5', mid('A4-FINAL'),  'final', null);
 
 select t_eq('safety: pre-game card on a game ESPN shows in progress is live, not open',
   (select state from card_feed where id = 'a4000000-0000-0000-0000-0000000000c1'), 'live'::card_state);
@@ -50,15 +50,15 @@ insert into players (id, league, full_name, team_id, kalshi_player_id) values
 insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at, status) values
   ('a4000000-0000-0000-0000-0000000000e4', 'nba', 'a4e4', 'A4G4', storyline_today(), 1, 2, now() + interval '6 hours', 'canceled'),
   ('a4000000-0000-0000-0000-0000000000e5', 'nba', 'a4e5', 'A4G5', storyline_today(), 1, 2, now() + interval '6 hours', 'postponed');
-insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike,
+insert into markets (id, league, game_id, kind, title, player_id, stat, strike,
                      yes_ask_cents, no_ask_cents, status, prices_updated_at) values
-  ('A4-CANCEL', 'nba', 'a4000000-0000-0000-0000-0000000000e4', 'player_stat', 'KXNBAPTS', 'x', 'a4000000-0000-0000-0000-0000000000b6', 'points', 20, 50, 51, 'open', now()),
-  ('A4-POSTP',  'nba', 'a4000000-0000-0000-0000-0000000000e5', 'player_stat', 'KXNBAPTS', 'x', 'a4000000-0000-0000-0000-0000000000b7', 'points', 20, 50, 51, 'open', now()),
-  ('A4-IGFIN',  'nba', 'a4000000-0000-0000-0000-0000000000e3', 'player_stat', 'KXNBAPTS', 'x', 'a4000000-0000-0000-0000-0000000000b8', 'points', 20, 50, 51, 'open', now());
-insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb, locks_at) values
-  ('a4000000-0000-0000-0000-0000000000c6', storyline_today(), 46, 'a4000000-0000-0000-0000-0000000000e4', 'player', 'a4000000-0000-0000-0000-0000000000b6', 'A4-CANCEL', 'x', null),
-  ('a4000000-0000-0000-0000-0000000000c7', storyline_today(), 47, 'a4000000-0000-0000-0000-0000000000e5', 'player', 'a4000000-0000-0000-0000-0000000000b7', 'A4-POSTP',  'x', null),
-  ('a4000000-0000-0000-0000-0000000000c8', storyline_today(), 48, 'a4000000-0000-0000-0000-0000000000e3', 'player', 'a4000000-0000-0000-0000-0000000000b8', 'A4-IGFIN',  'x', now() + interval '1 hour');
+  (mid('A4-CANCEL'), 'nba', 'a4000000-0000-0000-0000-0000000000e4', 'player_stat', 'x', 'a4000000-0000-0000-0000-0000000000b6', 'points', 20, 50, 51, 'open', now()),
+  (mid('A4-POSTP'),  'nba', 'a4000000-0000-0000-0000-0000000000e5', 'player_stat', 'x', 'a4000000-0000-0000-0000-0000000000b7', 'points', 20, 50, 51, 'open', now()),
+  (mid('A4-IGFIN'),  'nba', 'a4000000-0000-0000-0000-0000000000e3', 'player_stat', 'x', 'a4000000-0000-0000-0000-0000000000b8', 'points', 20, 50, 51, 'open', now());
+insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_id, blurb, locks_at) values
+  ('a4000000-0000-0000-0000-0000000000c6', storyline_today(), 46, 'a4000000-0000-0000-0000-0000000000e4', 'player', 'a4000000-0000-0000-0000-0000000000b6', mid('A4-CANCEL'), 'x', null),
+  ('a4000000-0000-0000-0000-0000000000c7', storyline_today(), 47, 'a4000000-0000-0000-0000-0000000000e5', 'player', 'a4000000-0000-0000-0000-0000000000b7', mid('A4-POSTP'),  'x', null),
+  ('a4000000-0000-0000-0000-0000000000c8', storyline_today(), 48, 'a4000000-0000-0000-0000-0000000000e3', 'player', 'a4000000-0000-0000-0000-0000000000b8', mid('A4-IGFIN'),  'x', now() + interval '1 hour');
 select t_eq('safety: card on a canceled game is locked',
   (select state from card_feed where id = 'a4000000-0000-0000-0000-0000000000c6'), 'locked'::card_state);
 select t_eq('safety: card on a postponed game (new tip-off ahead) stays open',
@@ -83,16 +83,16 @@ reset role;
 -- ---------------------------------------------------------------- market status (ADR-021)
 -- Cards follow our own market status, not a provider's words.
 select t_eq('status: an open market keeps its card open',
-  (select state::text from card_feed where market_ticker = 'A4-OK'), 'open');
-update markets set status = 'paused' where ticker = 'A4-OK';
+  (select state::text from card_feed where market_id = mid('A4-OK')), 'open');
+update markets set status = 'paused' where id = mid('A4-OK');
 select t_eq('status: a paused market turns its card out',
-  (select state::text from card_feed where market_ticker = 'A4-OK'), 'out');
-update markets set status = 'closed' where ticker = 'A4-OK';
+  (select state::text from card_feed where market_id = mid('A4-OK')), 'out');
+update markets set status = 'closed' where id = mid('A4-OK');
 select t_eq('status: a closed market (result not final) turns its card out',
-  (select state::text from card_feed where market_ticker = 'A4-OK'), 'out');
-update markets set status = 'settled' where ticker = 'A4-OK';
+  (select state::text from card_feed where market_id = mid('A4-OK')), 'out');
+update markets set status = 'settled' where id = mid('A4-OK');
 select t_eq('status: a market the exchange settled, before our settlement has run, is out (no picks)',
-  (select state::text from card_feed where market_ticker = 'A4-OK'), 'out');
-update markets set status = 'open' where ticker = 'A4-OK';
+  (select state::text from card_feed where market_id = mid('A4-OK')), 'out');
+update markets set status = 'open' where id = mid('A4-OK');
 select t_err('status: a provider''s own word can''t be stored',
-  $q$update markets set status = 'active' where ticker = 'A4-OK'$q$, '%invalid input value for enum market_status%');
+  $q$update markets set status = 'active' where id = mid('A4-OK')$q$, '%invalid input value for enum market_status%');
