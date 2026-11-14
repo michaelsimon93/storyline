@@ -43,7 +43,8 @@ Three PRs, each one concern, all before settlement (STO-13) and curation (STO-10
 3. STO-39: team, player and game provider IDs move to the cross-reference table.
 
 Also in scope, so nothing provider-specific is left behind:
-- `markets.kalshi_series` moves to the cross-reference table with the ticker (STO-38).
+- `markets.kalshi_series` is dropped (STO-38): it's the first part of Kalshi's ticker, and the
+  market's own `kind` and `stat` already say what it measures.
 - `markets.result` uses Kalshi's word `scalar` for a void market. Settlement (STO-13) maps
   results into our own vocabulary when it starts reading them.
 - `markets.title` stays: it's display text, and the provider's wording is the content.
