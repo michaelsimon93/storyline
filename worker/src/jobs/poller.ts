@@ -22,7 +22,7 @@ export interface PollSummary {
   slate_date: string;
   carded: number;        // markets on today's cards
   updated: number;       // rows refreshed
-  not_active: string[];  // carded markets Kalshi isn't trading (their cards show as out)
+  not_open: string[];    // carded markets that aren't trading (their cards show as out)
   snapshots: number;     // price-history rows written
 }
 
@@ -43,7 +43,7 @@ export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
     const { rows } = await db.query<{ ticker: string }>(
       `select distinct market_ticker as ticker from cards where slate_date = $1 order by 1`, [slateDate]);
     const tickers = rows.map((r) => r.ticker);
-    const summary: PollSummary = { slate_date: slateDate, carded: tickers.length, updated: 0, not_active: [], snapshots: 0 };
+    const summary: PollSummary = { slate_date: slateDate, carded: tickers.length, updated: 0, not_open: [], snapshots: 0 };
     if (!tickers.length) return summary;   // no deck yet today (curation runs at 10am)
 
     const fetchedAt = await dbNow(db);
@@ -54,17 +54,17 @@ export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
 
     // Lock rows in ticker order before updating. Ingest writes markets in the same order, so
     // the two jobs can wait on each other but never deadlock.
-    const updated = await db.query<{ ticker: string; kalshi_status: string }>(
+    const updated = await db.query<{ ticker: string }>(
       `with q as (
          select * from jsonb_to_recordset($1) as q(ticker text, yes_bid smallint, yes_ask smallint,
-           no_bid smallint, no_ask smallint, volume integer, status text)
+           no_bid smallint, no_ask smallint, volume integer, status market_status)
        ), locked as (
          select m.ticker from markets m join q using (ticker) order by m.ticker for no key update of m
        )
        update markets m
           set yes_bid_cents = q.yes_bid, yes_ask_cents = q.yes_ask,
               no_bid_cents = q.no_bid,   no_ask_cents = q.no_ask,
-              volume = q.volume, kalshi_status = q.status,
+              volume = q.volume, status = q.status,
               prices_updated_at = $2, updated_at = now()
          from q join locked using (ticker)
         where m.ticker = q.ticker
@@ -74,7 +74,7 @@ export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
       [JSON.stringify(quotes), fetchedAt],
     );
     summary.updated = updated.rowCount ?? 0;
-    summary.not_active = quotes.filter((q) => q.status !== "active").map((q) => q.ticker).sort();
+    summary.not_open = quotes.filter((q) => q.status !== "open").map((q) => q.ticker).sort();
 
     // Price history: the rule for when to snapshot lives in snapshot_prices().
     const snap = await db.query<{ n: number }>(`select snapshot_prices() as n`);
@@ -84,9 +84,17 @@ export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
     // silently. Fail the run (and alert) after writing everything we did get.
     const returned = new Set(quotes.map((q) => q.ticker));
     const missing = tickers.filter((t) => !returned.has(t));
+    const problems: string[] = [];
     if (missing.length) {
-      throw new Error(`Kalshi returned no data for ${missing.length} carded market(s): ${missing.join(", ")}`);
+      problems.push(`Kalshi returned no data for ${missing.length} carded market(s): ${missing.join(", ")}`);
     }
+    // A status word we don't know was stored as `paused` (cards out); say so loudly, since it
+    // usually means Kalshi changed its API and the adapter's mapping needs updating.
+    const unknown = quotes.filter((q) => q.unknown).map((q) => `${q.ticker} ("${q.unknown}")`);
+    if (unknown.length) {
+      problems.push(`unknown Kalshi status for ${unknown.length} market(s), treated as paused: ${unknown.join(", ")}`);
+    }
+    if (problems.length) throw new Error(problems.join("; "));
     return summary;
   });
 }

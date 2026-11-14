@@ -170,10 +170,10 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     }
     await db.query(
       `insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, team_id, stat, strike,
-                            yes_bid_cents, yes_ask_cents, no_bid_cents, no_ask_cents, volume, kalshi_status,
+                            yes_bid_cents, yes_ask_cents, no_bid_cents, no_ask_cents, volume, status,
                             prices_updated_at, updated_at)
        select m.ticker, 'nba', m.game_id, m.kind::market_kind, m.series, m.title, m.player_id, m.team_id, m.stat, m.strike,
-              m.yes_bid, m.yes_ask, m.no_bid, m.no_ask, m.volume, m.status, $2, now()
+              m.yes_bid, m.yes_ask, m.no_bid, m.no_ask, m.volume, m.status::market_status, $2, now()
        from jsonb_to_recordset($1) as m(ticker text, game_id uuid, kind text, series text, title text, player_id uuid,
             team_id smallint, stat text, strike numeric, yes_bid smallint, yes_ask smallint, no_bid smallint,
             no_ask smallint, volume integer, status text)
@@ -182,7 +182,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
        on conflict (ticker) do update
          set yes_bid_cents = excluded.yes_bid_cents, yes_ask_cents = excluded.yes_ask_cents,
              no_bid_cents = excluded.no_bid_cents,   no_ask_cents = excluded.no_ask_cents,
-             volume = excluded.volume, kalshi_status = excluded.kalshi_status,
+             volume = excluded.volume, status = excluded.status,
              prices_updated_at = excluded.prices_updated_at, updated_at = now()
          -- Never replace newer data (e.g. a poll that ran while ingest was fetching rosters).
          -- Results are never written here: settlement owns them.

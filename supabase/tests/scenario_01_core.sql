@@ -24,11 +24,11 @@ insert into players (id,league,full_name,team_id,espn_athlete_id,kalshi_player_i
 insert into games (id,league,espn_event_id,kalshi_game_key,slate_date,home_team_id,away_team_id,tip_off_at) values
  ('00000000-0000-0000-0000-0000000000b1','nba','e1','G1',storyline_today(),1,2, now()+interval '6 hours'),
  ('00000000-0000-0000-0000-0000000000b2','nba','e2','G2',storyline_today(),1,2, now()-interval '1 hour');
-insert into markets (ticker,league,game_id,kind,kalshi_series,title,player_id,team_id,stat,strike,yes_ask_cents,no_ask_cents,kalshi_status,prices_updated_at) values
- ('WEMBY-30','nba','00000000-0000-0000-0000-0000000000b1','player_stat','KXNBAPTS','Victor Wembanyama: 30+ points','00000000-0000-0000-0000-0000000000a1',null,'points',30,43,58,'active',now()),
- ('CURRY-5', 'nba','00000000-0000-0000-0000-0000000000b2','player_stat','KXNBA3PT','Stephen Curry: 5+ threes','00000000-0000-0000-0000-0000000000a2',null,'threes',5,50,51,'active',now()),
- ('KJ-8',    'nba','00000000-0000-0000-0000-0000000000b1','player_stat','KXNBAREB','Keldon Johnson: 8+ rebounds','00000000-0000-0000-0000-0000000000a3',null,'rebounds',8,50,51,'active',now()-interval '10 minutes'),
- ('SAS-WIN', 'nba','00000000-0000-0000-0000-0000000000b1','game_winner','KXNBAGAME','San Antonio wins',null,1,null,null,62,40,'active',now());
+insert into markets (ticker,league,game_id,kind,kalshi_series,title,player_id,team_id,stat,strike,yes_ask_cents,no_ask_cents,status,prices_updated_at) values
+ ('WEMBY-30','nba','00000000-0000-0000-0000-0000000000b1','player_stat','KXNBAPTS','Victor Wembanyama: 30+ points','00000000-0000-0000-0000-0000000000a1',null,'points',30,43,58,'open',now()),
+ ('CURRY-5', 'nba','00000000-0000-0000-0000-0000000000b2','player_stat','KXNBA3PT','Stephen Curry: 5+ threes','00000000-0000-0000-0000-0000000000a2',null,'threes',5,50,51,'open',now()),
+ ('KJ-8',    'nba','00000000-0000-0000-0000-0000000000b1','player_stat','KXNBAREB','Keldon Johnson: 8+ rebounds','00000000-0000-0000-0000-0000000000a3',null,'rebounds',8,50,51,'open',now()-interval '10 minutes'),
+ ('SAS-WIN', 'nba','00000000-0000-0000-0000-0000000000b1','game_winner','KXNBAGAME','San Antonio wins',null,1,null,null,62,40,'open',now());
 insert into cards (id,slate_date,sort_key,game_id,subject,player_id,team_id,market_ticker,blurb) values
  ('00000000-0000-0000-0000-0000000000c1',storyline_today(),1,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a1',1,'WEMBY-30','Wemby has hit 30 in 3 straight.'),
  ('00000000-0000-0000-0000-0000000000c2',storyline_today(),2,'00000000-0000-0000-0000-0000000000b2','player','00000000-0000-0000-0000-0000000000a2',2,'CURRY-5','Curry vs the Spurs again.'),

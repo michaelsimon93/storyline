@@ -52,8 +52,14 @@ before(async () => {
 beforeEach(() => useFetch(pollRoute()));
 after(async () => { restore(); await db?.end(); });
 
+/** Card states depend on the clock: keep the recorded game in the future, so a test run after
+ *  the real Nov 13 tip-off still sees pre-game states. */
+async function gameNotStarted() {
+  await db!.query(`update games set tip_off_at = now() + interval '1 day', status = 'scheduled'`);
+}
+
 const market = async (ticker: string) =>
-  (await db!.query(`select yes_bid_cents, yes_ask_cents, volume, kalshi_status, prices_updated_at
+  (await db!.query(`select yes_bid_cents, yes_ask_cents, volume, status, prices_updated_at
                     from markets where ticker = $1`, [ticker])).rows[0];
 
 test("refreshes prices, volume and status of every carded market in one request", { skip }, async () => {
@@ -61,7 +67,7 @@ test("refreshes prices, volume and status of every carded market in one request"
   const untouched = await market(NOT_CARDED);
   const s = await pollPrices(db!, SLATE);
 
-  assert.deepEqual({ carded: s.carded, updated: s.updated, not_active: s.not_active }, { carded: 3, updated: 3, not_active: [CLOSED] });
+  assert.deepEqual({ carded: s.carded, updated: s.updated, not_open: s.not_open }, { carded: 3, updated: 3, not_open: [CLOSED] });
   const pollCalls = calls.filter((c) => c.includes("tickers="));
   assert.equal(pollCalls.length, 1, "one request covers all carded markets");
   assert.deepEqual(new URL(pollCalls[0]!).searchParams.get("tickers")!.split(",").sort(), [...CARDED].sort(),
@@ -72,11 +78,12 @@ test("refreshes prices, volume and status of every carded market in one request"
   assert.deepEqual([before.yes_bid_cents, after.yes_bid_cents, after.yes_ask_cents], [9, 51, 53]);
   assert.equal(after.volume, 250);
   assert.ok(after.prices_updated_at > before.prices_updated_at);
-  assert.equal((await market(CLOSED)).kalshi_status, "closed");
+  assert.equal((await market(CLOSED)).status, "closed", "Kalshi's 'closed' in our words");
   assert.deepEqual(await market(NOT_CARDED), untouched, "markets without a card are left alone");
 });
 
 test("a market Kalshi closes shows as an out card", { skip }, async () => {
+  await gameNotStarted();
   await pollPrices(db!, SLATE);
   const { rows } = await db!.query(`select state from card_feed where market_ticker = $1`, [CLOSED]);
   assert.equal(rows[0].state, "out");
@@ -130,6 +137,29 @@ test("a carded market Kalshi doesn't return fails the run, after updating the re
   assert.ok(Number(m.age) < 5, "the markets Kalshi did return were still refreshed");
 });
 
+test("a status word we don't know turns the card out and fails the run loudly", { skip }, async () => {
+  // e.g. Kalshi adds a lifecycle state. Safe side: not open, so no picks; and an alert.
+  const poll = pollRoute();
+  useFetch((url) => {
+    const res = poll(url);
+    if (!res) return undefined;
+    return (async () => {
+      const body = await res.json() as { markets: { ticker: string; status: string }[] };
+      for (const m of body.markets) if (m.ticker === WINNER) m.status = "suspended_for_review";
+      return json(body);
+    })() as unknown as Response;
+  });
+  await gameNotStarted();
+  await assert.rejects(pollPrices(db!, SLATE),
+    new RegExp(`unknown Kalshi status for 1 market\\(s\\), treated as paused: ${WINNER} \\("suspended_for_review"\\)`));
+  assert.equal((await market(WINNER)).status, "paused");
+  const { rows } = await db!.query(`select state from card_feed where market_ticker = $1`, [WINNER]);
+  assert.equal(rows[0].state, "out");
+  useFetch(pollRoute());
+  await pollPrices(db!, SLATE);                 // Kalshi back to normal: the card reopens
+  assert.equal((await market(WINNER)).status, "open");
+});
+
 test("no deck yet: nothing to poll, no Kalshi call", { skip }, async () => {
   const s = await pollPrices(db!, "2026-11-14");
   assert.equal(s.carded, 0);
@@ -181,7 +211,7 @@ test("ingest doesn't overwrite fresher prices the poller wrote while it was runn
   assert.ok(polled, "the poll ran in the middle of ingest");
   const m = await market(MOVED);
   assert.deepEqual([m.yes_bid_cents, m.yes_ask_cents], [51, 53], "ingest replaced the poller's newer prices with stale ones");
-  assert.equal((await market(CLOSED)).kalshi_status, "closed", "ingest reverted a newer status");
+  assert.equal((await market(CLOSED)).status, "closed", "ingest reverted a newer status");
 });
 
 test("ingest never clears a result settlement has written", { skip }, async () => {

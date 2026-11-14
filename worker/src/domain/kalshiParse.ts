@@ -62,9 +62,39 @@ export const PLAYER_PROP_SERIES: Record<string, string> = {
 
 export const GAME_WINNER_SERIES = "KXNBAGAME";
 
+import type { MarketStatus } from "./market.js";
+
 /**
- * The live part of a Kalshi market: prices, volume and trading status. Ingest and the price
- * poller both write exactly this, so they can't disagree on how a quote is read.
+ * Kalshi's market lifecycle (docs.kalshi.com, "Market lifecycle"): initialized → active →
+ * (inactive) → closed → determined → (disputed → amended) → finalized. Only `finalized` is final;
+ * a determined result can still be disputed, so it maps to `closed`, not `settled`. Some API
+ * listings also show `settled`, treated like `finalized`.
+ */
+const KALSHI_STATUS: Record<string, MarketStatus> = {
+  active: "open",
+  initialized: "paused",
+  inactive: "paused",
+  closed: "closed",
+  determined: "closed",
+  disputed: "closed",
+  amended: "closed",
+  finalized: "settled",
+  settled: "settled",
+};
+
+/**
+ * Kalshi's status word in Storyline's vocabulary. An unknown word maps to `paused` (cards go
+ * out: the safe side) and is returned as `unknown` so the caller can report it.
+ */
+export function marketStatus(kalshiStatus: string): { status: MarketStatus; unknown?: string } {
+  const status = KALSHI_STATUS[kalshiStatus];
+  return status ? { status } : { status: "paused", unknown: kalshiStatus };
+}
+
+/**
+ * The live part of a Kalshi market, in Storyline's vocabulary: prices in cents, volume, and
+ * our market status. Ingest and the price poller both write exactly this, so they can't
+ * disagree on how a quote is read.
  * Deliberately not `result`: Kalshi can show a result before it is final and can amend it, so
  * reading and paying out on results belongs to settlement alone (STO-13, ADR-004).
  */
@@ -76,6 +106,6 @@ export function marketQuote(m: {
     yes_bid: dollarsToCents(m.yes_bid_dollars), yes_ask: dollarsToCents(m.yes_ask_dollars),
     no_bid: dollarsToCents(m.no_bid_dollars),   no_ask: dollarsToCents(m.no_ask_dollars),
     volume: Math.round(Number(m.volume_fp ?? 0)),
-    status: m.status,
+    ...marketStatus(m.status),
   };
 }
