@@ -40,16 +40,21 @@ export function fetchDeadline(intervalSeconds: number) {
 export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
   const slateDate = await resolveSlateDate(db, date);
   return withRun(db, "price_poll", slateDate, async () => {
-    // Today's carded markets that come from Kalshi, with their Kalshi tickers (ADR-021).
-    const { rows } = await db.query<{ market_id: string; ticker: string }>(
+    // Today's carded markets with their Kalshi tickers (ADR-021). A carded market with no Kalshi
+    // ticker can't be priced by this poller; it's reported below, never silently skipped.
+    const { rows } = await db.query<{ market_id: string; ticker: string | null }>(
       `select distinct c.market_id, x.external_id as ticker
          from cards c
-         join external_ids x on x.market_id = c.market_id and x.source = $2 and x.kind = 'market'
+         left join external_ids x on x.market_id = c.market_id and x.source = $2 and x.kind = 'market'
         where c.slate_date = $1
         order by 2`, [slateDate, kalshi.SOURCE]);
-    const idByTicker = new Map(rows.map((r) => [r.ticker, r.market_id]));
+    const unpriceable = rows.filter((r) => r.ticker === null).map((r) => r.market_id).sort();
+    const idByTicker = new Map(rows.filter((r) => r.ticker !== null).map((r) => [r.ticker!, r.market_id]));
     const tickers = [...idByTicker.keys()];
-    const summary: PollSummary = { slate_date: slateDate, carded: tickers.length, updated: 0, not_open: [], snapshots: 0 };
+    const summary: PollSummary = { slate_date: slateDate, carded: rows.length, updated: 0, not_open: [], snapshots: 0 };
+    if (unpriceable.length && !tickers.length) {
+      throw new Error(`${unpriceable.length} carded market(s) have no Kalshi ticker, so nothing prices them: ${unpriceable.join(", ")}`);
+    }
     if (!tickers.length) return summary;   // no deck yet today (curation runs at 10am)
 
     const fetchedAt = await dbNow(db);
@@ -91,6 +96,9 @@ export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
     const returned = new Set(quotes.map((q) => q.ticker));
     const missing = tickers.filter((t) => !returned.has(t));
     const problems: string[] = [];
+    if (unpriceable.length) {
+      problems.push(`${unpriceable.length} carded market(s) have no Kalshi ticker, so nothing prices them: ${unpriceable.join(", ")}`);
+    }
     if (missing.length) {
       problems.push(`Kalshi returned no data for ${missing.length} carded market(s): ${missing.join(", ")}`);
     }

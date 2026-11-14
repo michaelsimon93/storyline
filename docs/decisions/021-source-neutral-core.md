@@ -29,7 +29,12 @@ Nothing is deployed yet, so changing this now costs only code.
    side (an unknown market status → `paused`, so cards go out) and reports them loudly.
 4. **Provider IDs live in one cross-reference table**, as (source, kind, external ID → our ID),
    unique per source and kind. Adding a provider adds rows, not columns.
-5. **Guardrail: no speculative frameworks.** Build only abstractions with a real provider
+5. **A market is identified by what it is**: game, kind, player or team, stat and line
+   (`markets_identity`), not by who lists it. Provider IDs attach to that market. A lost or
+   re-sent provider ID re-attaches instead of creating a duplicate, racing runs are no-ops
+   instead of errors, and two providers listing the same market map to one Storyline market.
+   (Found by the test adversary on STO-38.)
+6. **Guardrail: no speculative frameworks.** Build only abstractions with a real provider
    behind them. One adapter each for Kalshi and ESPN; no generic plugin system.
 
 Kalshi's status mapping follows its documented lifecycle. A determined result can still be

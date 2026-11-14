@@ -14,6 +14,9 @@ create table external_ids (
   source       text not null check (source ~ '^[a-z][a-z0-9_]*$'),   -- 'kalshi', 'espn', ...
   kind         text not null check (kind in ('market')),              -- STO-39 adds team/player/game
   external_id  text not null,
+  -- Exactly as the provider sends it: non-empty, no surrounding whitespace, so a padded copy
+  -- can't claim a second slot for the same provider market.
+  constraint external_id_clean check (external_id <> '' and external_id = btrim(external_id)),
   market_id    uuid,
   created_at   timestamptz not null default now(),
   primary key (source, kind, external_id),
@@ -59,7 +62,14 @@ alter table markets add primary key (id);
 alter table markets drop column ticker;
 alter table markets drop column kalshi_series;
 
+-- A market is identified by what it is: this game, this kind, this player or team, this stat
+-- and line. Not by who lists it. Providers' IDs attach to it, so a lost or re-sent provider ID
+-- re-attaches to the same market instead of minting a duplicate, and two providers listing
+-- the same market would map to one Storyline market.
+create unique index markets_identity on markets (game_id, kind, player_id, team_id, stat, strike) nulls not distinct;
+
 alter table external_ids           add foreign key (market_id) references markets(id) on delete cascade;
+create index external_ids_market_idx on external_ids (market_id);   -- cascades and reverse lookups
 alter table market_price_snapshots add primary key (market_id, captured_at);
 alter table market_price_snapshots add foreign key (market_id) references markets(id) on delete cascade;
 alter table picks add foreign key (market_id) references markets(id);

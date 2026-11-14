@@ -31,6 +31,10 @@ select t_err('external ids: a market row must point at a market',
 select t_err('external ids: provider names are lowercase identifiers',
   $q$insert into external_ids (source, kind, external_id, market_id) values ('Kalshi API', 'market', 'z', mid('X5-B'))$q$,
   '%external_ids_source_check%');
+select t_err('markets: the same market (game, kind, team or player, stat, line) can''t exist twice',
+  $q$insert into markets (id, league, game_id, kind, title, team_id, status)
+     values (mid('X5-A2'), 'nba', 'a5500000-0000-0000-0000-0000000000e1', 'game_winner', 'A wins again', 1, 'open')$q$,
+  '%markets_identity%');
 delete from markets where id = mid('X5-B');
 select t_eq('external ids: deleting a market removes its provider ids',
   (select count(*)::int from external_ids where market_id = mid('X5-B')), 0);
