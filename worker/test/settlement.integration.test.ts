@@ -25,15 +25,15 @@ before(async () => {
       ('a5000000-0000-0000-0000-0000000000b1','nba','P1',1,'k1'), ('a5000000-0000-0000-0000-0000000000b2','nba','P2',1,'k2');
     insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at)
       values ('a5000000-0000-0000-0000-0000000000e1','nba','e1','G1',storyline_today(),1,2, now() + interval '6 hours');
-    insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, kalshi_status, prices_updated_at) values
-      ('S1','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAPTS','P1: 20+','a5000000-0000-0000-0000-0000000000b1','points',20,40,61,'active',now()),
-      ('S2','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAPTS','P2: 20+','a5000000-0000-0000-0000-0000000000b2','points',20,40,61,'active',now());
+    insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, status, prices_updated_at) values
+      ('S1','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAPTS','P1: 20+','a5000000-0000-0000-0000-0000000000b1','points',20,40,61,'open',now()),
+      ('S2','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAPTS','P2: 20+','a5000000-0000-0000-0000-0000000000b2','points',20,40,61,'open',now());
     insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_ticker, blurb) values
       ('${CARD_1}', storyline_today(), 1, 'a5000000-0000-0000-0000-0000000000e1', 'player', 'a5000000-0000-0000-0000-0000000000b1', 'S1', 'a'),
       ('${CARD_2}', storyline_today(), 2, 'a5000000-0000-0000-0000-0000000000e1', 'player', 'a5000000-0000-0000-0000-0000000000b2', 'S2', 'b');
-    insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, kalshi_status, prices_updated_at) values
-      ('S3','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAREB','P1: 8+','a5000000-0000-0000-0000-0000000000b1','rebounds',8,40,61,'active',now()),
-      ('S4','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAREB','P2: 8+','a5000000-0000-0000-0000-0000000000b2','rebounds',8,40,61,'active',now());
+    insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, status, prices_updated_at) values
+      ('S3','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAREB','P1: 8+','a5000000-0000-0000-0000-0000000000b1','rebounds',8,40,61,'open',now()),
+      ('S4','nba','a5000000-0000-0000-0000-0000000000e1','player_stat','KXNBAREB','P2: 8+','a5000000-0000-0000-0000-0000000000b2','rebounds',8,40,61,'open',now());
     insert into players (id, league, full_name, team_id, kalshi_player_id) values
       ('a5000000-0000-0000-0000-0000000000b3','nba','P3',2,'k3'), ('a5000000-0000-0000-0000-0000000000b4','nba','P4',2,'k4');
     update markets set player_id = 'a5000000-0000-0000-0000-0000000000b3' where ticker = 'S3';

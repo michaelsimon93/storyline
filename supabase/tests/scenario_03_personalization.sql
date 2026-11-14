@@ -28,11 +28,11 @@ insert into players (id, league, full_name, team_id, kalshi_player_id) values
   ('00000000-0000-0000-0000-0000000000a6', 'nba', 'Trade Candidate', 1, 'k6'),
   ('00000000-0000-0000-0000-0000000000a7', 'nba', 'Bench Guy', 2, 'k7');
 insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike,
-                     yes_ask_cents, no_ask_cents, kalshi_status, prices_updated_at) values
+                     yes_ask_cents, no_ask_cents, status, prices_updated_at) values
   ('TC-3', 'nba', '00000000-0000-0000-0000-0000000000b1', 'player_stat', 'KXNBA3PT', 'Trade Candidate: 3+ threes',
-   '00000000-0000-0000-0000-0000000000a6', 'threes', 3, 40, 61, 'active', now()),
+   '00000000-0000-0000-0000-0000000000a6', 'threes', 3, 40, 61, 'open', now()),
   ('BG-8', 'nba', '00000000-0000-0000-0000-0000000000b1', 'player_stat', 'KXNBAREB', 'Bench Guy: 8+ rebounds',
-   '00000000-0000-0000-0000-0000000000a7', 'rebounds', 8, 50, 51, 'active', now());
+   '00000000-0000-0000-0000-0000000000a7', 'rebounds', 8, 50, 51, 'open', now());
 insert into cards (id, slate_date, sort_key, game_id, subject, player_id, team_id, market_ticker, blurb, storyline_type, placement) values
   ('00000000-0000-0000-0000-0000000000c6', storyline_today(), 6, '00000000-0000-0000-0000-0000000000b1', 'player',
    '00000000-0000-0000-0000-0000000000a6', 1, 'TC-3', 'Hot from deep.', 'hot_streak', 'core'),

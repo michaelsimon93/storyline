@@ -53,9 +53,9 @@ update app_config set value = '10' where key = 'cards_per_day';
 insert into players (id, league, full_name, team_id, kalshi_player_id)
   values ('00000000-0000-0000-0000-0000000000a5', 'nba', 'Config Tester', 2, 'k5');
 insert into markets (ticker, league, game_id, kind, kalshi_series, title, player_id, stat, strike,
-                     yes_ask_cents, no_ask_cents, kalshi_status, prices_updated_at)
+                     yes_ask_cents, no_ask_cents, status, prices_updated_at)
   values ('CFG-10', 'nba', '00000000-0000-0000-0000-0000000000b1', 'player_stat', 'KXNBAPTS',
-          'Config Tester: 10+ points', '00000000-0000-0000-0000-0000000000a5', 'points', 10, 50, 51, 'active', now());
+          'Config Tester: 10+ points', '00000000-0000-0000-0000-0000000000a5', 'points', 10, 50, 51, 'open', now());
 insert into cards (id, slate_date, sort_key, game_id, subject, player_id, team_id, market_ticker, blurb)
   values ('00000000-0000-0000-0000-0000000000c5', storyline_today(), 5, '00000000-0000-0000-0000-0000000000b1',
           'player', '00000000-0000-0000-0000-0000000000a5', 2, 'CFG-10', 'config test');

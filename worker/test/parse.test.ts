@@ -68,10 +68,32 @@ test("a Kalshi quote becomes integer cents and a whole-number volume, and never 
   assert.deepEqual(marketQuote({
     yes_bid_dollars: "0.4300", yes_ask_dollars: "0.4500", no_bid_dollars: "0.5500", no_ask_dollars: "0.5700",
     volume_fp: "1234.00", status: "active",
-  }), { yes_bid: 43, yes_ask: 45, no_bid: 55, no_ask: 57, volume: 1234, status: "active" });
+  }), { yes_bid: 43, yes_ask: 45, no_bid: 55, no_ask: 57, volume: 1234, status: "open" });
   // Kalshi's result is ignored even when present: settlement owns results (STO-13, ADR-004).
   const settled = marketQuote({ status: "finalized", result: "yes" } as { status: string });
   assert.equal("result" in settled, false);
   assert.equal(settled.yes_bid, null, "missing prices stay null, not 0");
   assert.equal(settled.volume, 0);
+});
+
+test("Kalshi's lifecycle maps to our four statuses; only finalized counts as settled", async () => {
+  const { marketStatus } = await import("../src/domain/kalshiParse.js");
+  const mapped = Object.fromEntries(
+    ["active", "initialized", "inactive", "closed", "determined", "disputed", "amended", "finalized", "settled"]
+      .map((k) => [k, marketStatus(k).status]));
+  assert.deepEqual(mapped, {
+    active: "open", initialized: "paused", inactive: "paused",
+    closed: "closed", determined: "closed", disputed: "closed", amended: "closed",   // result may still change
+    finalized: "settled", settled: "settled",
+  });
+  assert.equal(marketStatus("active").unknown, undefined);
+});
+
+test("an unknown Kalshi status is treated as paused and flagged", async () => {
+  const { marketStatus } = await import("../src/domain/kalshiParse.js");
+  assert.deepEqual(marketStatus("halted_for_review"), { status: "paused", unknown: "halted_for_review" });
+  assert.deepEqual(marketStatus(""), { status: "paused", unknown: "" });
+  for (const builtin of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+    assert.deepEqual(marketStatus(builtin), { status: "paused", unknown: builtin }, builtin);
+  }
 });

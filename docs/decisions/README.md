@@ -24,3 +24,4 @@ Short records of the decisions that shaped Storyline: the context, the options c
 | 018 | [Configurable settings and feature flags in the database](018-config-and-feature-flags.md) |
 | 019 | [Personalization: shared core deck, signals from views and picks](019-personalization-groundwork.md) |
 | 020 | [Lock ordering for picks and settlement](020-lock-ordering.md) |
+| 021 | [Core tables speak Storyline, not provider](021-source-neutral-core.md) |
