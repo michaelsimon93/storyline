@@ -22,6 +22,36 @@ let db: Db | null = null;
 let calls: string[] = [];
 let restore = () => {};
 
+/**
+ * Give the carded markets fixed ids in the REVERSE of their ticker order, written highest id
+ * first so the lowest id also sits last on disk. Ticker order, physical order and id order then
+ * all disagree, so the lock-order tests can tell them apart every time, not by luck.
+ */
+const FIXED_IDS = ["a0000000-0000-4000-8000-000000000001", "b0000000-0000-4000-8000-000000000002",
+                   "c0000000-0000-4000-8000-000000000003"];
+async function rekeyCarded(d: Db) {
+  const byTicker = [...CARDED].sort();                 // lowest ticker gets the highest id
+  const plan = byTicker.map((t, i) => ({ ticker: t, id: FIXED_IDS[FIXED_IDS.length - 1 - i]! }));
+  const c = await d.connect();
+  try {
+    await c.query("begin");
+    for (const { ticker, id } of plan) {               // highest id first → lowest id last on disk
+      const old = await idOf(d, ticker);
+      const { rows: [row] } = await c.query(`delete from markets where id = $1 returning *`, [old]);
+      await c.query(`insert into markets select (json_populate_record(null::markets, $1::json)).*`,
+        [JSON.stringify({ ...row, id })]);
+      await c.query(`insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'market', $1, $2)`,
+        [ticker, id]);
+    }
+    await c.query("commit");
+  } catch (e) {
+    await c.query("rollback");
+    throw e;
+  } finally {
+    c.release();
+  }
+}
+
 /** Kalshi's GET /markets?tickers=... answered from the derived fixture, filtered to the request. */
 function pollRoute(drop: string[] = []): Route {
   return (url) => {
@@ -43,6 +73,7 @@ before(async () => {
   if (!db) return;
   useFetch();
   await ingest(db, SLATE);
+  await rekeyCarded(db);
   await db.query(`
     insert into cards (slate_date, sort_key, game_id, subject, player_id, team_id, market_id, blurb)
     select $1, row_number() over (order by id), game_id,
@@ -272,22 +303,30 @@ async function waitForLockWait(timeoutMs = 5_000): Promise<boolean> {
   return false;
 }
 
-async function assertLocksInIdOrder(run: () => Promise<unknown>, lowest: string, highest: string) {
+/**
+ * Hold one market row, run the job, and when it's waiting on that row check exactly which of the
+ * job's rows it has already locked: in market-id order that must be every row with a smaller id
+ * and nothing else. Any other order (ticker order, disk order) locks a different set.
+ */
+async function assertLocksInIdOrder(run: () => Promise<unknown>, touched: string[], blocked: string) {
   const blocker = await db!.connect();
   const probe = await db!.connect();
   try {
     await blocker.query("begin");
-    await blocker.query(`select 1 from markets where id = $1 for no key update`, [lowest]);
+    await blocker.query(`select 1 from markets where id = $1 for no key update`, [blocked]);
     const running = run();
     void running.catch(() => {});
-    assert.ok(await waitForLockWait(), "the job should be waiting on the lowest market id");
+    assert.ok(await waitForLockWait(), "the job should be waiting on the blocked market");
     await probe.query("begin");
-    const free = await probe.query(`select 1 from markets where id = $1 for no key update nowait`, [highest])
-      .then(() => true, () => false);
+    const { rows } = await probe.query<{ id: string }>(
+      `select id from markets where id = any($1) and id <> $2 for no key update skip locked`, [touched, blocked]);
     await probe.query("rollback");
     await blocker.query("commit");
     await running;
-    assert.ok(free, `${highest} was locked before ${lowest}: rows aren't locked in market-id order`);
+    const free = new Set(rows.map((r) => r.id));
+    const locked = touched.filter((id) => id !== blocked && !free.has(id)).sort();
+    const expected = touched.filter((id) => id < blocked).sort();
+    assert.deepEqual(locked, expected, "while waiting, exactly the rows with smaller ids are locked");
   } finally {
     await blocker.query("rollback").catch(() => {});
     blocker.release();
@@ -296,14 +335,16 @@ async function assertLocksInIdOrder(run: () => Promise<unknown>, lowest: string,
 }
 
 test("the poller locks market rows in market-id order", { skip }, async () => {
-  const sorted = (await idsOf(db!, CARDED)).sort();
-  // Rewrite the lowest row so it sits last on disk. A plain UPDATE scans in physical order, so
-  // without the explicit ORDER BY ... FOR NO KEY UPDATE it would lock the higher ids first.
-  await db!.query(`update markets set updated_at = now() where id = $1`, [sorted[0]]);
-  await assertLocksInIdOrder(() => pollPrices(db!, SLATE), sorted[0]!, sorted.at(-1)!);
+  const ids = (await idsOf(db!, CARDED)).sort();       // = FIXED_IDS
+  assert.deepEqual(ids, FIXED_IDS);
+  // Polls rewrite rows in id order; put them back in reverse on disk (highest id first).
+  for (const id of [...ids].reverse()) await db!.query(`update markets set updated_at = now() where id = $1`, [id]);
+  await assertLocksInIdOrder(() => pollPrices(db!, SLATE), ids, ids[1]!);
 });
 
 test("ingest locks market rows in market-id order", { skip }, async () => {
-  const { rows } = await db!.query(`select min(id::text)::uuid lo, max(id::text)::uuid hi from markets`);
-  await assertLocksInIdOrder(() => ingest(db!, SLATE), rows[0].lo, rows[0].hi);
+  const { rows } = await db!.query<{ id: string }>(
+    `select x.market_id as id from external_ids x where x.source = 'kalshi' and x.kind = 'market' order by 1`);
+  const ids = rows.map((r) => r.id);
+  await assertLocksInIdOrder(() => ingest(db!, SLATE), ids, ids[Math.floor(ids.length / 2)]!);
 });
