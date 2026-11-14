@@ -42,9 +42,15 @@ Three PRs, each one concern, all before settlement (STO-13) and curation (STO-10
 2. STO-38: our own market IDs; Kalshi tickers move to the cross-reference table.
 3. STO-39: team, player and game provider IDs move to the cross-reference table.
 
+Also in scope, so nothing provider-specific is left behind:
+- `markets.kalshi_series` moves to the cross-reference table with the ticker (STO-38).
+- `markets.result` uses Kalshi's word `scalar` for a void market. Settlement (STO-13) maps
+  results into our own vocabulary when it starts reading them.
+- `markets.title` stays: it's display text, and the provider's wording is the content.
+
 ## Consequences
 - A provider renaming or adding a status changes one mapping in its adapter. Unknown values
-  turn cards out and fail the run, so they're noticed the same day.
+  turn cards out and fail the run (ingest and the poller both), so they're noticed the same day.
 - Lookups by provider ID (ingest, the poller) take one extra join. User-facing reads don't.
 - A second market or stats source means a new adapter plus cross-reference rows, with no schema
   change to core tables.

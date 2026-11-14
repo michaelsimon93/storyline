@@ -93,12 +93,7 @@ test("an unknown Kalshi status is treated as paused and flagged", async () => {
   const { marketStatus } = await import("../src/domain/kalshiParse.js");
   assert.deepEqual(marketStatus("halted_for_review"), { status: "paused", unknown: "halted_for_review" });
   assert.deepEqual(marketStatus(""), { status: "paused", unknown: "" });
-});
-
-test("our status list matches the market_status enum in SQL", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { MARKET_STATUSES } = await import("../src/domain/market.js");
-  const sql = readFileSync(new URL("../../supabase/migrations/20261114001000_market_status.sql", import.meta.url), "utf8");
-  const values = sql.match(/create type market_status as enum \(([^)]*)\)/)![1]!.match(/'(\w+)'/g)!.map((v) => v.slice(1, -1));
-  assert.deepEqual([...MARKET_STATUSES], values);
+  for (const builtin of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+    assert.deepEqual(marketStatus(builtin), { status: "paused", unknown: builtin }, builtin);
+  }
 });

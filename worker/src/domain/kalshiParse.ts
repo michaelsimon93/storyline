@@ -87,8 +87,10 @@ const KALSHI_STATUS: Record<string, MarketStatus> = {
  * out: the safe side) and is returned as `unknown` so the caller can report it.
  */
 export function marketStatus(kalshiStatus: string): { status: MarketStatus; unknown?: string } {
-  const status = KALSHI_STATUS[kalshiStatus];
-  return status ? { status } : { status: "paused", unknown: kalshiStatus };
+  // Own keys only: "constructor" or "__proto__" must not read as known statuses.
+  return Object.hasOwn(KALSHI_STATUS, kalshiStatus)
+    ? { status: KALSHI_STATUS[kalshiStatus]! }
+    : { status: "paused", unknown: kalshiStatus };
 }
 
 /**

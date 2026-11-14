@@ -12,7 +12,8 @@
 create type market_status as enum ('open', 'paused', 'closed', 'settled');
 
 alter table markets add column status market_status;
--- Existing rows (pre-deploy test data only) carry Kalshi's words; same mapping as the adapter.
+-- One-off backfill of pre-deploy test data, which carries Kalshi's words. Not maintained:
+-- the Kalshi adapter's mapping (worker/src/domain/kalshiParse.ts) is the only live copy.
 update markets set status = case kalshi_status
   when 'active'      then 'open'
   when 'initialized' then 'paused'

@@ -226,6 +226,34 @@ test("ingest never clears a result settlement has written", { skip }, async () =
   }
 });
 
+test("ingest reports an unknown Kalshi status loudly instead of quietly storing paused", { skip }, async () => {
+  // e.g. Kalshi renames `active` to `open`: every market would become paused, the deck would be
+  // empty, and with no deck the poller never calls Kalshi. Ingest is the only place to notice.
+  const renamed: Route = (url) => {
+    if (url.hostname !== "external-api.kalshi.com" || url.searchParams.get("series_ticker") !== "KXNBAGAME") return undefined;
+    const body = fixture("kalshi-KXNBAGAME.json") as { markets: { status: string }[] };
+    for (const m of body.markets) m.status = "open";
+    return json(body);
+  };
+  useFetch(renamed);
+  await gameNotStarted();
+  await db!.query(`update markets set prices_updated_at = now() - interval '1 hour' where ticker = $1`, [WINNER]);
+  await assert.rejects(ingest(db!, SLATE),
+    /unknown Kalshi status for 2 market\(s\), treated as paused: KXNBAGAME-26NOV13MILORL-MIL \("open"\), KXNBAGAME-26NOV13MILORL-ORL \("open"\)/);
+  assert.equal((await market(WINNER)).status, "paused", "everything else was still written");
+  const { rows } = await db!.query(`select status from pipeline_runs where job = 'ingest' order by id desc limit 1`);
+  assert.equal(rows[0].status, "failed");
+  useFetch(pollRoute());
+  await pollPrices(db!, SLATE);              // the poller restores it from Kalshi's real word
+});
+
+test("the worker's status list matches the market_status enum in the database", { skip }, async () => {
+  // Reads the live enum, so a later migration that adds a value can't drift past this check.
+  const { MARKET_STATUSES } = await import("../src/domain/market.js");
+  const { rows } = await db!.query(`select enum_range(null::market_status)::text[] as v`);
+  assert.deepEqual(rows[0].v, [...MARKET_STATUSES]);
+});
+
 // ------------------------------------------------------------------ no deadlock with ingest
 // Ingest and the poller both write market rows. If they locked rows in different orders, a
 // run of each could deadlock. Both lock in ticker order. The proof: while another session

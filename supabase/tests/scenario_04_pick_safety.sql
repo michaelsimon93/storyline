@@ -90,6 +90,9 @@ select t_eq('status: a paused market turns its card out',
 update markets set status = 'closed' where ticker = 'A4-OK';
 select t_eq('status: a closed market (result not final) turns its card out',
   (select state::text from card_feed where market_ticker = 'A4-OK'), 'out');
+update markets set status = 'settled' where ticker = 'A4-OK';
+select t_eq('status: a market the exchange settled, before our settlement has run, is out (no picks)',
+  (select state::text from card_feed where market_ticker = 'A4-OK'), 'out');
 update markets set status = 'open' where ticker = 'A4-OK';
 select t_err('status: a provider''s own word can''t be stored',
   $q$update markets set status = 'active' where ticker = 'A4-OK'$q$, '%invalid input value for enum market_status%');

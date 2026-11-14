@@ -194,6 +194,13 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     const snap = await db.query<{ n: number }>(`select snapshot_prices() as n`);
     summary.snapshots = snap.rows[0]!.n;
 
+    // An unknown Kalshi status was stored as paused (cards out). Fail loudly after writing:
+    // with every market paused there'd be no deck, so the poller would never notice (ADR-021).
+    const unknown = marketRows.filter((r) => r.unknown !== undefined)
+      .map((r) => `${r.ticker} ("${r.unknown}")`).sort();
+    if (unknown.length) {
+      throw new Error(`unknown Kalshi status for ${unknown.length} market(s), treated as paused: ${unknown.join(", ")}`);
+    }
     return summary;
   });
 }
