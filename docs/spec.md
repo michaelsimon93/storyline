@@ -138,7 +138,7 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 - *(v1.1)* Live stats come from ESPN game summaries. The worker polls them about every 60 seconds per in-progress game.
 - **We never void picks ourselves.** "Out" only blocks new picks. Every result comes from Kalshi, so if a player listed Out ends up playing, his picks settle on what actually happened.
 
-**Before cards are published ("Cards dropping soon")**
+**Before storylines are published**
 - The app's "day" rolls over at **03:00 ET** by default (`storyline_day()`; the hour is an `app_config` value, STO-48). The daily claim uses the same day. From then until today's cards publish, the card area shows a waiting state instead of an empty screen:
   - Headline: **"Today's storylines drop around 11 AM ET"**
   - Today's slate from ESPN: e.g. "9 games tonight · first game 7:00 PM"
@@ -147,14 +147,14 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 - On no-game days: "No games today. Back tomorrow."
 
 **Acceptance criteria**
-- [ ] Between the day rollover and publish, every visitor sees the waiting state with today's game count and first tip time.
+- [ ] Between the day rollover and publish, every visitor sees the waiting state with today's game count and first game time.
 - [ ] Yesterday's cards are no longer shown as "today's" after the day rollover. They remain visible in My Picks.
 - [ ] If cards haven't published by 12:00 ET, the copy switches to the "running late" version.
 - [ ] The card's line never changes after publish.
 - [ ] Displayed prices are never more than 60 seconds old. If the cache is staler than 2 minutes, the pick buttons show "Updating…" and are disabled.
 - [ ] A pick submitted after tip-off is rejected by the server, even if the client still shows the card as open.
 - [ ] A user with a balance under $5 can view all cards, but the pick buttons are disabled. The message points to the daily claim: "Collect $10" if it's available, otherwise when the next one unlocks (`docs/design.md` §3).
-- [ ] Swiping past card #10 shows the end card, and swiping past the end card shows card #1. Swiping back from #1 shows the end card.
+- [ ] Swiping past the last card shows the end card, and swiping past the end card shows the first card. Swiping back from the first card shows the end card.
 - [ ] When ESPN lists a carded player as Out, the card switches to "Ruled out" within 5 minutes and rejects new picks. Existing picks are untouched until Kalshi settles.
 - [ ] *(v1.1)* During a game, a Live card's stat is never more than 2 minutes behind ESPN.
 - [ ] *(v1.1)* If the price moved more than 3 points, the pick isn't placed until the user confirms.
