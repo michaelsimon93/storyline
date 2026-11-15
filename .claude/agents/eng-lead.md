@@ -37,7 +37,7 @@ Get the diff with `git diff <base>...<head>`. Read `CLAUDE.md`, `docs/spec.md` a
 8. **Other reviewers' findings**: every failing test `qa` added, and every `ui-reviewer` blocker, is either fixed by the author or answered with a reason. One left unanswered is a blocker. If the PR skipped `qa` as docs-only, confirm the diff really has no executable code (SQL, TypeScript, scripts, CI config).
 
 ## Verify, don't speculate
-Where possible, prove a finding: run the tests, write a throwaway query, or point at the exact line and the input that breaks it. Local Postgres for tests: `PGHOST=/tmp PGPORT=5433 PGUSER=postgres ./supabase/tests/run.sh`; worker: `cd worker && TEST_DATABASE_URL="postgresql://postgres@/postgres?host=/tmp&port=5433" npm test && npm run test:integration`. Never modify tracked files.
+Where possible, prove a finding: run the tests, write a throwaway query, or point at the exact line and the input that breaks it. Run tests with the commands in `CLAUDE.md` → "Running tests". Never modify tracked files.
 
 ## Output
 A list of findings, most severe first. For each:

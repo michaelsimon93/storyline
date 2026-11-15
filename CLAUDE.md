@@ -27,6 +27,14 @@ cd worker && npm test                                             # unit
 cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run test:integration
 ```
 
+In a Claude session without a Postgres service, run a local one on a socket and point the same commands at it. Agents use these commands; don't copy them into agent files.
+```bash
+su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /tmp/pgdata -o '-k /tmp -p 5433' -l /tmp/pg.log start"   # if it isn't running
+PGHOST=/tmp PGPORT=5433 PGUSER=postgres ./supabase/tests/run.sh
+cd worker && TEST_DATABASE_URL="postgresql://postgres@/postgres?host=/tmp&port=5433" npm test && npm run test:integration
+```
+CI runs Postgres 17; a local 16 is fine for development, but CI is the source of truth.
+
 ## Workflow
 - Never commit to `main`. Branch → PR → CI green → merge.
 
@@ -70,7 +78,7 @@ At the end of each milestone, run `/retro`.
 - **No hard-coded tunables.** Anything we might want to adjust (sizes, thresholds, money amounts, intervals) is an `app_config` row with a type and range, read via `config_int()` in SQL or `loadConfig()` in the worker. No defaults in code (ADR-018).
 - **Risky or user-visible new features ship behind a feature flag**, and the app logs `flag_exposure` when a flag changes what a user sees.
 - **Events that involve a card carry `card_id`.** Personalization depends on it (ADR-019).
-- Business rules live in exactly one place. The 3am-ET slate day is `storyline_day()` in SQL, and the worker asks the database.
+- Business rules live in exactly one place. The slate day (03:00 ET rollover by default) is `storyline_day()` in SQL, and the worker and app ask the database. The daily claim uses the same day.
 
 ## Other conventions
 - Money is integer cents. Prices are integer cents 1–99.
