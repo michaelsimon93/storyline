@@ -22,7 +22,7 @@ You'll be given a PR number or a base..head range. Get the diff with `git diff <
 7. **PR size**: does it do one thing? If the title needs "and", say how to split it.
 
 ## Verify, don't speculate
-Where possible, prove a finding: run the tests, write a throwaway query, or point at the exact line and the input that breaks it. Local Postgres for tests: `PGHOST=/tmp PGPORT=5433 PGUSER=postgres ./supabase/tests/run.sh`; worker: `cd worker && TEST_DATABASE_URL="postgresql://postgres@/postgres?host=/tmp&port=5433" npm test && npm run test:integration`. Never modify tracked files.
+Where possible, prove a finding: run the tests, write a throwaway query, or point at the exact line and the input that breaks it. Run tests with the commands in `CLAUDE.md` → "Running tests". Never modify tracked files.
 
 ## Output
 A list of findings, most severe first. For each:

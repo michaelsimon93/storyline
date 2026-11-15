@@ -18,4 +18,6 @@ Fixes STO-<!-- issue number -->
 - [ ] No hard-coded tunables; no rule implemented twice
 - [ ] New tables/functions locked down, with a "can't do it" test
 - [ ] ADR/spec updated if a decision changed
-- [ ] Reviewer agent run; findings addressed or answered
+- [ ] `reviewer` run; findings addressed or answered
+- [ ] `test-adversary` run, or not needed (no money, results, matching, security or concurrency changes)
+- [ ] `ui-reviewer` run, or not needed (nothing in `web/`)
