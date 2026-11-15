@@ -39,24 +39,24 @@ Don't set `TZ`. Schedules are in ET in code (`America/New_York`) and the slate d
 
 ## 2. Apply migrations
 
-Run these from the repo root with the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started). `link` asks for the database password.
+Run these from the repo root with the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started). `link` asks for the database password. Every command after `link` needs `--remote`: newer CLIs (3.x) default to a local Docker database and fail with `ECONNREFUSED 127.0.0.1:54322` without it.
 
 ```bash
 supabase link --project-ref <project-ref>
 ```
 
 ```bash
-supabase db push --dry-run
+supabase db push --remote --dry-run
 ```
 
-The dry run should list every file in `supabase/migrations/` (six on the first deploy). Then:
+The dry run should list every file in `supabase/migrations/` (six on the first deploy). It also prints `Skipping migration DEPLOYED…`; that's expected, since `DEPLOYED` is our manifest, not a migration. Then:
 
 ```bash
-supabase db push
+supabase db push --remote
 ```
 
 ```bash
-supabase migration list
+supabase migration list --remote
 ```
 
 Every migration should show in both the Local and Remote columns.
@@ -71,7 +71,7 @@ cd supabase/migrations && sha256sum <file>.sql ... >> DEPLOYED
 
 `DEPLOYED` is append-only (CI checks that too). Any later schema change is a **new** migration, applied with the same `db push`.
 
-**Order on every schema change:** merge the migration, `supabase db push`, then let the worker deploy. Railway deploys on merge, so if the new worker needs the new schema, push the migration before merging the worker change, or pause the deploy.
+**Order on every schema change:** merge the migration, `supabase db push --remote`, then let the worker deploy. Railway deploys on merge, so if the new worker needs the new schema, push the migration before merging the worker change, or pause the deploy.
 
 ## 3. Check the worker is healthy
 
@@ -124,7 +124,7 @@ Within a few seconds Discord should get **`[storyline-worker] … worker failed 
 
 - **Worker:** Railway → service → **Deployments** → pick the last good deployment → **Redeploy**. Then revert the bad commit on `main`, so the next merge doesn't bring it back.
 - **Stop the worker entirely:** Railway → the active deployment → **Remove**. Jobs in flight get the draining window to finish. Redeploy to start it again.
-- **Schema:** migrations are forward-only and frozen once deployed. Undo a change with a **new** migration that reverses it, applied with `supabase db push`. Never edit or delete a deployed migration.
+- **Schema:** migrations are forward-only and frozen once deployed. Undo a change with a **new** migration that reverses it, applied with `supabase db push --remote`. Never edit or delete a deployed migration.
 - **Bad data from a job:** every run is in `pipeline_runs` with its inputs and outputs. Find the run, fix the cause, and re-run the job (jobs are safe to re-run):
 
 ```bash

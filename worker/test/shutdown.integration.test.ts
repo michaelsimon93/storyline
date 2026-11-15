@@ -10,7 +10,7 @@
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -31,6 +31,26 @@ before(async () => {
 after(async () => { await db?.end(); });
 
 const isRunning = (pgid: number) => { try { process.kill(-pgid, 0); return true; } catch { return false; } };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** What's left in the process group, for the failure message. */
+const leftovers = (pgid: number) => {
+  try { return execSync("ps -eo pid,pgid,stat,args --no-headers").toString().split("\n")
+    .filter((l) => l.trim().split(/\s+/)[1] === String(pgid)).join("\n"); } catch { return "(ps failed)"; }
+};
+
+/**
+ * True once nothing in the group is left. Helpers (tsx's esbuild service) exit a few milliseconds
+ * after node and can briefly linger until reaped, so allow a short grace period. An orphaned
+ * worker, the regression this guards against, keeps running indefinitely and still fails.
+ */
+async function groupExits(pgid: number, graceMs = 2_000): Promise<boolean> {
+  const end = Date.now() + graceMs;
+  while (isRunning(pgid)) {
+    if (Date.now() > end) return false;
+    await sleep(50);
+  }
+  return true;
+}
 
 for (const shell of ["bash", "sh"]) test(`the start command shuts down cleanly on SIGTERM (${shell} -c)`, { skip, timeout: 30_000 }, async () => {
   const child = spawn(shell, ["-c", START], {
@@ -50,14 +70,14 @@ for (const shell of ["bash", "sh"]) test(`the start command shuts down cleanly o
     while (!out.includes("scheduled price_poll")) {
       if (child.exitCode !== null) assert.fail(`worker exited early (${child.exitCode}):\n${out}`);
       if (Date.now() > deadline) assert.fail(`worker never started:\n${out}`);
-      await new Promise((r) => setTimeout(r, 100));
+      await sleep(100);
     }
     child.kill("SIGTERM");
 
     const code = await Promise.race([exited, new Promise<"hung">((r) => setTimeout(() => r("hung"), 10_000))]);
     assert.equal(code, 0, `expected a clean exit, got ${code}:\n${out}`);
     assert.match(out, /SIGTERM: stopping scheduler, waiting for running jobs/);
-    assert.equal(isRunning(child.pid!), false, `a worker process outlived the shutdown:\n${out}`);
+    assert.ok(await groupExits(child.pid!), `a process outlived the shutdown:\n${leftovers(child.pid!)}\n${out}`);
   } finally {
     // Whatever happened, leave nothing running: an orphan would hold the test's pipes open.
     if (isRunning(child.pid!)) process.kill(-child.pid!, "SIGKILL");
