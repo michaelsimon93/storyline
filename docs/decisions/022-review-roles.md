@@ -25,3 +25,6 @@ Two review roles, modeled on a real team:
 - The handoff's "worth understanding" line keeps him able to defend each decision without the agent in the room.
 - GitHub doesn't allow approving your own PR, and the agents push as Michael, so `eng-lead`'s approval is a PR comment, not a GitHub review. A bot account would fix this if we ever need branch protection on approvals.
 - Revisit at the end of v1: if the core loop is stable, move to merge rights split by risk. If `/retro` shows an agent changed no decisions in a milestone, cut or merge it.
+
+## Amendment (2026-11-15): review depth matches risk
+Running `qa` and `eng-lead` on every PR cost more than it caught: a two-line docs change went through two review rounds, and three days of work went mostly to process. The roles stay the same; what changes is when they run. Docs-only PRs get no agent review, ordinary code gets `eng-lead`, and only high-risk code (money, security, concurrency) gets `qa` first. Only blockers trigger a re-review. Michael still merges every PR. The table lives in `CLAUDE.md`.
