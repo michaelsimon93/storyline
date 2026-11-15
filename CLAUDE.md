@@ -2,6 +2,15 @@
 
 Read `docs/product.md` (why), `docs/spec.md` (what), and `docs/decisions/` (how and why we chose it) before making changes. For anything in `web/`, `docs/design.md` is the source of truth for UI.
 
+## Working with Michael
+Michael is Head of Product and directs the build. Teaching matters as much as shipping, so he can defend every decision himself.
+- With any code or architecture choice, give a 3–5 line **why**.
+- For real architecture or pipeline choices, give **two options with tradeoffs** and let him pick.
+- **State assumptions before building.** Say whether external API behavior is verified (fixture, docs, a real call) or a guess.
+- Build the **smallest end-to-end version first**, then layer on.
+- **Push back** on scope and ideas. Don't just execute.
+- Be concise by default. Go deeper when he asks why.
+
 ## Testing is part of done
 A change isn't finished until it has tests and CI is green. No exceptions for "small" changes.
 
