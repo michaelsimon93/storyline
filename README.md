@@ -45,6 +45,7 @@ flowchart LR
 | [`docs/product.md`](docs/product.md) | **Why Storyline exists:** the problem, the bet, the three product layers, principles, risks |
 | [`docs/spec.md`](docs/spec.md) | Product spec: scope, card states, bankroll, resulting, release plan, acceptance criteria |
 | [`docs/decisions/`](docs/decisions/) | Architecture decision records: context, options, decision, consequences |
+| [`docs/runbook-deploy.md`](docs/runbook-deploy.md) | Deploying the database (Supabase) and worker (Railway): setup, migrations, health checks, rollback |
 | [`supabase/migrations/`](supabase/migrations/) | Database schema, RLS policies, and functions (`place_pick`, `settle_market`, …) |
 | [`supabase/tests/`](supabase/tests/) | Scenario tests, run in CI against Postgres 17 |
 | [`worker/`](worker/) | Background jobs (TypeScript). **Ingest** is done: ESPN games and rosters plus Kalshi markets, with player matching. Price polling, curation, and settlement are next. |
