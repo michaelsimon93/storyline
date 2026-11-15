@@ -18,5 +18,6 @@ Fixes STO-<!-- issue number -->
 - [ ] No hard-coded tunables; no rule implemented twice
 - [ ] New tables/functions locked down, with a "can't do it" test
 - [ ] ADR/spec updated if a decision changed
-- [ ] `qa` run; failing tests fixed or answered
+- [ ] `qa` run; failing tests fixed or answered (or skipped: docs-only)
+- [ ] `ui-reviewer` run, or not needed (nothing in `web/`)
 - [ ] `eng-lead` verdict: APPROVED
