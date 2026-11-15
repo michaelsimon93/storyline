@@ -2,3 +2,9 @@
 # is frozen: CI fails if its contents change or it is deleted. Change the schema
 # with a NEW migration instead. Format: <sha256>  <filename>
 # (Empty until the first production deploy.)
+03c64170ec6681a1957e1a404739f930ec88abf1c12d7bfb23583a531e2a784c  0001_init.sql
+07e2b3a89241cb0cc9225297162fbde2cbab27de6fa1bd20da0764ec6f0ff96b  0002_pick_safety.sql
+0e02d52673a92f6e30ef8413265d97a806f07f18021abb367401758601767a41  20261113200000_job_schedules.sql
+3ba376af6b7ab2918c8001f51fcff9a01e6cc5885e4acad0926bd5c8d9504673  20261113233000_price_poller.sql
+3bc8600e336c56b4e00ced1a9bb9c246c911c82c3ac7ba4948abd1058f57fe28  20261114001000_market_status.sql
+d995c29e11bbc2cefae506f2b2526afa44079dc33a9dc6d8bd1a19533aafb66e  20261114160000_market_ids.sql
