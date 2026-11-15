@@ -14,6 +14,8 @@ How the backend runs in production: the schema on **Supabase**, the worker on **
 1. Create a project. Note its **project ref** (the id in the dashboard URL).
 2. Copy a connection string from **Connect**. Use the **direct connection** (`db.<ref>.supabase.co:5432`). If Railway can't reach it (the direct host is IPv6-only unless the IPv4 add-on is on), use the **session pooler** (`…pooler.supabase.com`, **port 5432**) instead.
    - **Never the transaction pooler (port 6543).** It breaks the advisory locks that stop two copies of a job from running at once.
+3. Append **`?uselibpqcompat=true&sslmode=require`** to the URL. Without it, the worker's Postgres client connects **unencrypted**, sending the `postgres` password and every query over the internet in plaintext. Don't use a bare `sslmode=require`: node-postgres treats it as `verify-full`, which needs Supabase's CA certificate.
+4. **Database → Settings → Enforce SSL:** turn it on. Then a URL missing the SSL setting fails loudly instead of quietly connecting in plaintext.
 
 ### Railway
 1. New project → **Deploy from GitHub repo** → this repo.
@@ -27,7 +29,7 @@ How the backend runs in production: the schema on **Supabase**, the worker on **
 
 | Variable | Value |
 |---|---|
-| `DATABASE_URL` | The Supabase connection string from above |
+| `DATABASE_URL` | The Supabase connection string from above, ending in `?uselibpqcompat=true&sslmode=require` |
 | `ALERT_WEBHOOK_URL` | The Discord alerts channel's webhook URL |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `120` (time between SIGTERM and SIGKILL; Railway's default is 0) |
 
