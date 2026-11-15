@@ -49,7 +49,7 @@ supabase link --project-ref <project-ref>
 supabase db push --remote --dry-run
 ```
 
-The dry run should list every file in `supabase/migrations/` (six on the first deploy). Then:
+The dry run should list every file in `supabase/migrations/` (six on the first deploy). It also prints `Skipping migration DEPLOYED…`; that's expected, since `DEPLOYED` is our manifest, not a migration. Then:
 
 ```bash
 supabase db push --remote
