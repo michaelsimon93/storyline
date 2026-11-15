@@ -26,8 +26,8 @@
 
 | Release | Scope | Goal |
 |---|---|---|
-| **v1 — core loop** | Curation pipeline, cards (Open / Out / Locked / Settled), $5 picks, settlement, My Picks, $100 starting balance, display name, waiting state, carousel, events logging | See real progress fast; friends picking on real cards |
-| **v1.1 — retention** | Daily $10 claim (3am–3pm ET), live stat progress on cards, "price moved" prompt | Reasons to come back daily and during games |
+| **v1 — core loop** | Curation pipeline, cards (Open / Out / Locked / Settled), $5 picks, settlement, My Picks, $100 starting balance, daily $10 claim, display name, waiting state, carousel, events logging | See real progress fast; friends picking on real cards |
+| **v1.1 — retention** | Live stat progress on cards, "price moved" prompt | Reasons to come back daily and during games |
 | **v2+** | Login, onboarding, leaderboard, consensus split, share my picks, where to watch, cash out, user-set wager/line, admin dashboard | — |
 
 **Architecture rule:** v1 is built so v1.1 *adds* to it and doesn't change what's there. The data model includes v1.1's fields and states from day one (see §9 groundwork). Sections below tag v1.1 items explicitly.
@@ -111,10 +111,9 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 - The **line is locked at publish.** Everyone picks on the same strike for the whole day.
 - **Prices update live** from our cache (see §8).
 
-**Navigating the deck**
+**Navigating the storylines**
 - Swiping moves to the next or previous card, like flipping through a pack. **Swiping never makes a pick.**
-- The deck is an **infinite carousel**: swiping past the last card goes back to the first.
-- *(Future: an interstitial card between the last and first, for referrals, feedback, etc.)*
+- The storylines are an **infinite carousel** with an **end card** between the last card and the first (see `docs/design.md` §3). Swiping past the end card goes back to the first card.
 
 **Making a pick**
 - Tap Yes or No to place a **$5 pick** at the current ask.
@@ -139,23 +138,23 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 - *(v1.1)* Live stats come from ESPN game summaries. The worker polls them about every 60 seconds per in-progress game.
 - **We never void picks ourselves.** "Out" only blocks new picks. Every result comes from Kalshi, so if a player listed Out ends up playing, his picks settle on what actually happened.
 
-**Before cards are published ("Cards dropping soon")**
-- The app's "day" rolls over at **03:00 ET**, the same time as the daily grant. From then until today's cards publish, the card area shows a waiting state instead of an empty screen:
-  - Headline: **"Today's cards drop around 11am ET"**
-  - Today's slate from ESPN: e.g. "9 games tonight · first tip 7:00 PM"
-  - *(v1.1)* The "Collect $10" prompt, if the grant is still claimable, so the visit is worth something even before the cards arrive
-- If the pipeline fails or runs late, the same state remains, with the copy changed to "Cards are running late — check back soon." It never shows an error or a blank screen.
+**Before storylines are published**
+- The app's "day" rolls over at **03:00 ET** by default (`storyline_day()`; the hour is an `app_config` value, STO-48). The daily claim uses the same day. From then until today's cards publish, the card area shows a waiting state instead of an empty screen:
+  - Headline: **"Today's storylines drop around 11 AM ET"**
+  - Today's slate from ESPN: e.g. "9 games tonight · first game 7:00 PM"
+  - The "Collect $10" prompt, if the grant is still claimable, so the visit is worth something even before the cards arrive
+- If the pipeline fails or runs late, the same state remains, with the copy changed to "Today's storylines are running late" (exact copy in `docs/design.md` §3). It never shows an error or a blank screen.
 - On no-game days: "No games today. Back tomorrow."
 
 **Acceptance criteria**
-- [ ] Between 03:00 ET and publish, every visitor sees the waiting state with today's game count and first tip time.
-- [ ] Yesterday's cards are no longer shown as "today's" after 03:00 ET. They remain visible in My Picks.
+- [ ] Between the day rollover and publish, every visitor sees the waiting state with today's game count and first game time.
+- [ ] Yesterday's cards are no longer shown as "today's" after the day rollover. They remain visible in My Picks.
 - [ ] If cards haven't published by 12:00 ET, the copy switches to the "running late" version.
 - [ ] The card's line never changes after publish.
 - [ ] Displayed prices are never more than 60 seconds old. If the cache is staler than 2 minutes, the pick buttons show "Updating…" and are disabled.
 - [ ] A pick submitted after tip-off is rejected by the server, even if the client still shows the card as open.
-- [ ] A user with a balance under $5 can view all cards, but the pick buttons are disabled. In v1 the message is "Out of funds"; in v1.1 it points to the next daily claim.
-- [ ] Swiping right from the last card shows the first card. Swiping left from the first card shows the last.
+- [ ] A user with a balance under $5 can view all cards, but the pick buttons are disabled. The message points to the daily claim: "Collect $10" if it's available, otherwise when the next one unlocks (`docs/design.md` §3).
+- [ ] Swiping past the last card shows the end card, and swiping past the end card shows the first card. Swiping back from the first card shows the end card.
 - [ ] When ESPN lists a carded player as Out, the card switches to "Ruled out" within 5 minutes and rejects new picks. Existing picks are untouched until Kalshi settles.
 - [ ] *(v1.1)* During a game, a Live card's stat is never more than 2 minutes behind ESPN.
 - [ ] *(v1.1)* If the price moved more than 3 points, the pick isn't placed until the user confirms.
@@ -168,10 +167,10 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 |---|---|
 | Starting balance | **$100** on first visit |
 | Pick size | **$5 fixed** (user-chosen amounts in v2/v3) |
-| Daily grant *(v1.1)* | **$10**, available from **3:00 ET**, must be claimed by **15:00 ET** (12:00 PT). Unclaimed grants expire. |
-| Out of funds | User can browse but can't pick until they have ≥ $5. In v1 that means they're out until v1.1 ships, which is acceptable for a short gap among friends. |
+| Daily claim | **$10** (`daily_grant_cents`), once per storyline day, any time that day. Opens at the day rollover (03:00 ET by default) and expires at the next one. Unclaimed claims don't carry over. |
+| Out of funds | User can browse but can't pick until they have ≥ $5. The daily claim is the way back in. |
 
-**Payout math (Kalshi-style):** a $5 pick at ask price *p* buys 5/*p* contracts. Each contract pays $1 if it wins.
+**Payout math (Kalshi-style):** a $5 pick at ask price *p* buys 5/*p* contracts. Each contract pays $1 if it wins. Shown before a pick as "$5 pick · YES pays $8.62 · NO pays $11.90" (`docs/design.md` §4).
 - Win: credit $5 ÷ *p* (e.g., $5 at 43% → **$11.63**)
 - Loss: $0
 - Void (DNP or cancellation): refund $5
@@ -194,8 +193,8 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 
 **Acceptance criteria**
 - [ ] A new ID gets exactly one `signup_grant`.
-- [ ] *(v1.1)* The daily grant can be claimed only once per ET day, only between 03:00 and 15:00 ET.
-- [ ] *(v1.1)* The "Collect $10" prompt is visible and obvious while a grant is claimable.
+- [ ] The daily claim can be collected only once per storyline day, and an unclaimed one can't be collected after the next rollover.
+- [ ] The "Collect $10" prompt is visible and obvious while a grant is claimable.
 - [ ] A pick and its `pick_stake` entry are written in a single transaction. A pick never exists without its stake, and vice versa.
 - [ ] The balance can never go below $0.
 
@@ -223,7 +222,7 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 
 ## 7. Identity, My Picks, and placeholders
 
-**Display name:** on first visit, before seeing cards, the user enters a display name: 2–20 characters, unique, editable later. That's the only step; there's no other onboarding (onboarding arrives with login). Names exist now so the v2 leaderboard and social features have someone to show.
+**Display name:** on first visit, before seeing cards, the user enters a display name: 4–20 letters, numbers or underscores, unique without regard to case, editable later (rules in `docs/design.md` §5). That's the only step; there's no other onboarding (onboarding arrives with login). Names exist now so the v2 leaderboard and social features have someone to show.
 
 **Identity:** on first visit, the app silently creates a **Supabase anonymous user**. The user sees no login; they just enter a display name. Why this instead of a homemade cookie ID:
 - The ID is a real user to the database, so database security rules can enforce "you can only see and place your own picks". A homemade ID couldn't do that.
@@ -247,8 +246,8 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 
 - **Only the worker calls Kalshi, ESPN, and Claude.** The web app reads only from Supabase.
 - A **price poller** refreshes today's published-card markets every 30–60s and writes to the cache. It respects rate limits with backoff on 429s.
-- Times are stored in UTC and the business rules are applied in ET (grant window, "today").
-- Every scheduled job (curation, price poller, live-stats poller, settlement, grant expiry) logs its runs and failures.
+- Times are stored in UTC and the business rules are applied in ET (the storyline day, which also bounds the daily claim).
+- Every scheduled job (curation, price poller, live-stats poller, settlement) logs its runs and failures.
 
 **Blurb feedback loop:** Michael gives feedback on published cards in conversation with Claude. That feedback is captured in `blurb-style-guide.md` in the repo, which the curation step includes in its prompt every day. Edit the guide and the next day's blurbs change. A feedback UI is a later iteration.
 
@@ -262,7 +261,8 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
   - `card_swipe` (`direction`: next / previous; `from_position`, `to_position`)
   - `pick_placed` (card, side, price)
   - `tab_switch` (`from_tab`, `to_tab`)
-- Added in v1.1: `price_moved_prompt` (+ accepted/declined), `grant_claimed`, `grant_expired`.
+  - `grant_claimed`, `claim_modal_shown`, `claim_modal_dismissed` (STO-22)
+- Added in v1.1: `price_moved_prompt` (+ accepted/declined).
 - Display names are visible to all users (needed for the leaderboard and for following friends later). Picks stay private in v1. Friends seeing each other's picks comes with the follow feature.
 - Analysis is plain SQL queries. There are no dashboards in v1.
 - **Primary v1 signal is the morning read habit** (opens + how much of the pack gets viewed), not just picks. Units showed many fans read daily without picking. `card_view` carries the deck position so pack completion can be measured.
@@ -274,7 +274,7 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 | UI | Tailwind + shadcn/ui; Embla Carousel for the deck | Same UI tools as Moments. Embla has built-in looping and touch swiping for the infinite carousel. |
 | Database + auth | **Supabase** (Postgres, anonymous auth, realtime) | One service covers data, identity, and live price push to open cards. |
 | Pick placement | A Postgres function (`place_pick`) called via RPC | Checks the lock time, balance, and price, then writes the pick and its −$5 ledger entry in **one transaction**. No separate API server needed. |
-| Worker | **Node + TypeScript** on Railway, always on | Runs curation, the price poller, settlement, and grant expiry. It's the only code that calls Kalshi, ESPN, or Claude. |
+| Worker | **Node + TypeScript** on Railway, always on | Runs curation, the price poller, and settlement. It's the only code that calls Kalshi, ESPN, or Claude. |
 | Hosting | Vercel (web app), Railway (worker), Supabase (data) | — |
 
 The web app and the worker are one repo with shared TypeScript types (`Card`, `Pick`, `LedgerEntry`).
@@ -326,7 +326,7 @@ The web app and the worker are one repo with shared TypeScript types (`Card`, `P
 - **No real money, ever.**
 
 **v1 groundwork for later features**
-- The ledger supports every entry type from day one, including `daily_grant`, even though nothing writes it until v1.1.
+- The ledger supports every entry type from day one, including `daily_grant`.
 - The card-state model includes `live` from day one. v1 just shows it as "Locked".
 - Store the full Kalshi ladder for each card's player + stat, not just the chosen line. Adjustable lines will need it.
 - Every pick stores its price and timestamp at the moment it's placed. Both Share my picks and leaderboard scoring need this.
