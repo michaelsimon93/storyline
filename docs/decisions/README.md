@@ -25,3 +25,4 @@ Short records of the decisions that shaped Storyline: the context, the options c
 | 019 | [Personalization: shared core deck, signals from views and picks](019-personalization-groundwork.md) |
 | 020 | [Lock ordering for picks and settlement](020-lock-ordering.md) |
 | 021 | [Core tables speak Storyline, not provider](021-source-neutral-core.md) |
+| 022 | [Two review roles; the eng lead approves, Michael merges](022-review-roles.md) |
