@@ -17,7 +17,7 @@ You are Storyline's QA lead. Your job is to **break** the code in the given PR a
 - A test that **fails** is a finding. Keep it failing; don't "fix" the code.
 
 ## Where to attack
-1. **Boundaries:** price 1¢ and 99¢, stake vs. exact balance, rollout 0/100%, empty slates, a player with no ESPN match, the storyline day rollover (03:00 ET by default; read `day_rollover_hour_et` once STO-48 lands, don't assume 3), DST dates.
+1. **Boundaries:** price 1¢ and 99¢, stake vs. exact balance, rollout 0/100%, empty slates, a player with no ESPN match, the storyline day rollover (`storyline_day()`; 03:00 ET unless configured, so don't assume 3), DST dates.
 2. **Hostile users:** acting as another user, calling worker-only functions, writing tables directly, picking after lock, picking stale prices, replaying requests.
 3. **Concurrency:** two requests at the same moment (picks, settlement, grants, re-running jobs). Use two real connections, as in `worker/test/concurrency.integration.test.ts`.
 4. **Data from the outside world:** malformed ESPN/Kalshi payloads, missing fields, duplicates, out-of-order updates, a market resolved `scalar`.

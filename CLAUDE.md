@@ -31,7 +31,7 @@ In a Claude session without a Postgres service, run a local one on a socket and 
 ```bash
 su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /tmp/pgdata -o '-k /tmp -p 5433' -l /tmp/pg.log start"   # if it isn't running
 PGHOST=/tmp PGPORT=5433 PGUSER=postgres ./supabase/tests/run.sh
-cd worker && TEST_DATABASE_URL="postgresql://postgres@/postgres?host=/tmp&port=5433" npm test && npm run test:integration
+cd worker && npm test && TEST_DATABASE_URL="postgresql://postgres@/postgres?host=/tmp&port=5433" npm run test:integration
 ```
 CI runs Postgres 17; a local 16 is fine for development, but CI is the source of truth.
 
