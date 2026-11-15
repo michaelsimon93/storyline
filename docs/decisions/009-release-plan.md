@@ -10,7 +10,9 @@ Scope grew quickly during planning (bankroll, daily claim, live stats, price-mov
 - Ship the core loop first, retention second
 
 ## Decision
-**v1:** curation, cards, $5 picks, settlement, My Picks, $100 start, display name. **v1.1:** daily $10 claim, live stat progress, price-moved prompt. **v2+:** login, leaderboard, follows, sharing, contests…
+**v1:** curation, cards, $5 picks, settlement, My Picks, $100 start, daily $10 claim, display name. **v1.1:** live stat progress, price-moved prompt. **v2+:** login, leaderboard, follows, sharing, contests…
+
+*Amended 2026-11-15:* the daily claim moved from v1.1 to v1. It's the only way back in for a user who runs out of money (STO-22, STO-47).
 
 ## Consequences
 - Friends see real cards sooner.
