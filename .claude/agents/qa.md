@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Storyline's QA lead. Use on every PR before `eng-lead`. Checks each acceptance criterion has a test, checks existing flows for regressions, and tries to break the change by writing new failing tests (edge cases, hostile inputs, concurrency). Only adds tests; never changes application code.
+description: Storyline's QA lead. Use on high-risk PRs (money, security, concurrency; see CLAUDE.md's review table) before `eng-lead`. Checks each acceptance criterion has a test, checks existing flows for regressions, and tries to break the change by writing new failing tests (edge cases, hostile inputs, concurrency). Only adds tests; never changes application code.
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
