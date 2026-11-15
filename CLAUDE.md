@@ -48,11 +48,21 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 - Fill in the PR template, especially **Risks & where to look**, which tells the human reviewer what to read closely.
 - Merge stacked PRs with a merge commit (not squash) so the PRs above them don't conflict.
 
-### Reviews (agents in `.claude/agents/`)
-1. **`reviewer`**: independent review against this file plus a security checklist. Runs in a fresh context; never the agent that wrote the code.
-2. **`test-adversary`**: tries to break the change by adding failing tests. Only touches test files.
-3. **`ui-reviewer`** (PRs that touch `web/`): independent review against `docs/design.md`: card states, tokens, copy, accessibility. Reads only.
-4. **Human review** of the "Risks & where to look" spots. The human decides; agents advise.
+### Reviews (agents in `.claude/agents/`, ADR-022)
+Every PR goes through these in order. Each runs in a fresh context and is never the agent that wrote the code.
+1. **`qa`**: maps each acceptance criterion to a test, checks existing flows for regressions, and tries to break the change with failing tests. Only touches test files. The author fixes against its findings.
+2. **`ui-reviewer`** (PRs that touch `web/`): review against `docs/design.md`: card states, tokens, copy, accessibility. Reads only.
+3. **`eng-lead`**: the required approver. Reviews against the issue, the spec, this file and a security checklist, reads `qa`'s report, and gives one verdict. CHANGES REQUESTED goes back to the author and through `eng-lead` again. APPROVED comes with a handoff for Michael.
+4. **Michael merges.** He reads the handoff and the "Risks & where to look" spots. No agent merges.
+
+**Running the reviewers (the launching session's job):**
+- Pass each reviewer the base..head range, the PR description, and the Linear issue's acceptance criteria word for word (plus any open `needs-decision`). The reviewers can't read Linear.
+- Pass `eng-lead` the `qa` report, and the `ui-reviewer` report for `web/` PRs.
+- **Docs-only PRs** (no SQL, TypeScript, scripts or CI config) skip `qa`; `eng-lead` confirms the diff qualifies.
+- **Post every report as a PR comment**, headed `**qa (agent) report**`, `**ui-reviewer (agent) report**` or `**eng-lead (agent) verdict: …** (round n)`, so agent comments are told apart from Michael's and `/retro` has the record.
+- **On CHANGES REQUESTED:** the author fixes; re-run `qa` if the fix touched application code or migrations; re-run `eng-lead` with its previous verdict.
+
+At the end of each milestone, run `/retro`.
 
 ### Schema and code rules
 - **Migrations are frozen once deployed** (listed in `supabase/migrations/DEPLOYED`). Change the schema with a new migration; CI enforces this.
