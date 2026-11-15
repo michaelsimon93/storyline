@@ -19,7 +19,7 @@ Visual reference: the "Storyline v1 designs" canvas (private, linked from STO-45
 
 ## 2. Tokens
 
-**No raw color codes outside the tokens file** (CI enforces this). Use tokens by meaning, never by hue: a "win" is `--win` even where another green would look the same. Dark theme only.
+**No raw color codes outside the tokens file.** A CI check is planned with STO-42; until it exists, `ui-reviewer` enforces this. Use tokens by meaning, never by hue: a "win" is `--win` even where another green would look the same. Dark theme only.
 
 ### Color
 
@@ -237,8 +237,7 @@ Visual reference: the "Storyline v1 designs" canvas (private, linked from STO-45
 - "Ruled out" never refunds until the market voids (STO-14, ADR-004).
 - Price delay: picks pause past `max_price_age_seconds`, enforced in `place_pick` (STO-41).
 - The daily claim is in v1, as a once-a-day modal with a pill as the fallback (STO-22).
+- **Claim day = storyline day.** The claim opens at the `storyline_day()` rollover (03:00 ET by default, configurable via STO-48) and expires at the next one. Because the hour can change, UI copy says "today" or "tomorrow," never a clock time.
 
 **Still open**
-- **Claim day boundary:** STO-22 says the claim runs midnight to midnight ET, but the storyline day (`storyline_day()`, spec §4) rolls over at 03:00 ET. Pick one boundary for both. Until then, UI copy says "today" or "tomorrow," never a clock time.
 - **"Paused" state:** spec §4 shows a paused market as "Ruled out." This file splits it into its own "Paused" state. Confirm.
-- **`docs/spec.md` §4–5 needs to catch up with this file:** the payout line format, "cards" → "storylines" in the waiting copy, the end card instead of last → first, display names of 2–20 → 4–20, and the claim moving from v1.1 to v1.
