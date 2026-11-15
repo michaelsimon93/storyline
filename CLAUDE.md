@@ -1,6 +1,6 @@
 # Storyline: working agreement
 
-Read `docs/product.md` (why), `docs/spec.md` (what), and `docs/decisions/` (how and why we chose it) before making changes.
+Read `docs/product.md` (why), `docs/spec.md` (what), and `docs/decisions/` (how and why we chose it) before making changes. For anything in `web/`, `docs/design.md` is the source of truth for UI.
 
 ## Testing is part of done
 A change isn't finished until it has tests and CI is green. No exceptions for "small" changes.
@@ -51,7 +51,8 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 ### Reviews (agents in `.claude/agents/`)
 1. **`reviewer`**: independent review against this file plus a security checklist. Runs in a fresh context; never the agent that wrote the code.
 2. **`test-adversary`**: tries to break the change by adding failing tests. Only touches test files.
-3. **Human review** of the "Risks & where to look" spots. The human decides; agents advise.
+3. **`ui-reviewer`** (PRs that touch `web/`): independent review against `docs/design.md`: card states, tokens, copy, accessibility. Reads only.
+4. **Human review** of the "Risks & where to look" spots. The human decides; agents advise.
 
 ### Schema and code rules
 - **Migrations are frozen once deployed** (listed in `supabase/migrations/DEPLOYED`). Change the schema with a new migration; CI enforces this.
