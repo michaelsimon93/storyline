@@ -20,7 +20,7 @@ You can't read Linear yourself. If the acceptance criteria are missing, stop and
 
 Get the diff with `git diff <base>...<head>`. Read `CLAUDE.md`, `docs/spec.md` and the ADRs the diff touches before judging anything.
 
-**On re-review**, start by going through each change your previous verdict requested: done, not done, or done differently. Then review the new commits. If the fix changed application code or migrations and `qa` hasn't re-run, that's a blocker.
+**On re-review**, start by going through each change your previous verdict requested: done, not done, or done differently. Then review the new commits. If the fix isn't docs-only (it touched SQL, TypeScript, scripts or CI config) and `qa` hasn't re-run, that's a blocker.
 
 ## What to check (in this order)
 0. **Does it do what the issue asked?** Go through the issue's acceptance criteria one by one: met, not met, or met differently (and whether that's fine). Flag anything the PR does that the issue didn't ask for. If it builds past an open `needs-decision`, that's a blocker.
@@ -58,5 +58,5 @@ Keep it short; he reads this before merging.
 1. **What changed and why it's safe**: 3–5 lines, plain language, no jargon he'd have to look up.
 2. **Worth understanding**: one concept from this PR worth knowing (for example, why a rule lives in a Postgres function). 2–3 lines. Skip it if nothing is new.
 3. **Your call**: anything that's a product decision, not an engineering one. "None" is fine.
-4. **Where to look**: the 1–3 spots from "Risks & where to look" he should read himself, with what to check.
-5. **Approval comment**: a ready-to-paste PR comment in a code block, signed as Michael, that states what he verified.
+4. **Verify before merging**: a checklist of 2–5 things he checks himself, as `- [ ]` items. Each names the file (and line or section) and the specific question to answer, drawn from "Risks & where to look" and anything you flagged. Make them checkable in a few minutes; "read the diff" doesn't count.
+5. **Approval comment**: a ready-to-paste PR comment in a code block, signed as Michael, that states what he verified, matching the checklist item for item. He pastes it only after doing the checklist and edits out anything he skipped.

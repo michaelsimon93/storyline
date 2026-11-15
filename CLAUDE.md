@@ -52,7 +52,7 @@ cd worker && TEST_DATABASE_URL=postgres://postgres@localhost/postgres npm run te
 Every PR goes through these in order. Each runs in a fresh context and is never the agent that wrote the code.
 1. **`qa`**: maps each acceptance criterion to a test, checks existing flows for regressions, and tries to break the change with failing tests. Only touches test files. The author fixes against its findings.
 2. **`ui-reviewer`** (PRs that touch `web/`): review against `docs/design.md`: card states, tokens, copy, accessibility. Reads only.
-3. **`eng-lead`**: the required approver. Reviews against the issue, the spec, this file and a security checklist, reads `qa`'s report, and gives one verdict. CHANGES REQUESTED goes back to the author and through `eng-lead` again. APPROVED comes with a handoff for Michael.
+3. **`eng-lead`**: the required approver. Reviews against the issue, the spec, this file and a security checklist, reads the `qa` report (and the `ui-reviewer` report for `web/` PRs), and gives one verdict. CHANGES REQUESTED goes back to the author and through `eng-lead` again. APPROVED comes with a handoff for Michael: a checklist to verify himself, then a pre-written approval comment.
 4. **Michael merges.** He reads the handoff and the "Risks & where to look" spots. No agent merges.
 
 **Running the reviewers (the launching session's job):**
@@ -60,7 +60,7 @@ Every PR goes through these in order. Each runs in a fresh context and is never 
 - Pass `eng-lead` the `qa` report, and the `ui-reviewer` report for `web/` PRs.
 - **Docs-only PRs** (no SQL, TypeScript, scripts or CI config) skip `qa`; `eng-lead` confirms the diff qualifies.
 - **Post every report as a PR comment**, headed `**qa (agent) report**`, `**ui-reviewer (agent) report**` or `**eng-lead (agent) verdict: …** (round n)`, so agent comments are told apart from Michael's and `/retro` has the record.
-- **On CHANGES REQUESTED:** the author fixes; re-run `qa` if the fix touched application code or migrations; re-run `eng-lead` with its previous verdict.
+- **On CHANGES REQUESTED:** the author fixes; re-run `qa` unless the fix is docs-only; re-run `eng-lead` with its previous verdict.
 
 At the end of each milestone, run `/retro`.
 
