@@ -55,7 +55,14 @@ Every PR goes through these in order. Each runs in a fresh context and is never 
 3. **`eng-lead`**: the required approver. Reviews against the issue, the spec, this file and a security checklist, reads `qa`'s report, and gives one verdict. CHANGES REQUESTED goes back to the author and through `eng-lead` again. APPROVED comes with a handoff for Michael.
 4. **Michael merges.** He reads the handoff and the "Risks & where to look" spots. No agent merges.
 
-Post `eng-lead`'s verdict as a PR comment. At the end of each milestone, run `/retro`.
+**Running the reviewers (the launching session's job):**
+- Pass each reviewer the base..head range, the PR description, and the Linear issue's acceptance criteria word for word (plus any open `needs-decision`). The reviewers can't read Linear.
+- Pass `eng-lead` the `qa` report, and the `ui-reviewer` report for `web/` PRs.
+- **Docs-only PRs** (no SQL, TypeScript, scripts or CI config) skip `qa`; `eng-lead` confirms the diff qualifies.
+- **Post every report as a PR comment**, headed `**qa (agent) report**`, `**ui-reviewer (agent) report**` or `**eng-lead (agent) verdict: …** (round n)`, so agent comments are told apart from Michael's and `/retro` has the record.
+- **On CHANGES REQUESTED:** the author fixes; re-run `qa` if the fix touched application code or migrations; re-run `eng-lead` with its previous verdict.
+
+At the end of each milestone, run `/retro`.
 
 ### Schema and code rules
 - **Migrations are frozen once deployed** (listed in `supabase/migrations/DEPLOYED`). Change the schema with a new migration; CI enforces this.

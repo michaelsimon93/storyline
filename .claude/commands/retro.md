@@ -1,5 +1,5 @@
 ---
-description: Milestone retro on how the agent team built it. Proposes changes to CLAUDE.md, the agents and the spec template; Michael decides.
+description: Milestone retro on how the agent team built it. Proposes changes to CLAUDE.md, the agents, the PR template and how acceptance criteria are written; Michael decides.
 argument-hint: <milestone or date range, e.g. "v1" or "since 2026-11-01">
 ---
 
@@ -10,7 +10,7 @@ The question isn't "what did we ship" but "where did the process fail, and what 
 ## Gather
 - The merged PRs in the range (`git log --merges`, and the PR descriptions and comments if `gh` works).
 - Each PR's Linear issue and its acceptance criteria.
-- `qa` and `eng-lead` findings, where they're recorded in PR comments.
+- The agent reports posted as PR comments (headed `qa (agent)`, `ui-reviewer (agent)`, `eng-lead (agent)`).
 - Fix-up commits after review, reverted commits, and ADRs that were superseded in the range.
 
 ## Look for
@@ -24,7 +24,7 @@ The question isn't "what did we ship" but "where did the process fail, and what 
 ## Output
 1. **What happened**: 3–5 lines with numbers (PRs merged, sent back, escapes).
 2. **Findings**: each with the evidence (PR/issue links) and the root cause.
-3. **Proposed changes**: at most 5, each a concrete edit to `CLAUDE.md`, an agent in `.claude/agents/`, the PR template or the issue template, with the exact wording. Rank by impact.
+3. **Proposed changes**: at most 5, each a concrete edit to `CLAUDE.md`, an agent in `.claude/agents/`, the PR template, or how acceptance criteria are written (the blocks in `docs/spec.md` and in Linear issues), with the exact wording. Rank by impact.
 4. **Agents to cut or merge**, if any, with the reason.
 
 Don't make the changes. Michael picks which to adopt, and each one ships as its own PR.
