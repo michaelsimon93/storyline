@@ -20,11 +20,11 @@ before(async () => {
   db = await freshDb("storyline_settlement_test");
   if (!db) return;
   await db.query(`
-    insert into teams (id, league, name, kalshi_abbr, espn_abbr, espn_id) values (1,'nba','A','AAA','AAA','1'), (2,'nba','B','BBB','BBB','2');
-    insert into players (id, league, full_name, team_id, kalshi_player_id) values
-      ('a5000000-0000-0000-0000-0000000000b1','nba','P1',1,'k1'), ('a5000000-0000-0000-0000-0000000000b2','nba','P2',1,'k2');
-    insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at)
-      values ('a5000000-0000-0000-0000-0000000000e1','nba','e1','G1',storyline_today(),1,2, now() + interval '6 hours');
+    insert into teams (id, league, name, abbr) values (1,'nba','A','AAA'), (2,'nba','B','BBB');
+    insert into players (id, league, full_name, team_id) values
+      ('a5000000-0000-0000-0000-0000000000b1','nba','P1',1), ('a5000000-0000-0000-0000-0000000000b2','nba','P2',1);
+    insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at)
+      values ('a5000000-0000-0000-0000-0000000000e1','nba',storyline_today(),1,2, now() + interval '6 hours');
     insert into markets (id, league, game_id, kind, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, status, prices_updated_at) values
       (md5('S1')::uuid,'nba','a5000000-0000-0000-0000-0000000000e1','player_stat','P1: 20+','a5000000-0000-0000-0000-0000000000b1','points',20,40,61,'open',now()),
       (md5('S2')::uuid,'nba','a5000000-0000-0000-0000-0000000000e1','player_stat','P2: 20+','a5000000-0000-0000-0000-0000000000b2','points',20,40,61,'open',now());
@@ -34,8 +34,8 @@ before(async () => {
     insert into markets (id, league, game_id, kind, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, status, prices_updated_at) values
       (md5('S3')::uuid,'nba','a5000000-0000-0000-0000-0000000000e1','player_stat','P1: 8+','a5000000-0000-0000-0000-0000000000b1','rebounds',8,40,61,'open',now()),
       (md5('S4')::uuid,'nba','a5000000-0000-0000-0000-0000000000e1','player_stat','P2: 8+','a5000000-0000-0000-0000-0000000000b2','rebounds',8,40,61,'open',now());
-    insert into players (id, league, full_name, team_id, kalshi_player_id) values
-      ('a5000000-0000-0000-0000-0000000000b3','nba','P3',2,'k3'), ('a5000000-0000-0000-0000-0000000000b4','nba','P4',2,'k4');
+    insert into players (id, league, full_name, team_id) values
+      ('a5000000-0000-0000-0000-0000000000b3','nba','P3',2), ('a5000000-0000-0000-0000-0000000000b4','nba','P4',2);
     update markets set player_id = 'a5000000-0000-0000-0000-0000000000b3' where id = md5('S3')::uuid;
     update markets set player_id = 'a5000000-0000-0000-0000-0000000000b4' where id = md5('S4')::uuid;
     insert into cards (id, slate_date, sort_key, game_id, subject, player_id, market_id, blurb) values

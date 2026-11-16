@@ -30,8 +30,12 @@ function useFetch(...routes: Route[]) {
   restore = installFetch(...routes, slateRoutes).restore;
 }
 const counts = async (d: Db) => (await d.query(`
-  select (select count(*) from markets)::int m, (select count(*) from external_ids)::int x,
-         (select count(distinct external_id) from external_ids)::int t`)).rows[0];
+  select (select count(*) from markets)::int m, (select count(*) from external_ids where kind = 'market')::int x,
+         (select count(distinct external_id) from external_ids where kind = 'market')::int t,
+         (select count(*) from external_ids)::int all_ids`)).rows[0];
+/** Every provider ID and the Storyline ID it points at, all kinds (STO-39). */
+const allIds = `select source, kind, external_id, coalesce(market_id::text, team_id::text, player_id::text, game_id::text) our_id
+                  from external_ids order by source, kind, external_id`;
 
 /** Kalshi's KXNBAGAME series page, with one market listed twice (e.g. it shifted across pages). */
 const duplicatedWinnerPage: Route = (url) => {
@@ -60,14 +64,14 @@ test("adv38: three ingest runs keep exactly one market and one Kalshi id per tic
   useFetch();
   await ingest(d, SLATE);
   const first = await counts(d);
-  const ids = (await d.query(`select market_id, external_id from external_ids order by external_id`)).rows;
+  const ids = (await d.query(allIds)).rows;
   await ingest(d, SLATE);
   await ingest(d, SLATE);
   assert.deepEqual(await counts(d), first);
   assert.equal(first.m, first.x);
   assert.equal(first.x, first.t);
-  assert.deepEqual((await d.query(`select market_id, external_id from external_ids order by external_id`)).rows, ids,
-    "a re-run must not re-key any market");
+  assert.deepEqual((await d.query(allIds)).rows, ids,
+    "a re-run must not re-key any market, team, player or game");
 });
 
 // Attack: a duplicated ticker in Kalshi's payload on a RE-run (markets already known).
@@ -118,7 +122,7 @@ test("adv38: an ingest racing another ingest that is creating the same market do
   const other = await d.connect();
   try {
     await other.query("begin");
-    await other.query(`insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'market', $1, $2)`,
+    await other.query(`insert into external_ids (source, kind, league, external_id, market_id) values ('kalshi', 'market', 'nba', $1, $2)`,
       [MIL_WIN, created.id]);
     const running = ingest(d, SLATE);
     void running.catch(() => {});
@@ -135,6 +139,48 @@ test("adv38: an ingest racing another ingest that is creating the same market do
   const c = await counts(d);
   assert.equal(c.m, c.x, "every market has exactly one Kalshi id");
 });
+
+// STO-39: teams and players are created together with the provider ID that finds them, ID first.
+// A run that loses the race for that ID must write nothing: no orphan team or player without an
+// ID, which a later run could never find again (and would duplicate).
+for (const [what, source, kind, externalId, table, insertRow] of [
+  ["team", "espn", "team", "15", "teams",          // MIL's ESPN id
+   `insert into teams (id, league, name, abbr) select team_id, 'nba', 'Milwaukee Bucks', 'MIL' from x`],
+  ["player", "kalshi", "player", "60bb439a-df6a-4fea-8312-4caa6a2c0fbe", "players",   // Anthony Black
+   `insert into players (id, league, full_name) select player_id, 'nba', 'Anthony Black' from x`],
+] as const) {
+  test(`STO-39: an ingest racing another run creating the same ${what} writes no second ${what}`, { skip }, async () => {
+    const d = await db(`race_${what}`);
+    useFetch();
+    const other = await d.connect();
+    try {
+      // The other run is mid-statement: it has created the ID and its row but not committed.
+      await other.query("begin");
+      await other.query(
+        `with x as (insert into external_ids (source, kind, league, external_id, ${kind}_id)
+                    values ($1, $2, 'nba', $3, ${kind === "team" ? "nextval(pg_get_serial_sequence('teams', 'id'))" : "gen_random_uuid()"})
+                    returning ${kind}_id)
+         ${insertRow}`, [source, kind, externalId]);
+      const running = ingest(d, SLATE);
+      void running.catch(() => {});
+      assert.ok(await waitForLockWait(d), `ingest should be waiting on the other run's uncommitted ${what} id`);
+      await other.query("commit");
+      await running;   // its ID insert is a no-op, so is its row
+    } finally {
+      await other.query("rollback").catch(() => {});
+      other.release();
+    }
+    const { rows: [c] } = await d.query(`
+      select (select count(*) from ${table})::int n,
+             (select count(*) from ${table} t where not exists
+                (select 1 from external_ids x where x.${kind}_id = t.id and x.source = $1))::int orphans`, [source]);
+    assert.equal(c.orphans, 0, `every ${what} has its ${source} id`);
+    assert.equal(c.n, what === "team" ? 2 : 11, `no second ${what}`);
+    const before = await counts(d);
+    await ingest(d, SLATE);
+    assert.deepEqual(await counts(d), before, "a later run finds everything again");
+  });
+}
 
 // Attack: a market whose external_ids row is gone (manual cleanup, a bad migration, a future
 // "re-map" script). The ticker was the primary key before, so one-market-per-Kalshi-ticker held

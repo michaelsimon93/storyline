@@ -40,7 +40,7 @@ async function rekeyCarded(d: Db) {
       const { rows: [row] } = await c.query(`delete from markets where id = $1 returning *`, [old]);
       await c.query(`insert into markets select (json_populate_record(null::markets, $1::json)).*`,
         [JSON.stringify({ ...row, id })]);
-      await c.query(`insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'market', $1, $2)`,
+      await c.query(`insert into external_ids (source, kind, league, external_id, market_id) values ('kalshi', 'market', 'nba', $1, $2)`,
         [ticker, id]);
     }
     await c.query("commit");

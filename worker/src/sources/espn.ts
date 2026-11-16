@@ -4,6 +4,9 @@
 import { fetchJson } from "../lib/http.js";
 import type { RosterPlayer } from "../domain/names.js";
 
+/** This provider's name in external_ids (ADR-021). */
+export const SOURCE = "espn";
+
 const BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
 
 export interface EspnTeam {

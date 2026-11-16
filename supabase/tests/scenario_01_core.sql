@@ -14,16 +14,21 @@ select t_eq('DST fall-back: 3:00am EST',     storyline_day('2026-11-01 08:00:00+
 select t_eq('storyline_today() = storyline_day(now())', storyline_today(), storyline_day(now()));
 
 -- ---------------------------------------------------------------- seed (worker)
-insert into teams (id,league,name,kalshi_abbr,espn_abbr,espn_id) values
- (1,'nba','Spurs','SAS','SA','24'), (2,'nba','Warriors','GSW','GS','9'),
- (3,'nba','Timberwolves','MIN','MIN','16'), (4,'nfl','Vikings','MIN','MIN','16');  -- same abbr+espn id, different league
-insert into players (id,league,full_name,team_id,espn_athlete_id,kalshi_player_id) values
- ('00000000-0000-0000-0000-0000000000a1','nba','Victor Wembanyama',1,'5104157','k1'),
- ('00000000-0000-0000-0000-0000000000a2','nba','Stephen Curry',2,'3975','k2'),
- ('00000000-0000-0000-0000-0000000000a3','nba','Keldon Johnson',1,'4395630','k3');
-insert into games (id,league,espn_event_id,kalshi_game_key,slate_date,home_team_id,away_team_id,tip_off_at) values
- ('00000000-0000-0000-0000-0000000000b1','nba','e1','G1',storyline_today(),1,2, now()+interval '6 hours'),
- ('00000000-0000-0000-0000-0000000000b2','nba','e2','G2',storyline_today(),1,2, now()-interval '1 hour');
+insert into teams (id,league,name,abbr) values
+ (1,'nba','Spurs','SAS'), (2,'nba','Warriors','GSW'), (3,'nba','Timberwolves','MIN'), (4,'nfl','Vikings','MIN');
+-- Spare NBA teams: other scenarios need games with their own matchup (games_identity).
+insert into teams (id,league,name,abbr) select n, 'nba', 'Test team ' || n, 'Q' || chr(54 + n) from generate_series(11, 30) n;
+insert into external_ids (source,kind,league,external_id,team_id) values
+ ('kalshi','team','nba','SAS',1), ('espn','team','nba','24',1), ('kalshi','team','nba','GSW',2), ('espn','team','nba','9',2),
+ ('kalshi','team','nba','MIN',3), ('espn','team','nba','16',3),
+ ('kalshi','team','nfl','MIN',4), ('espn','team','nfl','16',4);  -- same abbr+espn id, different league
+insert into players (id,league,full_name,team_id) values
+ ('00000000-0000-0000-0000-0000000000a1','nba','Victor Wembanyama',1),
+ ('00000000-0000-0000-0000-0000000000a2','nba','Stephen Curry',2),
+ ('00000000-0000-0000-0000-0000000000a3','nba','Keldon Johnson',1);
+insert into games (id,league,slate_date,home_team_id,away_team_id,tip_off_at) values
+ ('00000000-0000-0000-0000-0000000000b1','nba',storyline_today(),1,2, now()+interval '6 hours'),
+ ('00000000-0000-0000-0000-0000000000b2','nba',storyline_today(),3,2, now()-interval '1 hour');
 insert into markets (id,league,game_id,kind,title,player_id,team_id,stat,strike,yes_ask_cents,no_ask_cents,status,prices_updated_at) values
  (mid('WEMBY-30'),'nba','00000000-0000-0000-0000-0000000000b1','player_stat','Victor Wembanyama: 30+ points','00000000-0000-0000-0000-0000000000a1',null,'points',30,43,58,'open',now()),
  (mid('CURRY-5'), 'nba','00000000-0000-0000-0000-0000000000b2','player_stat','Stephen Curry: 5+ threes','00000000-0000-0000-0000-0000000000a2',null,'threes',5,50,51,'open',now()),
@@ -31,7 +36,7 @@ insert into markets (id,league,game_id,kind,title,player_id,team_id,stat,strike,
  (mid('SAS-WIN'), 'nba','00000000-0000-0000-0000-0000000000b1','game_winner','San Antonio wins',null,1,null,null,62,40,'open',now());
 insert into cards (id,slate_date,sort_key,game_id,subject,player_id,team_id,market_id,blurb) values
  ('00000000-0000-0000-0000-0000000000c1',storyline_today(),1,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a1',1,mid('WEMBY-30'),'Wemby has hit 30 in 3 straight.'),
- ('00000000-0000-0000-0000-0000000000c2',storyline_today(),2,'00000000-0000-0000-0000-0000000000b2','player','00000000-0000-0000-0000-0000000000a2',2,mid('CURRY-5'),'Curry vs the Spurs again.'),
+ ('00000000-0000-0000-0000-0000000000c2',storyline_today(),2,'00000000-0000-0000-0000-0000000000b2','player','00000000-0000-0000-0000-0000000000a2',2,mid('CURRY-5'),'Curry vs the Wolves again.'),
  ('00000000-0000-0000-0000-0000000000c3',storyline_today(),3,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a3',1,mid('KJ-8'),'Starting with Sochan out.'),
  ('00000000-0000-0000-0000-0000000000c4',storyline_today(),4,'00000000-0000-0000-0000-0000000000b1','team',null,1,mid('SAS-WIN'),'Spurs chasing a 15th straight win.');
 insert into auth.users (id) values ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
@@ -41,7 +46,8 @@ update cards set storyline_type='team_streak' where id='00000000-0000-0000-0000-
 select t_err('storyline_type must be a known type',
   $q$update cards set storyline_type='vibes' where id='00000000-0000-0000-0000-0000000000c1'$q$, '%check constraint%');
 select t_eq('storyline types queryable', (select string_agg(storyline_type, ',' order by sort_key) from cards), 'hot_streak,other,other,team_streak');
-select 'PASS league: NBA MIN and NFL MIN coexist' where (select count(*) from teams where kalshi_abbr='MIN') = 2;
+select t_eq('league: NBA MIN and NFL MIN coexist',
+  (select count(*)::int from external_ids where source='kalshi' and kind='team' and external_id='MIN'), 2);
 select t_err('one card per player per game',
   $q$insert into cards (slate_date,sort_key,game_id,subject,player_id,team_id,market_id,blurb)
      values (storyline_today(),9,'00000000-0000-0000-0000-0000000000b1','player','00000000-0000-0000-0000-0000000000a1',1,mid('WEMBY-30'),'dupe')$q$,

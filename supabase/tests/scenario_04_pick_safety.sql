@@ -6,17 +6,17 @@
 reset role;
 
 insert into auth.users (id) values ('a4000000-0000-0000-0000-0000000000f1');
-insert into players (id, league, full_name, team_id, kalshi_player_id) values
-  ('a4000000-0000-0000-0000-0000000000b1', 'nba', 'Early Starter',  1, 'a4k1'),
-  ('a4000000-0000-0000-0000-0000000000b2', 'nba', 'Paused Market',  1, 'a4k2'),
-  ('a4000000-0000-0000-0000-0000000000b3', 'nba', 'Normal Card',    2, 'a4k3'),
-  ('a4000000-0000-0000-0000-0000000000b4', 'nba', 'In-Game Card',   2, 'a4k4'),
-  ('a4000000-0000-0000-0000-0000000000b5', 'nba', 'Final Early',    1, 'a4k5');
-insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at, status) values
+insert into players (id, league, full_name, team_id) values
+  ('a4000000-0000-0000-0000-0000000000b1', 'nba', 'Early Starter',  1),
+  ('a4000000-0000-0000-0000-0000000000b2', 'nba', 'Paused Market',  1),
+  ('a4000000-0000-0000-0000-0000000000b3', 'nba', 'Normal Card',    2),
+  ('a4000000-0000-0000-0000-0000000000b4', 'nba', 'In-Game Card',   2),
+  ('a4000000-0000-0000-0000-0000000000b5', 'nba', 'Final Early',    1);
+insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at, status) values
   -- ESPN says in progress, but the stored tip-off is still 2h away (early start / stale schedule)
-  ('a4000000-0000-0000-0000-0000000000e1', 'nba', 'a4e1', 'A4G1', storyline_today(), 1, 2, now() + interval '2 hours', 'in_progress'),
-  ('a4000000-0000-0000-0000-0000000000e2', 'nba', 'a4e2', 'A4G2', storyline_today(), 1, 2, now() + interval '6 hours', 'scheduled'),
-  ('a4000000-0000-0000-0000-0000000000e3', 'nba', 'a4e3', 'A4G3', storyline_today(), 1, 2, now() + interval '6 hours', 'final');
+  ('a4000000-0000-0000-0000-0000000000e1', 'nba', storyline_today(), 11, 12, now() + interval '2 hours', 'in_progress'),
+  ('a4000000-0000-0000-0000-0000000000e2', 'nba', storyline_today(), 13, 14, now() + interval '6 hours', 'scheduled'),
+  ('a4000000-0000-0000-0000-0000000000e3', 'nba', storyline_today(), 15, 16, now() + interval '6 hours', 'final');
 insert into markets (id, league, game_id, kind, title, player_id, stat, strike,
                      yes_ask_cents, no_ask_cents, status, prices_updated_at) values
   (mid('A4-EARLY'),  'nba', 'a4000000-0000-0000-0000-0000000000e1', 'player_stat', 'Early Starter: 20+', 'a4000000-0000-0000-0000-0000000000b1', 'points', 20, 50, 51, 'open', now()),
@@ -43,13 +43,13 @@ select t_eq('safety: in-game card with its own lock time stays open while the ga
 
 -- Review findings (PR A): final/canceled lock EVERY card, including in-game cards with their
 -- own lock time; and the other game statuses behave as expected.
-insert into players (id, league, full_name, team_id, kalshi_player_id) values
-  ('a4000000-0000-0000-0000-0000000000b6', 'nba', 'Canceled Game',  2, 'a4k6'),
-  ('a4000000-0000-0000-0000-0000000000b7', 'nba', 'Postponed Game', 2, 'a4k7'),
-  ('a4000000-0000-0000-0000-0000000000b8', 'nba', 'In-Game Final',  2, 'a4k8');
-insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at, status) values
-  ('a4000000-0000-0000-0000-0000000000e4', 'nba', 'a4e4', 'A4G4', storyline_today(), 1, 2, now() + interval '6 hours', 'canceled'),
-  ('a4000000-0000-0000-0000-0000000000e5', 'nba', 'a4e5', 'A4G5', storyline_today(), 1, 2, now() + interval '6 hours', 'postponed');
+insert into players (id, league, full_name, team_id) values
+  ('a4000000-0000-0000-0000-0000000000b6', 'nba', 'Canceled Game',  2),
+  ('a4000000-0000-0000-0000-0000000000b7', 'nba', 'Postponed Game', 2),
+  ('a4000000-0000-0000-0000-0000000000b8', 'nba', 'In-Game Final',  2);
+insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at, status) values
+  ('a4000000-0000-0000-0000-0000000000e4', 'nba', storyline_today(), 17, 18, now() + interval '6 hours', 'canceled'),
+  ('a4000000-0000-0000-0000-0000000000e5', 'nba', storyline_today(), 19, 20, now() + interval '6 hours', 'postponed');
 insert into markets (id, league, game_id, kind, title, player_id, stat, strike,
                      yes_ask_cents, no_ask_cents, status, prices_updated_at) values
   (mid('A4-CANCEL'), 'nba', 'a4000000-0000-0000-0000-0000000000e4', 'player_stat', 'x', 'a4000000-0000-0000-0000-0000000000b6', 'points', 20, 50, 51, 'open', now()),

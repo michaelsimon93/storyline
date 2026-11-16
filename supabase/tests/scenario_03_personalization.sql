@@ -24,9 +24,9 @@ select t_err('cards: placement must be core or pool',
 
 -- A fresh user who views three cards and picks one.
 insert into auth.users (id) values ('55555555-5555-5555-5555-555555555555');
-insert into players (id, league, full_name, team_id, kalshi_player_id) values
-  ('00000000-0000-0000-0000-0000000000a6', 'nba', 'Trade Candidate', 1, 'k6'),
-  ('00000000-0000-0000-0000-0000000000a7', 'nba', 'Bench Guy', 2, 'k7');
+insert into players (id, league, full_name, team_id) values
+  ('00000000-0000-0000-0000-0000000000a6', 'nba', 'Trade Candidate', 1),
+  ('00000000-0000-0000-0000-0000000000a7', 'nba', 'Bench Guy', 2);
 insert into markets (id, league, game_id, kind, title, player_id, stat, strike,
                      yes_ask_cents, no_ask_cents, status, prices_updated_at) values
   (mid('TC-3'), 'nba', '00000000-0000-0000-0000-0000000000b1', 'player_stat', 'Trade Candidate: 3+ threes',

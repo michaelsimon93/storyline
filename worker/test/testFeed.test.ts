@@ -110,10 +110,17 @@ function summary(over: Partial<IngestSummary> = {}): IngestSummary {
     slateDate: "2026-11-13", games: 1,
     markets: { KXNBAPTS: 37, KXNBAREB: 46, KXNBAGAME: 2 },
     players: { total: 40, exact: 38, fuzzy: 1, unmatched: ["Bob Jones (ORL)"], ambiguous: [], reissued: [] },
-    outOrDoubtful: ["Jalen Suggs (ORL): Out"], skipped: [], snapshots: 85,
+    outOrDoubtful: ["Jalen Suggs (ORL): Out"], skipped: [], skippedGames: [], snapshots: 85,
     ...over,
   };
 }
+
+test("the ingest summary lists games left out of the slate", () => {
+  const text = ingestSummaryText(summary({ skippedGames: ["MIL @ ORL: ESPN lists it under 2 events (1, 2); left out"] }));
+  assert.match(text, /Skipped games \(1\)\*\*\n• MIL @ ORL: ESPN lists it under 2 events/);
+  const allOut = ingestSummaryText(summary({ games: 0, skippedGames: ["MIL @ ORL: left out"] }));
+  assert.match(allOut, /Skipped games \(1\)/, "a slate whose only game was left out still says why");
+});
 
 test("the ingest summary shows slate, games, markets, matches and what was skipped", () => {
   const text = ingestSummaryText(summary({ skipped: ["KXNBAPTS-26NOV13MILORL-X-25: unknown team XXX"] }));
