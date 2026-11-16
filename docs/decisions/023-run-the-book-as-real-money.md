@@ -15,7 +15,7 @@ The spec puts the admin dashboard in v2+ (STO-29) and says there are no dashboar
 ## Decision
 Measure now, add limits later (`docs/risk.md`):
 - Storyline is the house. Exposure is liability per outcome, worst case, expected result at the current price, and hedge needed, per market, per game and per day.
-- The payout rule lives in one SQL function, used by both settlement and the risk views, so they can't disagree.
+- Each pick's payout is computed once when it's placed and stored on the pick. Settlement pays it and the risk views sum it, so they can't disagree, and a later rule change can't alter what an open pick was promised. (A shared function called at settlement was considered and rejected for that reason.)
 - A reconciliation view that should always be empty is the books' health check. Any row is a critical alert.
 - Grants are reported as promo spend, separate from the book's result. Money created vs. taken back is tracked to catch inflation.
 - A manual suspend switch per card, audited. No admin voids: Kalshi's result still decides every void (ADR-004).

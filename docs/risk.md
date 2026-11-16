@@ -19,18 +19,20 @@ Promotions are a cost: the $100 signup grant, the $10 daily claim and free trade
 
 ## 2. The math
 
-Every pick stores `side`, `price_cents`, `stake_cents`, `contracts` and `credit_id` at the moment it's placed, and these never change. That's all the exposure math needs.
+Every pick stores `side`, `price_cents`, `stake_cents`, `contracts`, `credit_id` and `payout_if_won_cents` at the moment it's placed, and these never change. That's all the exposure math needs.
 
-**Payout if won**: one rule, in one SQL function, shared by settlement and the risk views (STO-62):
+**Payout if won** is computed once, by `place_pick`, and stored on the pick, like a printed betting slip (STO-62). Settlement pays the stored amount, and liability is a plain sum of it.
 - Cash pick: `round(stake × 100 / price)` cents. $5 at 43% → 1163.
 - Free-credit pick: payout minus stake (winnings only, ADR-011). No cash was taken in.
+
+Why store it instead of recomputing at settlement: if the rounding or free-trade rule ever changes, open picks keep what they were promised, and the confirmation the user saw is exactly what gets paid. `contracts` × 100 isn't used because it gives fractional cents (1162.79) that never match the 1163 actually paid.
 
 **Per market** (open picks only):
 
 | Measure | Definition |
 |---|---|
 | Stakes in | Cash stakes on both sides (credit picks add nothing) |
-| Liability if Yes / if No | Sum of payout-if-won for that side's picks |
+| Liability if Yes / if No | Sum of `payout_if_won_cents` for that side's picks |
 | Result if Yes / if No | Stakes in − liability for that side |
 | **Worst case** | The lower of the two results. A void returns every stake, so it nets to $0 and is never the worst case. |
 | **Expected result** | Stakes in − (p × liability Yes + (1 − p) × liability No), with p = the current Yes midpoint (average of bid and ask) |
@@ -58,7 +60,7 @@ All of this is SQL views over `picks`, `ledger_entries`, `markets` and `market_p
 | Game exposure | Game | The same, summed over the game's markets. One player's night moves several markets together, so the game is where risk concentrates. |
 | Day book | Storyline day | Open: total stakes, worst case, expected. Settled: house result (stakes kept − payouts − refunds). Settlement lag. |
 | Money supply | Storyline day | Created (grants, payouts, refunds), taken back (stakes), total user balances, promo spend |
-| Reconciliation | Problem found | **Should return no rows.** Any row is a bug: a pick without its stake, a settled pick without its payout or refund, a payout that doesn't match the pick, a negative balance, or a picked market settled at Kalshi but still open with us longer than `settlement_max_lag_minutes`. |
+| Reconciliation | Problem found | **Should return no rows.** Any row is a bug: a pick without its stake, a settled pick without its payout or refund, a payout that doesn't equal the pick's stored `payout_if_won_cents`, a negative balance, or a picked market settled at Kalshi but still open with us longer than `settlement_max_lag_minutes`. |
 
 The worst case for a game or a day is the **sum of each market's worst case**. That's conservative: it assumes every market goes against us at once. A true worst case for a whole game would need a model of how one player's stats move together, which is out of scope.
 
@@ -111,7 +113,7 @@ Thresholds are `app_config` rows (ADR-018). Alerts follow STO-36's dedupe once t
 Each issue carries its own criteria. These are the ones that define "the house is operable":
 
 - [ ] Any market's worst case, expected result and hedge needed can be read with one query, and the numbers match the worked example in §2 in a scenario test.
-- [ ] The payout used for liability is computed by the same function settlement uses. Changing the rule in one place changes both.
+- [ ] Liability and settlement both use the payout stored on the pick. A later rule change never changes what an open pick pays.
 - [ ] The reconciliation view returns no rows on a correct ledger, and returns a row for each kind of broken book in §3, with a test for each.
 - [ ] No risk view or admin function is readable or callable with the anon or user key ("can't do it" tests, ADR-016).
 - [ ] The book closed and settled reports post to Discord daily without manual steps.
