@@ -58,25 +58,34 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
 
     // ---------------------------------------------------------------- teams
     // Core tables hold only our IDs; provider IDs are rows in external_ids (ADR-021). A team is
-    // found by its ESPN ID. A new one is created in the same statement as that ID, ID first, so
-    // a team never exists without the ID that finds it, and a run that loses a race to another
-    // writes nothing.
+    // found by its ESPN ID, or by its Kalshi abbreviation if that ID was lost. A new one is
+    // created in the same statement as its ESPN ID, ID first, so a team never exists without the
+    // ID that finds it, and a run that loses a race to another writes nothing.
     const teamsIn = [...new Map(games.flatMap((g) => [g.home, g.away]).map((t) => [t.espnId, t])).values()]
       .map((t) => ({ name: t.name, espn: t.espnId, kalshi: kalshiFromEspn(t.abbr) }));
     const teamsJson = JSON.stringify(teamsIn);
     await db.query(
-      `with i as (select * from jsonb_to_recordset($1) as t(name text, espn text)),
+      `with i as (select * from jsonb_to_recordset($1) as t(name text, espn text, kalshi text)),
        fresh as (
          select nextval(pg_get_serial_sequence('teams', 'id'))::smallint as id, i.* from i
           where not exists (select 1 from external_ids x
-                             where x.source = $2 and x.kind = 'team' and x.league = $3 and x.external_id = i.espn)),
+                             where x.kind = 'team' and x.league = $3
+                               and ((x.source = $2 and x.external_id = i.espn) or (x.source = $4 and x.external_id = i.kalshi)))),
        ids as (
          insert into external_ids (source, kind, league, external_id, team_id)
          select $2, 'team', $3::league, espn, id from fresh
          on conflict do nothing
          returning team_id)
        insert into teams (id, league, name) select f.id, $3::league, f.name from fresh f join ids on ids.team_id = f.id`,
-      [teamsJson, espn.SOURCE, LEAGUE],
+      [teamsJson, espn.SOURCE, LEAGUE, kalshi.SOURCE],
+    );
+    // A known team whose ESPN ID went missing gets it back, found by its Kalshi abbreviation.
+    await db.query(
+      `insert into external_ids (source, kind, league, external_id, team_id)
+       select $2, 'team', $4::league, t.espn, k.team_id from jsonb_to_recordset($1) as t(espn text, kalshi text)
+         join external_ids k on k.source = $3 and k.kind = 'team' and k.league = $4 and k.external_id = t.kalshi
+       on conflict do nothing`,
+      [teamsJson, espn.SOURCE, kalshi.SOURCE, LEAGUE],
     );
     // Refresh names, and attach each team's Kalshi abbreviation (from the adapter's map).
     await db.query(
@@ -112,6 +121,19 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     // original stays on its night with its markets, cards and picks: Kalshi voids those markets
     // and settlement refunds the picks (ADR-004).
     const gamesJson = JSON.stringify(gameRows);
+    // One ESPN event is one game per slate (STO-32). If ESPN corrects a game's home and away
+    // teams, the game we have for that event tonight takes the corrected matchup, keeping its
+    // markets and cards, instead of a second game being created.
+    await db.query(
+      `update games g set home_team_id = r.home, away_team_id = r.away, updated_at = now()
+         from jsonb_to_recordset($1) as r(espn text, home smallint, away smallint)
+         join external_ids x on x.source = $3 and x.kind = 'game' and x.league = $4 and x.external_id = r.espn
+        where g.id = x.game_id and g.slate_date = $2::date
+          and (g.home_team_id, g.away_team_id) <> (r.home, r.away)
+          and not exists (select 1 from games o where o.league = $4 and o.slate_date = $2::date
+                                                  and o.home_team_id = r.home and o.away_team_id = r.away)`,
+      [gamesJson, slateDate, espn.SOURCE, LEAGUE],
+    );
     const upserted = await db.query<{ id: string; home: number; away: number }>(
       `insert into games (league, slate_date, home_team_id, away_team_id, tip_off_at, status, broadcasts, updated_at)
        select $3::league, $2::date, g.home, g.away, g.tip, g.status::game_status, g.broadcasts, now()
