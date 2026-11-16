@@ -36,6 +36,8 @@
 
 ## 2. Data sources
 
+These are v1's sources, not a fixed list. Markets, context and curation each sit behind one interface, so more sources can be added (ADR-024).
+
 | Source | Used for | Access |
 |---|---|---|
 | **Kalshi** public REST API (`external-api.kalshi.com/trade-api/v2`) | Prop markets, live prices, results | No API key for market data. Rate-limited (we got a 429 after ~4 quick calls). |
@@ -64,17 +66,14 @@
 
 Runs once each morning (default **10:00 ET**; Kalshi lists the day's props around 7:30 ET). It must publish before the first tip-off of the day, which matters for weekend afternoon games.
 
-**Steps**
-1. **Gather:** today's games from ESPN, and every open prop market for those games from Kalshi.
-2. **Candidate lines:** for each player + stat, keep every strike on the ladder priced within the **price band (default 25–75%)**. The story picks the line (step 6), not the price (ADR-014).
-3. **Filter:**
-   - Bid/ask spread ≤ 5¢
-   - Player matched to ESPN
-   - Player not listed Out or Doubtful
-   - No starters-only rule: relevant bench players are eligible. Kalshi only lists props for rotation players (about 13 per game), so its own listings act as the "real role" filter.
-4. **Enrich:** for each candidate, attach ESPN context: last 5–10 games, home/away split, season series vs. opponent, teammate injuries, recent news.
-5. **Shortlist:** take the top ~30 candidates by liquidity and data completeness.
-6. **Curate and write (Claude API):** Claude chooses the final **N cards** (default **N = 10**, configurable). For each one it picks the storyline, then **the strike that best fits that storyline** from the in-band ladder, and writes a blurb that cites fact IDs. Rules:
+**Steps** (stories first, then markets: ADR-024)
+1. **Discover:** for every player on today's slate who isn't listed Out or Doubtful, collect signals from the discover-stage context sources (v1: ESPN): last 5–10 games, home/away split, season series vs. opponent, teammate injuries, recent news.
+2. **Story candidates:** group each player's signals into stories: the angle (hot streak, revenge game, backup stepping in…), the stat it's about, and the signals behind it.
+3. **Rank:** order the stories by "why should a fan care?"
+4. **Match:** walk the ranked list. For each story, look for an open market on that player and stat with a strike in the **price band (default 25–75%)** and a bid/ask spread ≤ 5¢. No market → log it as "no market" and move to the next story. Stop at a shortlist of ~30 matched stories.
+   - No starters-only rule. Kalshi only lists props for rotation players (about 13 per game), so a deep-bench story drops out here for lack of a market.
+5. **Enrich:** run the enrich-stage context sources on the shortlist only (none in v1).
+6. **Curate and write (Claude API):** Claude chooses the final **N cards** (default **N = 10**, configurable). For each one it picks **the strike that best fits the story** from the in-band ladder (ADR-014) and writes a blurb that cites signal IDs. Rules:
    - At most 1 card per player
    - Spread across games and stat types
    - Favor the strongest storylines
