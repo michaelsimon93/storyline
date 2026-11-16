@@ -294,6 +294,39 @@ test("two ESPN events for one matchup: that game is left out and reported, the r
   assert.equal((await counts(d)).m, 0, "its markets match no game, like another night's");
 });
 
+// eng-lead round 2, should-fix 1: the duplicate shows up mid-day, after the game was loaded.
+// The game and its markets are kept as they were (nothing deleted), the run succeeds, and the
+// note says the game is no longer being updated, so the feed flags it for a look.
+test("a game already loaded, then listed twice: kept as it was, run ok, flagged as no longer updated", { skip }, async () => {
+  const d = await db("matchup_twice_midday");
+  useFetch();
+  await ingest(d, SLATE);
+  const game = async () => (await d.query(`select id, status::text, tip_off_at, (select count(*)::int from markets m where m.game_id = g.id) markets
+                                             from games g where slate_date = $1`, [SLATE])).rows;
+  const before = await game();
+  const countsBefore = await counts(d);
+  useFetch(sameMatchupTwice);
+  const s = await ingest(d, SLATE);
+  assert.deepEqual(s.skippedGames, [
+    "MIL @ ORL: ESPN lists it under 2 events (401909297, 401999998); left out (already loaded tonight: its start time and status are no longer updated)"]);
+  assert.deepEqual(await game(), before, "the loaded game and its 211 markets are kept as they were");
+  assert.deepEqual(await counts(d), countsBefore);
+  const { rows: [run] } = await d.query(`select status from pipeline_runs order by id desc limit 1`);
+  assert.equal(run.status, "ok");
+});
+
+// eng-lead round 2, nit 2: a left-out event can't mark an earlier night's game postponed. We can't
+// tell which of the two events is real, so the earlier game keeps its status.
+test("a matchup listed twice doesn't mark an earlier night's game postponed", { skip }, async () => {
+  const d = await db("matchup_twice_postpone");
+  useFetch();
+  await ingest(d, SLATE);
+  useFetch(sameMatchupTwice);
+  await ingest(d, "2026-11-15");   // same ESPN event 401909297, two nights later, listed twice
+  const { rows } = await d.query(`select slate_date::text, status::text from games order by slate_date`);
+  assert.deepEqual(rows, [{ slate_date: SLATE, status: "scheduled" }]);
+});
+
 /** Tonight's real MIL @ ORL, plus a second matchup (ORL @ MIL, home and away swapped) listed twice. */
 const otherMatchupTwice: Route = (url) => {
   if (url.hostname !== "site.api.espn.com" || !url.pathname.endsWith("/scoreboard")) return undefined;

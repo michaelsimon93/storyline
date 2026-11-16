@@ -125,11 +125,18 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     const eventsOf = new Map<string, string[]>();
     for (const r of listed) eventsOf.set(matchup(r), [...(eventsOf.get(matchup(r)) ?? []), r.espn]);
     const gameRows = listed.filter((r) => eventsOf.get(matchup(r))!.length === 1);
-    for (const r of listed) {
+    const leftOut = listed.filter((r) => eventsOf.get(matchup(r))!.length > 1 && eventsOf.get(matchup(r))![0] === r.espn);
+    // A left-out game that was already loaded keeps its row, markets and cards, but ingest stops
+    // updating it, so its start time and status freeze. Say so, so the feed flags it for a look.
+    const loaded = new Set((await db.query<{ home: number; away: number }>(
+      `select home_team_id as home, away_team_id as away from games g
+         join jsonb_to_recordset($1) as r(home smallint, away smallint) on (g.home_team_id, g.away_team_id) = (r.home, r.away)
+        where g.league = $3 and g.slate_date = $2::date`,
+      [JSON.stringify(leftOut), slateDate, LEAGUE])).rows.map(matchup));
+    for (const r of leftOut) {
       const events = eventsOf.get(matchup(r))!;
-      if (events.length > 1 && events[0] === r.espn) {
-        summary.skippedGames.push(`${r.label}: ESPN lists it under ${events.length} events (${events.join(", ")}); left out`);
-      }
+      summary.skippedGames.push(`${r.label}: ESPN lists it under ${events.length} events (${events.join(", ")}); left out` +
+        (loaded.has(matchup(r)) ? " (already loaded tonight: its start time and status are no longer updated)" : ""));
     }
     summary.games = gameRows.length;
     // A game is identified by what it is: league, slate, home and away team (games_identity),
