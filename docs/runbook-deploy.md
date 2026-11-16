@@ -33,6 +33,8 @@ How the backend runs in production: the schema on **Supabase**, the worker on **
 |---|---|
 | `DATABASE_URL` | The session pooler string from above, with the password filled in and ending in `?uselibpqcompat=true&sslmode=require` |
 | `ALERT_WEBHOOK_URL` | The Discord alerts channel's webhook URL |
+| `DISCORD_TEST_WEBHOOK_URL` | Optional. The Discord `#testing` channel's webhook URL: each ingest posts a summary there. Unset = off. Never the alerts URL |
+| `DISCORD_TEST_FEED_ENABLED` | Optional. `false` turns the test feed off but keeps its URL. Takes effect when Railway applies the variable change (it restarts the same build; no code change or PR) |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `120` (time between SIGTERM and SIGKILL; Railway's default is 0) |
 
 Don't set `TZ`. Schedules are in ET in code (`America/New_York`) and the slate day comes from `storyline_day()` in the database, so the container's time zone doesn't matter.
