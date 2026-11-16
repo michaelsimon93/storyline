@@ -12,8 +12,9 @@ How the backend runs in production: the schema on **Supabase**, the worker on **
 
 ### Supabase
 1. Create a project. Note its **project ref** (the id in the dashboard URL).
-2. Copy a connection string from **Connect**. Use the **direct connection** (`db.<ref>.supabase.co:5432`). If Railway can't reach it (the direct host is IPv6-only unless the IPv4 add-on is on), use the **session pooler** (`…pooler.supabase.com`, **port 5432**) instead.
-   - **Never the transaction pooler (port 6543).** It breaks the advisory locks that stop two copies of a job from running at once.
+2. Copy the **session pooler** connection string: **Connect** → **Direct (Connection string)** → method **Session pooler**. It looks like `postgresql://postgres.<ref>:[YOUR-PASSWORD]@aws-0-<region>.pooler.supabase.com:5432/postgres`.
+   - **Not the direct connection** (`db.<ref>.supabase.co`). That host is IPv6-only unless Supabase's paid IPv4 add-on is on, and Railway can't connect out over IPv6: the first deploy crashed with `ENETUNREACH 2600:…:5432`.
+   - **Never the transaction pooler (port 6543).** It breaks the advisory locks that stop two copies of a job from running at once. Session mode (port 5432) keeps them.
 3. Append **`?uselibpqcompat=true&sslmode=require`** to the URL. Without it, the worker's Postgres client connects **unencrypted**, sending the `postgres` password and every query over the internet in plaintext. Don't use a bare `sslmode=require`: node-postgres treats it as `verify-full`, which needs Supabase's CA certificate.
 4. **Database → Settings → Enforce SSL:** turn it on. Then a URL missing the SSL setting fails loudly instead of quietly connecting in plaintext.
 
@@ -25,11 +26,12 @@ How the backend runs in production: the schema on **Supabase**, the worker on **
    - **Start Command:** leave **empty**. The start command comes from `worker/railpack.json`. Don't set it to `npm start` (see [Why not `npm start`](#why-not-npm-start)).
    - **Restart Policy:** On Failure, 10 retries (Railway's default).
    - **Healthcheck:** none. The worker has no HTTP server.
+   - **Region:** the one nearest the Supabase project's region (e.g. US East for `us-east-1`). The worker makes many small queries, and each one crosses the distance.
 3. Service **Variables**:
 
 | Variable | Value |
 |---|---|
-| `DATABASE_URL` | The Supabase connection string from above, ending in `?uselibpqcompat=true&sslmode=require` |
+| `DATABASE_URL` | The session pooler string from above, with the password filled in and ending in `?uselibpqcompat=true&sslmode=require` |
 | `ALERT_WEBHOOK_URL` | The Discord alerts channel's webhook URL |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `120` (time between SIGTERM and SIGKILL; Railway's default is 0) |
 
