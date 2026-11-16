@@ -76,7 +76,7 @@ test("alerts redact credentials and stay under the webhook's size limit", () => 
 
 test("the job registry schedules ingest by cron and the price poller by config interval", async () => {
   const { scheduledJobs } = await import("../src/jobs/index.js");
-  const jobs = scheduledJobs({ ingestScheduleEt: "0 8-22/2 * * *", pollerIntervalSeconds: 30 } as never);
+  const jobs = scheduledJobs({ ingestScheduleEt: "0 8-22/2 * * *", pollerIntervalSeconds: 30 } as never, { post: async () => {} });
   assert.deepEqual(jobs.map((s) => [s.job.name, s.pattern ?? null, s.everySeconds ?? null]),
     [["ingest", "0 8-22/2 * * *", null], ["price_poll", null, 30]]);
 });

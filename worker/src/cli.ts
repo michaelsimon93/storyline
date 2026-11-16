@@ -6,13 +6,14 @@
 import { connect } from "./lib/db.js";
 import { loadConfig } from "./lib/config.js";
 import { webhookAlert } from "./lib/alert.js";
+import { testFeed } from "./lib/testFeed.js";
 import { alertText } from "./lib/alertText.js";
-import { ingest } from "./jobs/ingest.js";
-import { scheduledJobs } from "./jobs/index.js";
+import { ingestJob, scheduledJobs } from "./jobs/index.js";
 import { runJob, startScheduler, type RunOutcome } from "./scheduler.js";
 
 const [command, arg] = process.argv.slice(2);
 const alert = webhookAlert();
+const feed = testFeed();
 
 /** One-off commands exit non-zero unless the job actually ran and succeeded. */
 function report(outcome: RunOutcome) {
@@ -26,7 +27,7 @@ async function main() {
   switch (command) {
     case "run": {
       const config = await loadConfig(db);
-      const scheduler = startScheduler(db, scheduledJobs(config), alert);
+      const scheduler = startScheduler(db, scheduledJobs(config, feed), alert);
       for (const { job, next } of scheduler.nextRuns()) {
         console.log(`scheduled ${job}: next run ${next?.toISOString() ?? "never"}`);
       }
@@ -47,14 +48,14 @@ async function main() {
     }
     case "job": {
       const config = await loadConfig(db);
-      const entry = scheduledJobs(config).find((s) => s.job.name === arg);
+      const entry = scheduledJobs(config, feed).find((s) => s.job.name === arg);
       if (!entry) throw new Error(`Unknown job: ${arg}`);
       report(await runJob(db, entry.job, alert));
       break;
     }
     case "ingest": {
       // Same lock as the scheduled ingest, so a manual run can't overlap a scheduled one.
-      report(await runJob(db, { name: "ingest", run: (d) => ingest(d, arg) }, alert));
+      report(await runJob(db, ingestJob(feed, arg), alert));
       break;
     }
     default:
