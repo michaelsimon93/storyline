@@ -296,7 +296,7 @@ The web app and the worker are one repo with shared TypeScript types (`Card`, `P
 - Real money
 - User-chosen wager amounts
 - List view and Leaderboard (placeholders only)
-- Human review queue and admin dashboard. Later, the dashboard will manage cards, blurbs, lines, re-resulting, and bonus funds.
+- Human review queue and admin dashboard. Later, the dashboard will manage cards, blurbs, lines, re-resulting, and bonus funds. The risk views, reconciliation check, Discord risk reports and card suspend switch it will sit on top of **are** in v1: see `risk.md` (ADR-023).
 - Polymarket and cross-exchange prices
 - NFL and other sports
 - Native mobile app (v1 is a mobile-first web app)
