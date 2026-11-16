@@ -57,6 +57,8 @@ test("provider IDs for teams, players and games live in external_ids, one row ea
   assert.deepEqual(g, { espn_event_id: "401909297", kalshi_game_key: "26NOV13MILORL" });
   const { rows: teams } = await db!.query(`select kalshi_abbr, espn_id from ${TEAMS("t")} order by 1`);
   assert.deepEqual(teams, [{ kalshi_abbr: "MIL", espn_id: "15" }, { kalshi_abbr: "ORL", espn_id: "19" }]);
+  const { rows: ours } = await db!.query(`select name, abbr from teams order by abbr`);
+  assert.deepEqual(ours.map((t) => t.abbr), ["MIL", "ORL"], "our own short codes, readable without external_ids");
 });
 
 test("markets are written with correct kind, stat, strike and cents", { skip }, async () => {

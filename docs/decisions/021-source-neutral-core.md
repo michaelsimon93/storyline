@@ -58,6 +58,8 @@ Also in scope, so nothing provider-specific is left behind:
 - `markets.result` uses Kalshi's word `scalar` for a void market. Settlement (STO-13) maps
   results into our own vocabulary when it starts reading them.
 - `markets.title` stays: it's display text, and the provider's wording is the content.
+- Teams keep a short code of our own (`teams.abbr`, the league's official abbreviation, for
+  display), set from the team map. Kalshi's and ESPN's codes for a team live in `external_ids`.
 
 ## Consequences
 - A provider renaming or adding a status changes one mapping in its adapter. Unknown values

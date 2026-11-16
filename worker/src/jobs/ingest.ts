@@ -7,7 +7,7 @@ import type { Db } from "../lib/db.js";
 import { dbNow, withRun } from "../lib/db.js";
 import * as espn from "../sources/espn.js";
 import * as kalshi from "../sources/kalshi.js";
-import { kalshiFromEspn } from "../domain/nbaTeams.js";
+import { abbrFromEspn, kalshiFromEspn } from "../domain/nbaTeams.js";
 import { matchPlayer, normalizeName } from "../domain/names.js";
 import {
   GAME_WINNER_SERIES, PLAYER_PROP_SERIES, gameKey, kalshiDateCode, parseMarket, splitTicker,
@@ -29,6 +29,8 @@ export interface IngestSummary {
   outOrDoubtful: string[];
   /** Malformed Kalshi markets left out of this run, as "ticker: reason". */
   skipped: string[];
+  /** Games left out of this run (ESPN listed one matchup under two events), as readable notes. */
+  skippedGames: string[];
   snapshots: number;
 }
 
@@ -52,7 +54,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     const summary: IngestSummary = {
       slateDate, games: games.length, markets: {},
       players: { total: 0, exact: 0, fuzzy: 0, unmatched: [], ambiguous: [], reissued: [] },
-      outOrDoubtful: [], skipped: [], snapshots: 0,
+      outOrDoubtful: [], skipped: [], skippedGames: [], snapshots: 0,
     };
     if (games.length === 0) return summary;
 
@@ -62,10 +64,10 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     // created in the same statement as its ESPN ID, ID first, so a team never exists without the
     // ID that finds it, and a run that loses a race to another writes nothing.
     const teamsIn = [...new Map(games.flatMap((g) => [g.home, g.away]).map((t) => [t.espnId, t])).values()]
-      .map((t) => ({ name: t.name, espn: t.espnId, kalshi: kalshiFromEspn(t.abbr) }));
+      .map((t) => ({ name: t.name, abbr: abbrFromEspn(t.abbr), espn: t.espnId, kalshi: kalshiFromEspn(t.abbr) }));
     const teamsJson = JSON.stringify(teamsIn);
     await db.query(
-      `with i as (select * from jsonb_to_recordset($1) as t(name text, espn text, kalshi text)),
+      `with i as (select * from jsonb_to_recordset($1) as t(name text, abbr text, espn text, kalshi text)),
        fresh as (
          select nextval(pg_get_serial_sequence('teams', 'id'))::smallint as id, i.* from i
           where not exists (select 1 from external_ids x
@@ -76,7 +78,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
          select $2, 'team', $3::league, espn, id from fresh
          on conflict do nothing
          returning team_id)
-       insert into teams (id, league, name) select f.id, $3::league, f.name from fresh f join ids on ids.team_id = f.id`,
+       insert into teams (id, league, name, abbr) select f.id, $3::league, f.name, f.abbr from fresh f join ids on ids.team_id = f.id`,
       [teamsJson, espn.SOURCE, LEAGUE, kalshi.SOURCE],
     );
     // A known team whose ESPN ID went missing gets it back, found by its Kalshi abbreviation.
@@ -87,12 +89,14 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
        on conflict do nothing`,
       [teamsJson, espn.SOURCE, kalshi.SOURCE, LEAGUE],
     );
-    // Refresh names, and attach each team's Kalshi abbreviation (from the adapter's map).
+    // Refresh names and our short codes, and attach each team's Kalshi abbreviation (all from the
+    // team map).
     await db.query(
       `with i as (
-         select x.team_id, t.name, t.kalshi from jsonb_to_recordset($1) as t(name text, espn text, kalshi text)
+         select x.team_id, t.name, t.abbr, t.kalshi from jsonb_to_recordset($1) as t(name text, abbr text, espn text, kalshi text)
          join external_ids x on x.source = $2 and x.kind = 'team' and x.league = $4 and x.external_id = t.espn),
-       renamed as (update teams set name = i.name from i where teams.id = i.team_id and teams.name <> i.name)
+       renamed as (update teams set name = i.name, abbr = i.abbr from i
+                    where teams.id = i.team_id and (teams.name, teams.abbr) is distinct from (i.name, i.abbr))
        insert into external_ids (source, kind, league, external_id, team_id)
        select $3, 'team', $4::league, kalshi, team_id from i
        on conflict (team_id, source) where kind = 'team' do update set external_id = excluded.external_id
@@ -107,15 +111,27 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     const teamIdByEspn = teamIdsFrom(espn.SOURCE);
 
     // ---------------------------------------------------------------- games
-    const gameRows = games.map((g) => ({
+    const listed = games.map((g) => ({
+      label: `${abbrFromEspn(g.away.abbr)} @ ${abbrFromEspn(g.home.abbr)}`,
       espn: g.eventId,
       key: gameKey(dateCode, kalshiFromEspn(g.away.abbr), kalshiFromEspn(g.home.abbr)),
       home: teamIdByEspn.get(g.home.espnId), away: teamIdByEspn.get(g.away.espnId),
       tip: g.startsAt, status: g.status, broadcasts: g.broadcasts,
     }));
     const matchup = (r: { home: unknown; away: unknown }) => `${r.home}@${r.away}`;
-    const dupe = gameRows.find((r, i) => gameRows.findIndex((o) => matchup(o) === matchup(r)) !== i);
-    if (dupe) throw new Error(`ESPN lists two events for one matchup tonight (event ${dupe.espn}); a game is one matchup per slate`);
+    // A game is one matchup per slate. If ESPN lists one matchup under two events we can't tell
+    // which is real, so that game is left out tonight and reported; the rest of the slate loads.
+    // Its Kalshi markets then match no game and are ignored, like another night's.
+    const eventsOf = new Map<string, string[]>();
+    for (const r of listed) eventsOf.set(matchup(r), [...(eventsOf.get(matchup(r)) ?? []), r.espn]);
+    const gameRows = listed.filter((r) => eventsOf.get(matchup(r))!.length === 1);
+    for (const r of listed) {
+      const events = eventsOf.get(matchup(r))!;
+      if (events.length > 1 && events[0] === r.espn) {
+        summary.skippedGames.push(`${r.label}: ESPN lists it under ${events.length} events (${events.join(", ")}); left out`);
+      }
+    }
+    summary.games = gameRows.length;
     // A game is identified by what it is: league, slate, home and away team (games_identity),
     // like a market. A postponed game replayed on another night is therefore a new game. The
     // original stays on its night with its markets, cards and picks: Kalshi voids those markets
@@ -166,7 +182,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
         where x.source = $3 and x.kind = 'game' and x.league = $4 and x.external_id = any($1)
           and g.id = x.game_id and g.slate_date < $2::date
           and g.status not in ('postponed', 'final', 'canceled')`,
-      [games.map((g) => g.eventId), slateDate, espn.SOURCE, LEAGUE],
+      [gameRows.map((r) => r.espn), slateDate, espn.SOURCE, LEAGUE],
     );
     const gameIdByKey = new Map(gameRows.map((r) => [r.key, gameIdByMatchup.get(matchup(r))!]));
 

@@ -4,7 +4,7 @@ import {
   dollarsToCents, gameKey, kalshiDateCode, parseMarket, playerNameFromTitle, playerTeamFromTicker,
   splitTicker, strikeFromMarket,
 } from "../src/domain/kalshiParse.js";
-import { kalshiFromEspn, NBA_TEAMS } from "../src/domain/nbaTeams.js";
+import { abbrFromEspn, kalshiFromEspn, NBA_TEAMS } from "../src/domain/nbaTeams.js";
 import { matchPlayer, normalizeName } from "../src/domain/names.js";
 
 test("kalshi date code and game key", () => {
@@ -35,6 +35,11 @@ test("team map covers all 30 teams, both directions", () => {
   assert.equal(NBA_TEAMS.length, 30);
   assert.equal(new Set(NBA_TEAMS.map((t) => t.kalshi)).size, 30);
   assert.equal(new Set(NBA_TEAMS.map((t) => t.espn)).size, 30);
+  assert.equal(new Set(NBA_TEAMS.map((t) => t.abbr)).size, 30, "our own codes are unique");
+  assert.ok(NBA_TEAMS.every((t) => /^[A-Z]{2,4}$/.test(t.abbr)), "our codes fit teams_abbr_format");
+  assert.equal(abbrFromEspn("NY"), "NYK", "our code, not ESPN's");
+  assert.equal(abbrFromEspn("GS"), "GSW");
+  assert.throws(() => abbrFromEspn("XYZ"), /Unknown ESPN team/);
   assert.equal(kalshiFromEspn("NY"), "NYK");
   assert.equal(kalshiFromEspn("UTAH"), "UTA");
   assert.equal(kalshiFromEspn("WSH"), "WAS");

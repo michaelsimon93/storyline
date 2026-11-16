@@ -145,7 +145,7 @@ test("adv38: an ingest racing another ingest that is creating the same market do
 // ID, which a later run could never find again (and would duplicate).
 for (const [what, source, kind, externalId, table, insertRow] of [
   ["team", "espn", "team", "15", "teams",          // MIL's ESPN id
-   `insert into teams (id, league, name) select team_id, 'nba', 'Milwaukee Bucks' from x`],
+   `insert into teams (id, league, name, abbr) select team_id, 'nba', 'Milwaukee Bucks', 'MIL' from x`],
   ["player", "kalshi", "player", "60bb439a-df6a-4fea-8312-4caa6a2c0fbe", "players",   // Anthony Black
    `insert into players (id, league, full_name) select player_id, 'nba', 'Anthony Black' from x`],
 ] as const) {

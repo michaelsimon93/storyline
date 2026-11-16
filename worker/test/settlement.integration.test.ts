@@ -20,7 +20,7 @@ before(async () => {
   db = await freshDb("storyline_settlement_test");
   if (!db) return;
   await db.query(`
-    insert into teams (id, league, name) values (1,'nba','A'), (2,'nba','B');
+    insert into teams (id, league, name, abbr) values (1,'nba','A','AAA'), (2,'nba','B','BBB');
     insert into players (id, league, full_name, team_id) values
       ('a5000000-0000-0000-0000-0000000000b1','nba','P1',1), ('a5000000-0000-0000-0000-0000000000b2','nba','P2',1);
     insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at)

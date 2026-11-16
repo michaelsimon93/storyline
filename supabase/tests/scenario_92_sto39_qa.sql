@@ -46,7 +46,7 @@ select t_err('qa39: a null league is rejected',
 delete from external_ids where source = 'qa';
 
 -- Coverage: cascade on team/game deletion removes their IDs (not left dangling).
-insert into teams (id, league, name) values (91, 'nba', 'QA cascade');
+insert into teams (id, league, name, abbr) values (91, 'nba', 'QA cascade', 'QAC');
 insert into external_ids (source, kind, league, external_id, team_id) values ('espn', 'team', 'nba', 'qa91', 91);
 delete from teams where id = 91;
 select t_eq('qa39: deleting a team removes its provider IDs',

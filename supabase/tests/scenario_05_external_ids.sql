@@ -88,10 +88,22 @@ delete from players where id = 'a5500000-0000-0000-0000-0000000000b2';
 select t_eq('external ids: deleting a player removes his provider ids',
   (select count(*)::int from external_ids where external_id = 'kp56'), 0);
 
+-- ---------------------------------------------------------------- our own team short code
+select t_eq('teams: NBA MIN and NFL MIN share a short code across leagues',
+  (select count(*)::int from teams where abbr = 'MIN'), 2);
+select t_err('teams: two teams in one league can''t share a short code',
+  $q$update teams set abbr = 'SAS' where id = 2$q$, '%teams_league_abbr_key%');
+select t_err('teams: a short code is 2-4 capital letters',
+  $q$update teams set abbr = 'sas ' where id = 1$q$, '%teams_abbr_format%');
+select t_err('teams: every team has a short code',
+  $q$insert into teams (league, name) values ('nba', 'No Code')$q$, '%not-null%');
+
 set role authenticated;
 select as_user('a4000000-0000-0000-0000-0000000000f1');
 select t_err('external ids: users can''t read the provider cross-reference',
   $q$select * from external_ids$q$, 'permission denied%');
+select t_eq('teams: users read our short code',
+  (select abbr from teams where id = 1), 'SAS');
 select t_eq('external ids: users still read teams, players and games',
   (select count(*)::int from games where id = 'a5500000-0000-0000-0000-0000000000e1'), 1);
 select t_err('external ids: users can''t write it',

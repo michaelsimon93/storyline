@@ -21,7 +21,7 @@ const seriesLabel = (series: string) => series.replace(/^KXNBA/, "");
 
 export function ingestSummaryText(s: IngestSummary): string {
   const head = `📥 **Ingest · slate ${s.slateDate}**`;
-  if (s.games === 0) return `${head}\nNo games on this slate.`;
+  if (s.games === 0 && s.skippedGames.length === 0) return `${head}\nNo games on this slate.`;
 
   const p = s.players;
   const totalMarkets = Object.values(s.markets).reduce((a, b) => a + b, 0);
@@ -34,6 +34,7 @@ export function ingestSummaryText(s: IngestSummary): string {
     ...list("Unmatched", p.unmatched, cap),
     ...list("Ambiguous (left unmatched)", p.ambiguous, cap),
     ...list("Kalshi re-issued player ids", p.reissued, cap),
+    ...list("Skipped games", s.skippedGames, cap),
     ...list("Skipped markets", s.skipped, cap),
     ...list("Out / doubtful", s.outOrDoubtful, cap),
   ].join("\n");

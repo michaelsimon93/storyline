@@ -60,8 +60,9 @@ test("qa39: the migration moves every existing provider ID, and ingest afterward
   try {
     await setup.query(readFileSync(join(SUPABASE, "tests", "supabase_stubs.sql"), "utf8"));
     const files = migrationFiles();
-    assert.equal(files.at(-1), STO39, "STO-39's migration is the last one");
-    for (const f of files.slice(0, -1)) await setup.query(readFileSync(join(SUPABASE, "migrations", f), "utf8"));
+    const at = files.indexOf(STO39);
+    assert.ok(at > 0, "STO-39's migration exists");
+    for (const f of files.slice(0, at)) await setup.query(readFileSync(join(SUPABASE, "migrations", f), "utf8"));
     await setup.query(`
       insert into teams (id, league, name, kalshi_abbr, espn_abbr, espn_id) values
         (1, 'nba', 'Milwaukee Bucks', 'MIL', 'MIL', '15'), (2, 'nba', 'Orlando Magic', 'ORL', 'ORL', '19'),
@@ -78,7 +79,8 @@ test("qa39: the migration moves every existing provider ID, and ingest afterward
         ('00000000-0000-0000-0000-0000000000f1', 'nba', '00000000-0000-0000-0000-0000000000e1', 'game_winner', 'ORL wins', 2, 'open');
       insert into external_ids (source, kind, external_id, market_id) values
         ('kalshi', 'market', 'KXNBAGAME-26NOV10MILORL-ORL', '00000000-0000-0000-0000-0000000000f1');`);
-    await setup.query(readFileSync(join(SUPABASE, "migrations", STO39), "utf8"));
+    // STO-39's migration and every later one (e.g. teams.abbr, backfilled from the moved codes).
+    for (const f of files.slice(at)) await setup.query(readFileSync(join(SUPABASE, "migrations", f), "utf8"));
   } finally {
     await setup.end();
   }
@@ -101,6 +103,9 @@ test("qa39: the migration moves every existing provider ID, and ingest afterward
     "team/espn/nba/15->1", "team/espn/nba/19->2", "team/espn/nfl/15->3",
     "team/kalshi/nba/MIL->1", "team/kalshi/nba/ORL->2", "team/kalshi/nfl/MIL->3",
   ]);
+  const { rows: abbrs } = await d.query(`select id, league::text, abbr from teams order by id`);
+  assert.deepEqual(abbrs, [{ id: 1, league: "nba", abbr: "MIL" }, { id: 2, league: "nba", abbr: "ORL" },
+                           { id: 3, league: "nfl", abbr: "MIL" }], "existing teams get their short code");
   // Ingest on the migrated data finds the existing NBA teams and Anthony Black (not the NFL team).
   useFetch();
   await ingest(d, SLATE);
@@ -235,7 +240,7 @@ test("qa39: a team whose ESPN ID row is lost is not duplicated and the run doesn
 // be picked up by NBA ingest.
 test("qa39: NBA ingest ignores another league's team with the same provider IDs", { skip }, async () => {
   const d = await db("league_clash");
-  await d.query(`with t as (insert into teams (league, name) values ('nfl', 'NFL fifteen') returning id)
+  await d.query(`with t as (insert into teams (league, name, abbr) values ('nfl', 'NFL fifteen', 'MIL') returning id)
                  insert into external_ids (source, kind, league, external_id, team_id)
                  select s, 'team', 'nfl', e, id from t, (values ('espn', '15'), ('kalshi', 'MIL')) v(s, e)`);
   useFetch();
@@ -256,7 +261,7 @@ test("qa39: another league's team added later doesn't take over NBA games on re-
   const teamsOf = async () => (await d.query(
     `select home_team_id, away_team_id from games order by id`)).rows;
   const before = await teamsOf();
-  await d.query(`with t as (insert into teams (league, name) values ('nfl', 'NFL fifteen') returning id)
+  await d.query(`with t as (insert into teams (league, name, abbr) values ('nfl', 'NFL fifteen', 'MIL') returning id)
                  insert into external_ids (source, kind, league, external_id, team_id)
                  select s, 'team', 'nfl', e, id from t, (values ('espn', '15'), ('espn', '19'), ('kalshi', 'MIL'), ('kalshi', 'ORL')) v(s, e)
                  on conflict do nothing`);
@@ -275,15 +280,44 @@ const sameMatchupTwice: Route = (url) => {
   return json({ ...body, events: [...body.events, { ...body.events[0]!, id: "401999998" }] });
 };
 
-// Coverage: author's risk (3). Two ESPN events for one matchup on one slate breaks games_identity;
-// ingest must fail loudly and name the event, and must not write half a slate of games.
-test("qa39: two ESPN events for one matchup fail the run loudly and write no game", { skip }, async () => {
+// Michael's call (PR #26): if ESPN lists one matchup under two events, that game is left out and
+// reported; the run succeeds and every other game on the slate loads as usual.
+test("two ESPN events for one matchup: that game is left out and reported, the run succeeds", { skip }, async () => {
   const d = await db("matchup_twice");
   useFetch(sameMatchupTwice);
-  await assert.rejects(ingest(d, SLATE), /two events for one matchup.*40199999|two events for one matchup.*401909297/);
+  const s = await ingest(d, SLATE);
+  assert.equal(s.games, 0);
+  assert.deepEqual(s.skippedGames, ["MIL @ ORL: ESPN lists it under 2 events (401909297, 401999998); left out"]);
   const { rows: [run] } = await d.query(`select status from pipeline_runs order by id desc limit 1`);
-  assert.equal(run.status, "failed");
-  assert.equal((await counts(d)).g, 0);
+  assert.equal(run.status, "ok");
+  assert.equal((await counts(d)).g, 0, "no game for the ambiguous matchup");
+  assert.equal((await counts(d)).m, 0, "its markets match no game, like another night's");
+});
+
+/** Tonight's real MIL @ ORL, plus a second matchup (ORL @ MIL, home and away swapped) listed twice. */
+const otherMatchupTwice: Route = (url) => {
+  if (url.hostname !== "site.api.espn.com" || !url.pathname.endsWith("/scoreboard")) return undefined;
+  const body = fixture("espn-scoreboard-20261113.json") as { events: { id: string; competitions: { competitors: { homeAway: string }[] }[] }[] };
+  const swapped = (id: string) => ({ ...body.events[0]!, id, competitions: body.events[0]!.competitions.map((c) => ({
+    ...c, competitors: c.competitors.map((t) => ({ ...t, homeAway: t.homeAway === "home" ? "away" : "home" })) })) });
+  return json({ ...body, events: [...body.events, swapped("401999997"), swapped("401999996")] });
+};
+
+test("a left-out game doesn't affect the rest of the slate", { skip }, async () => {
+  const clean = await db("matchup_twice_baseline");
+  useFetch();
+  const baseline = await ingest(clean, SLATE);
+
+  const d = await db("matchup_twice_other");
+  useFetch(otherMatchupTwice);
+  const s = await ingest(d, SLATE);
+  assert.deepEqual(s.skippedGames, ["ORL @ MIL: ESPN lists it under 2 events (401999997, 401999996); left out"]);
+  assert.equal(s.games, 1);
+  assert.deepEqual(s.markets, baseline.markets, "MIL @ ORL loads every market");
+  assert.deepEqual(s.players, baseline.players);
+  assert.deepEqual(await counts(d), await counts(clean), "same games, markets, players, teams and ids as a clean night");
+  const { rows } = await d.query(`select espn_event_id from ${GAMES("g")}`);
+  assert.deepEqual(rows, [{ espn_event_id: "401909297" }]);
 });
 
 /** Tonight's scoreboard with ESPN's home/away designation flipped (a correction, or a neutral site). */

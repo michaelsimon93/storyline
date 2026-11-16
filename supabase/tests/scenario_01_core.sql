@@ -14,10 +14,10 @@ select t_eq('DST fall-back: 3:00am EST',     storyline_day('2026-11-01 08:00:00+
 select t_eq('storyline_today() = storyline_day(now())', storyline_today(), storyline_day(now()));
 
 -- ---------------------------------------------------------------- seed (worker)
-insert into teams (id,league,name) values
- (1,'nba','Spurs'), (2,'nba','Warriors'), (3,'nba','Timberwolves'), (4,'nfl','Vikings');
+insert into teams (id,league,name,abbr) values
+ (1,'nba','Spurs','SAS'), (2,'nba','Warriors','GSW'), (3,'nba','Timberwolves','MIN'), (4,'nfl','Vikings','MIN');
 -- Spare NBA teams: other scenarios need games with their own matchup (games_identity).
-insert into teams (id,league,name) select n, 'nba', 'Test team ' || n from generate_series(11, 30) n;
+insert into teams (id,league,name,abbr) select n, 'nba', 'Test team ' || n, 'Q' || chr(54 + n) from generate_series(11, 30) n;
 insert into external_ids (source,kind,league,external_id,team_id) values
  ('kalshi','team','nba','SAS',1), ('espn','team','nba','24',1), ('kalshi','team','nba','GSW',2), ('espn','team','nba','9',2),
  ('kalshi','team','nba','MIN',3), ('espn','team','nba','16',3),

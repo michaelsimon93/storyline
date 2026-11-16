@@ -18,7 +18,7 @@ before(async () => {
   db = await freshDb("storyline_concurrency_test");
   if (!db) return;
   await db.query(`
-    insert into teams (id, league, name) values (1,'nba','Spurs'), (2,'nba','Warriors');
+    insert into teams (id, league, name, abbr) values (1,'nba','Spurs','SAS'), (2,'nba','Warriors','GSW');
     insert into players (id, league, full_name, team_id) values
       ('00000000-0000-0000-0000-0000000000b1','nba','Player One',1),
       ('00000000-0000-0000-0000-0000000000b2','nba','Player Two',2);
