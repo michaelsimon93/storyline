@@ -246,6 +246,26 @@ test("qa39: NBA ingest ignores another league's team with the same provider IDs"
   assert.deepEqual(winners.map((r) => r.league), ["nba"]);
 });
 
+// eng-lead should-fix 1: the test above seeds the NFL team first, so without a league filter the
+// NBA rows (read later) still win the lookup by luck. Here the NFL team is added after the NBA
+// ones, so it is read last: an unscoped lookup would point tonight's game at it.
+test("qa39: another league's team added later doesn't take over NBA games on re-ingest", { skip }, async () => {
+  const d = await db("league_clash_later");
+  useFetch();
+  await ingest(d, SLATE);
+  const teamsOf = async () => (await d.query(
+    `select home_team_id, away_team_id from games order by id`)).rows;
+  const before = await teamsOf();
+  await d.query(`with t as (insert into teams (league, name) values ('nfl', 'NFL fifteen') returning id)
+                 insert into external_ids (source, kind, league, external_id, team_id)
+                 select s, 'team', 'nfl', e, id from t, (values ('espn', '15'), ('espn', '19'), ('kalshi', 'MIL'), ('kalshi', 'ORL')) v(s, e)
+                 on conflict do nothing`);
+  await ingest(d, SLATE);
+  assert.deepEqual(await teamsOf(), before, "tonight's game keeps its NBA teams");
+  const { rows } = await d.query(`select distinct t.league::text from markets m join teams t on t.id = m.team_id`);
+  assert.deepEqual(rows.map((r) => r.league), ["nba"]);
+});
+
 // ------------------------------------------------------------------ matchup identity
 
 /** ESPN's scoreboard listing tonight's MIL @ ORL twice, under two event IDs. */
@@ -282,8 +302,15 @@ test("qa39: one ESPN event never becomes two games on one slate (home/away corre
   const d = await db("home_away_flip");
   useFetch();
   await ingest(d, SLATE);
+  const gameNow = async () => (await d.query(
+    `select g.id, g.home_team_id, g.away_team_id, g.espn_event_id, g.kalshi_game_key,
+            (select count(*)::int from markets m where m.game_id = g.id) markets
+       from ${GAMES("g")} where g.slate_date = $1`, [SLATE])).rows;
+  const [before] = await gameNow();
   useFetch(homeAwayFlipped);
-  await ingest(d, SLATE).catch(() => {});   // the swapped matchup's Kalshi tickers don't match; that's fine
-  const { rows } = await d.query(`select g.espn_event_id, count(*)::int n from ${GAMES("g")} where g.slate_date = $1 group by 1`, [SLATE]);
-  assert.deepEqual(rows, [{ espn_event_id: "401909297", n: 1 }]);
+  await ingest(d, SLATE);   // must succeed (eng-lead should-fix 2: no swallowed error)
+  assert.deepEqual(await gameNow(), [{
+    id: before.id, home_team_id: before.away_team_id, away_team_id: before.home_team_id,
+    espn_event_id: "401909297", kalshi_game_key: "26NOV13ORLMIL", markets: 211,
+  }], "the same game takes the corrected matchup and keeps its markets");
 });
