@@ -67,22 +67,22 @@ These are v1's sources, not a fixed list. Markets, context and curation each sit
 Runs once each morning (default **10:00 ET**; Kalshi lists the day's props around 7:30 ET). It must publish before the first tip-off of the day, which matters for weekend afternoon games.
 
 **Steps** (stories first, then markets: ADR-024)
-1. **Discover:** for every player on today's slate who isn't listed Out or Doubtful, collect signals from the discover-stage context sources (v1: ESPN): last 5–10 games, home/away split, season series vs. opponent, teammate injuries, recent news.
-2. **Story candidates:** group each player's signals into stories: the angle (hot streak, revenge game, backup stepping in…), the stat it's about, and the signals behind it.
-3. **Rank:** order the stories by "why should a fan care?"
-4. **Match:** walk the ranked list. For each story, look for an open market on that player and stat with a strike in the **price band (default 25–75%)** and a bid/ask spread ≤ 5¢. No market → log it as "no market" and move to the next story. Stop at a shortlist of ~30 matched stories.
+1. **Discover:** for every player on today's slate who isn't listed Out or Doubtful, collect signals from the discover-stage context sources. ESPN: last 5–10 games, home/away split, season series vs. opponent, teammate injuries, recent news, run through story detectors (hot streak, revenge game, backup stepping in…). X (via one slate-wide Grok search, behind its flag): the storylines fans and reporters are talking about.
+2. **Story candidates:** group each player's signals into stories: the angle, the stat it's about, the signals behind it, and a rough score.
+3. **Match:** walk the candidates by score. For each story, look for an open market on that player and stat with a strike in the **price band (default 25–75%)** and a bid/ask spread ≤ 5¢. No market → log it as "no market" and move to the next story. Stop at a shortlist of ~50 matched stories.
    - No starters-only rule. Kalshi only lists props for rotation players (about 13 per game), so a deep-bench story drops out here for lack of a market.
-5. **Enrich:** run the enrich-stage context sources on the shortlist only (none in v1).
-6. **Curate and write (Claude API):** Claude chooses the final **N cards** (default **N = 10**, configurable). For each one it picks **the strike that best fits the story** from the in-band ladder (ADR-014) and writes a blurb that cites signal IDs. Rules:
+4. **Enrich:** run the enrich-stage context sources on the shortlist only (X buzz and late news per player, behind its flag).
+5. **Rank, curate and write (Claude API):** Claude ranks the shortlist by "why should a fan care?" using ESPN facts and X buzz, chooses the final **N cards** (default **N = 10**, configurable), picks **the strike that best fits each story** from the in-band ladder (ADR-014), and writes a blurb that cites signal IDs. Rules:
    - At most 1 card per player
    - Spread across games and stat types
    - Favor the strongest storylines
-7. **Validate:** check each blurb, and regenerate any that fail (see criteria below).
-8. **Publish:** cards go live immediately. There's no review queue in v1. Michael reviews the published cards and gives feedback afterward.
+6. **Validate:** check each blurb, and regenerate any that fail (see criteria below).
+7. **Publish:** cards go live immediately. There's no review queue in v1. Michael reviews the published cards and gives feedback afterward.
 
 **Blurb rules**
 - ≤ 200 characters.
 - **Every claim is grounded:** the model receives facts with IDs (stats *and* news: suspensions, injury returns, trades, matchups) and must cite the fact ID behind each claim. A validator rejects uncited claims. A number isn't required; "back from suspension" is a valid storyline (ADR-014).
+- **Reporting from X is attributed:** a claim from a post by an approved account names the source and links the post ("Per Shams, he's back tonight"). Posts from accounts not yet approved can shape ranking but never appear in a blurb. Michael approves accounts as they first show up (ADR-024).
 - Written about the player and the stat's storyline, not as betting advice. No "lock", "hammer", "smash".
 - Tone: punchy, fan-first, entertaining.
 

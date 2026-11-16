@@ -36,23 +36,32 @@ product question is "why should a fan care?", so curation should start there.
    - `Curator`: ranks stories and writes blurbs. v1: Claude.
    Only real providers get an implementation (ADR-021 rule 6 still holds: no plugin system).
 2. **A signal is a fact with a source.** Each signal has an ID, source, kind (`stat`, `news`,
-   `injury`, `buzz`), subject (our player, team or game ID, resolved through `external_ids`),
-   a one-line summary, evidence (URL or quote, observed time) and `verified`. Signals are the
-   facts ADR-014 talks about: blurbs cite signal IDs, and only `verified` signals can ground a
-   claim. Unverified signals (e.g. social buzz) can inform ranking, never a stated fact.
+   `injury`, `buzz`, `story`), subject (our player, team or game ID, resolved through
+   `external_ids`), a one-line summary, evidence (URL or quote, observed time) and a trust level.
+   Signals are the facts ADR-014 talks about: blurbs cite signal IDs.
+   - **Verified** (ESPN): may be stated as fact.
+   - **Attributed** (a post from an approved account): may be stated only as reporting, naming
+     the source and linking the post ("Per Shams, he's back tonight"). Never as plain fact.
+   - **Unreviewed** (a post from an account not yet approved): may inform discovery and ranking,
+     never a blurb.
+   Accounts start unreviewed. Each run lists the new accounts it pulled from (in the Discord test
+   feed) and Michael approves or rejects them; that is how the trusted list is built. The list is
+   data (a table with source, handle and status), not config.
 3. **Context sources declare a stage.** `discover` sources are cheap enough to run over the whole
-   slate (ESPN). `enrich` sources are costly and run only on the shortlist (e.g. a Grok/X search,
-   later).
+   slate. `enrich` sources are costly and run only on the shortlist. One provider can do both:
+   X (via Grok search) proposes stories with one slate-wide search at discover, then checks buzz
+   and late news per player at enrich.
 4. **Curation finds stories first.**
-   1. Discover: run `discover` sources for every player on the slate.
+   1. Discover: run `discover` sources over the slate. ESPN detectors (hot streak, revenge game,
+      backup stepping in…) and X both propose stories.
    2. Story candidates: group signals into stories (player, angle, the stat it's about,
-      supporting signals).
-   3. Rank by "why should a fan care?"
-   4. Match: walk the ranked list; for each story, find an open, in-band market on that stat
+      supporting signals), with a rough score.
+   3. Match: walk the candidates by score; for each story, find an open, in-band market on that stat
       that passes the filters. No market → skip it, log it as "no market", take the next story.
-   5. Enrich the matched shortlist with `enrich` sources.
-   6. Curate and write: the curator picks the final N and the strike that fits each story
-      (ADR-014), citing signal IDs.
+   4. Enrich the matched shortlist with `enrich` sources.
+   5. Rank, curate and write: the curator (Claude) ranks the shortlist by "why should a fan
+      care?" using ESPN facts and X buzz, picks the final N and the strike that fits each story
+      (ADR-014), and writes blurbs citing signal IDs under the trust rules above.
 5. **Turning sources on and off** uses `feature_flags` (ADR-018), so a source can be disabled
    without a deploy. A new source ships behind its own flag.
 6. **Failure rules.** A context source that fails is reported and skipped; curation runs on the
@@ -69,4 +78,5 @@ product question is "why should a fan care?", so curation should start there.
 - Supersedes the market-first steps 1–5 of spec §3 and the "~30 by liquidity" shortlist rule.
 - Open: spec §2 says curation still runs on Kalshi alone if ESPN fails. With stories first, no
   ESPN means no stories. What to do then is Michael's call (tracked on STO-10).
-- How stories are scored (rules in code, the model, or both) is decided in STO-10.
+- X-sourced stories can become cards, so some cards will carry other people's reporting. If a
+  report turns out wrong, the card was still attributed and linked, never stated as fact.
