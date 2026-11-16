@@ -27,3 +27,4 @@ Short records of the decisions that shaped Storyline: the context, the options c
 | 021 | [Core tables speak Storyline, not provider](021-source-neutral-core.md) |
 | 022 | [Two review roles; the eng lead approves, Michael merges](022-review-roles.md) |
 | 023 | [Run the book as if the money were real](023-run-the-book-as-real-money.md) |
+| 024 | [Sources are pluggable; curation finds stories first](024-sources-are-pluggable-stories-come-first.md) |
