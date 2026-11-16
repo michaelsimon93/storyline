@@ -1,6 +1,7 @@
 // The worker connects straight to Postgres (Supabase's session pooler, port 5432; never the 6543
-// transaction pooler, which breaks advisory locks) as a privileged role, so it bypasses RLS. Users never get this access: they go
-// through RLS policies and the place_pick / create_profile functions.
+// transaction pooler, which breaks advisory locks) as a privileged role, so it bypasses RLS.
+// Users never get this access: they go through RLS policies and the place_pick /
+// create_profile functions.
 
 import pg from "pg";
 
