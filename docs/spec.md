@@ -58,7 +58,7 @@ These are v1's sources, not a fixed list. Markets, context and curation each sit
 
 **Acceptance criteria**
 - [ ] Unmatched players are logged and excluded from curation. They are never silently dropped without a log entry.
-- [ ] A failed ESPN response (bad shape or non-200) is logged with an alert, and that day's curation still runs on the Kalshi data alone.
+- [ ] A failed ESPN response (bad shape or non-200) is logged with an alert, and that day's curation still publishes, with fewer facts (ADR-024 rule 7): ESPN signals from the last successful pull (dated), then X stories and attributed reporting, then market facts alone.
 
 ---
 

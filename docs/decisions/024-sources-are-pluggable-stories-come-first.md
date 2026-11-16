@@ -66,6 +66,14 @@ product question is "why should a fan care?", so curation should start there.
    without a deploy. A new source ships behind its own flag.
 6. **Failure rules.** A context source that fails is reported and skipped; curation runs on the
    rest. A market source failing stops the run (there's nothing to attach stories to).
+7. **ESPN down: publish with fewer facts, don't go dark.** Curation still publishes markets and
+   blurbs, drawing on what's left, in this order:
+   1. ESPN signals from the last successful pull. Still verified, but dated, so a blurb never
+      treats them as tonight's news.
+   2. X stories, and stats from posts by approved accounts, stated as attributed reporting
+      ("Per StatMuse, …"). A number Grok states without a post behind it is never used.
+   3. Market facts alone (player, matchup, line, price) for a thinner blurb.
+   The run alerts that it is degraded and says which level it used.
 
 ## Consequences
 - A new context source is a module plus a flag; curation doesn't change. A new market source is
@@ -76,7 +84,5 @@ product question is "why should a fan care?", so curation should start there.
 - Discovery touches every player on the slate, not ~30 candidates, so ESPN call volume rises.
   ESPN's limits are unknown (undocumented API); measure it in STO-10.
 - Supersedes the market-first steps 1–5 of spec §3 and the "~30 by liquidity" shortlist rule.
-- Open: spec §2 says curation still runs on Kalshi alone if ESPN fails. With stories first, no
-  ESPN means no stories. What to do then is Michael's call (tracked on STO-10).
 - X-sourced stories can become cards, so some cards will carry other people's reporting. If a
   report turns out wrong, the card was still attributed and linked, never stated as fact.
