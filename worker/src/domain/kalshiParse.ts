@@ -111,3 +111,60 @@ export function marketQuote(m: {
     ...marketStatus(m.status),
   };
 }
+
+/** The raw Kalshi fields parseMarket reads. */
+export interface KalshiMarketFields {
+  ticker: string; title: string; status: string;
+  floor_strike?: number | null; strike_type?: string; custom_strike?: Record<string, string>;
+  yes_bid_dollars?: string; yes_ask_dollars?: string; no_bid_dollars?: string; no_ask_dollars?: string;
+  volume_fp?: string;
+}
+
+/** One Kalshi market, checked and translated: everything ingest needs to store it. */
+export interface ParsedMarket {
+  ticker: string;
+  gameKey: string;
+  kind: "game_winner" | "player_stat";
+  title: string;
+  /** Kalshi team code: the team to win, or the player's team. */
+  team: string;
+  player: { kalshiId: string; name: string } | null;
+  stat: string | null;
+  strike: number | null;
+  quote: ReturnType<typeof marketQuote>;
+}
+
+const isText = (v: unknown): v is string => typeof v === "string" && v.trim() !== "";
+
+/**
+ * Check one raw Kalshi market and translate it. Throws with a short reason if any field ingest
+ * relies on is missing or out of range, so the caller can skip that one market instead of
+ * storing it half-filled or failing the whole slate (STO-32).
+ */
+export function parseMarket(m: Partial<KalshiMarketFields>, series: string): ParsedMarket {
+  if (!isText(m.ticker)) throw new Error("no ticker");
+  if (!isText(m.title)) throw new Error("no title");
+  if (!isText(m.status)) throw new Error("no status");
+  const { gameKey: key, rest } = splitTicker(m.ticker);
+
+  const quote = marketQuote(m as KalshiMarketFields);
+  for (const cents of [quote.yes_bid, quote.yes_ask, quote.no_bid, quote.no_ask]) {
+    if (cents !== null && !(cents >= 0 && cents <= 100)) throw new Error(`price out of range (${cents} cents)`);
+  }
+  if (!(quote.volume >= 0)) throw new Error(`bad volume (${m.volume_fp})`);
+
+  if (series === GAME_WINNER_SERIES) {
+    if (!isText(rest[0])) throw new Error("no team in ticker");
+    return { ticker: m.ticker, gameKey: key, kind: "game_winner", title: m.title, team: rest[0],
+             player: null, stat: null, strike: null, quote };
+  }
+  const stat = PLAYER_PROP_SERIES[series];
+  if (!stat) throw new Error(`unknown series ${series}`);
+  const kalshiId = m.custom_strike?.basketball_player;
+  if (!isText(kalshiId)) throw new Error("no player id (custom_strike.basketball_player)");
+  const strike = strikeFromMarket(m);
+  if (strike === null || !Number.isFinite(strike)) throw new Error("no strike (floor_strike)");
+  return { ticker: m.ticker, gameKey: key, kind: "player_stat", title: m.title,
+           team: playerTeamFromTicker(m.ticker),
+           player: { kalshiId, name: playerNameFromTitle(m.title) }, stat, strike, quote };
+}

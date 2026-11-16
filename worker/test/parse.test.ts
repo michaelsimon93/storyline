@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  dollarsToCents, gameKey, kalshiDateCode, playerNameFromTitle, playerTeamFromTicker,
+  dollarsToCents, gameKey, kalshiDateCode, parseMarket, playerNameFromTitle, playerTeamFromTicker,
   splitTicker, strikeFromMarket,
 } from "../src/domain/kalshiParse.js";
 import { kalshiFromEspn, NBA_TEAMS } from "../src/domain/nbaTeams.js";
@@ -96,4 +96,55 @@ test("an unknown Kalshi status is treated as paused and flagged", async () => {
   for (const builtin of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
     assert.deepEqual(marketStatus(builtin), { status: "paused", unknown: builtin }, builtin);
   }
+});
+
+// A real market from the KXNBAPTS fixture; each malformed case below changes one field.
+const PROP = {
+  ticker: "KXNBAPTS-26NOV13MILORL-ORLABLACK0-25", title: "Anthony Black: 25+ points", status: "active",
+  floor_strike: 24.5, strike_type: "greater",
+  custom_strike: { basketball_player: "60bb439a-df6a-4fea-8312-4caa6a2c0fbe" },
+  yes_bid_dollars: "0.0900", yes_ask_dollars: "0.1100", no_bid_dollars: "0.8900", no_ask_dollars: "0.9100",
+  volume_fp: "0.00",
+};
+const WINNER = { ...PROP, ticker: "KXNBAGAME-26NOV13MILORL-ORL", title: "Milwaukee at Orlando Winner?",
+                 floor_strike: undefined, custom_strike: undefined };
+
+test("parseMarket translates a player prop and a game winner", () => {
+  const p = parseMarket(PROP, "KXNBAPTS");
+  assert.deepEqual(
+    { gameKey: p.gameKey, kind: p.kind, team: p.team, player: p.player, stat: p.stat, strike: p.strike },
+    { gameKey: "26NOV13MILORL", kind: "player_stat", team: "ORL", stat: "points", strike: 25,
+      player: { kalshiId: "60bb439a-df6a-4fea-8312-4caa6a2c0fbe", name: "Anthony Black" } });
+  assert.equal(p.quote.yes_ask, 11);
+  assert.equal(p.quote.status, "open");
+
+  const w = parseMarket(WINNER, "KXNBAGAME");
+  assert.deepEqual({ kind: w.kind, team: w.team, player: w.player, stat: w.stat, strike: w.strike },
+                   { kind: "game_winner", team: "ORL", player: null, stat: null, strike: null });
+});
+
+test("parseMarket rejects a market it can't store correctly, with the reason", () => {
+  const bad = (edit: object, series: string, reason: RegExp) =>
+    assert.throws(() => parseMarket({ ...(series === "KXNBAGAME" ? WINNER : PROP), ...edit }, series), reason);
+  bad({ custom_strike: undefined }, "KXNBAPTS", /no player id/);
+  bad({ custom_strike: {} }, "KXNBAPTS", /no player id/);
+  bad({ floor_strike: null }, "KXNBAPTS", /no strike/);
+  bad({ title: "25+ points" }, "KXNBAPTS", /No player name/);
+  bad({ title: undefined }, "KXNBAPTS", /no title/);
+  bad({ ticker: undefined }, "KXNBAPTS", /no ticker/);
+  bad({ ticker: "GARBAGE" }, "KXNBAPTS", /Unrecognized ticker/);
+  bad({ ticker: "KXNBAPTS-26NOV13MILORL" }, "KXNBAPTS", /No player segment/);
+  bad({ status: undefined }, "KXNBAPTS", /no status/);
+  bad({ yes_ask_dollars: "1.5000" }, "KXNBAPTS", /price out of range/);
+  bad({ no_bid_dollars: "-0.0100" }, "KXNBAGAME", /price out of range/);
+  bad({ volume_fp: "lots" }, "KXNBAPTS", /bad volume/);
+  bad({ ticker: "KXNBAGAME-26NOV13MILORL" }, "KXNBAGAME", /no team/);
+  bad({}, "KXNBAXYZ", /unknown series/);
+});
+
+test("parseMarket keeps missing prices as null and unknown statuses as paused (not rejected)", () => {
+  const p = parseMarket({ ...PROP, yes_ask_dollars: undefined, status: "brand_new" }, "KXNBAPTS");
+  assert.equal(p.quote.yes_ask, null);
+  assert.equal(p.quote.status, "paused");
+  assert.equal(p.quote.unknown, "brand_new");
 });
