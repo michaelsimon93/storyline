@@ -121,6 +121,7 @@ Runs once each morning (default **10:00 ET**; Kalshi lists the day's props aroun
 - The server prices each pick from its latest cached ask at the moment of submission, not from what the client displayed. The confirmation always shows the price the user actually got.
 - *(v1.1)* If the server price has moved **more than 3 percentage points** from the price shown, the user sees "Price moved to 49% — still in?" before the pick is placed.
 - Picks lock at **tip-off**, using ESPN's *current* start time, so a postponed game moves its lock time with it.
+- A game **postponed to another night** is a new game on that night's slate, with its own markets. The original game's cards and picks stay where they are and are voided by Kalshi's result like any other void (STO-32).
 - Picks also stop as soon as **ESPN reports the game in progress or final**, even if the scheduled tip-off hasn't passed (early starts, stale schedules). Cards with their own lock time (future in-game cards) follow that time instead.
 - A card is **Out** while its market isn't trading (market `status` other than `open`; each provider's words are mapped to ours, ADR-021). Ingest only lists open markets, so **the price poller refreshes status for every carded market**, whatever its Kalshi status (STO-9). If polls fail, the stale-price check is the backstop.
 - A **final or canceled** game locks every card, including in-game cards with their own lock time.

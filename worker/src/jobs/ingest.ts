@@ -75,14 +75,21 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
        select 'nba', g.espn_event_id, g.key, $2::date, g.home, g.away, g.tip, g.status::game_status, g.broadcasts, now()
        from jsonb_to_recordset($1) as g(espn_event_id text, key text, home smallint, away smallint,
                                         tip timestamptz, status text, broadcasts jsonb)
-       on conflict (league, espn_event_id) do update
-         -- A postponed game replayed on another night is the same ESPN event with a new date:
-         -- it moves to that slate, and its key follows so Kalshi's re-dated tickers find it.
-         set slate_date = excluded.slate_date, kalshi_game_key = excluded.kalshi_game_key,
-             tip_off_at = excluded.tip_off_at, status = excluded.status,
+       on conflict (league, espn_event_id, slate_date) do update
+         set tip_off_at = excluded.tip_off_at, status = excluded.status,
              broadcasts = excluded.broadcasts, updated_at = now()
        returning id, kalshi_game_key`,
       [JSON.stringify(gameRows), slateDate],
+    );
+    // A postponed game replayed on another night is a new game (one row per ESPN event per
+    // slate). The original stays on its night with its markets, cards and picks: Kalshi voids
+    // those markets and settlement refunds the picks (ADR-004). If ESPN reused the event ID,
+    // we can tell which earlier game this replaces, and mark it postponed.
+    await db.query(
+      `update games set status = 'postponed', updated_at = now()
+        where league = 'nba' and espn_event_id = any($1) and slate_date < $2::date
+          and status not in ('postponed', 'final', 'canceled')`,
+      [games.map((g) => g.eventId), slateDate],
     );
     const gameIdByKey = new Map(insertedGames.rows.map((r) => [r.kalshi_game_key, r.id]));
 
@@ -211,22 +218,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
        on conflict (game_id, kind, player_id, team_id, stat, strike) do nothing`,
       [rowsJson, kalshiFetchedAt],
     );
-    // 2. A market Kalshi now lists under a different ticker (its game moved to another night,
-    //    so the date in the ticker changed) takes the new ticker, in place: there's no moment
-    //    where the market has none.
-    await db.query(
-      `with ${incoming}
-       update external_ids x set external_id = i.ticker
-       from incoming i
-       join markets mk on (mk.game_id, mk.kind, mk.player_id, mk.team_id, mk.stat, mk.strike)
-                          is not distinct from (i.game_id, i.kind::market_kind, i.player_id, i.team_id, i.stat, i.strike)
-       where x.source = $2 and x.kind = 'market' and x.market_id = mk.id and x.external_id <> i.ticker
-         and not exists (select 1 from incoming j where j.ticker = x.external_id)
-         and not exists (select 1 from external_ids y
-                         where y.source = $2 and y.kind = 'market' and y.external_id = i.ticker)`,
-      [rowsJson, kalshi.SOURCE],
-    );
-    // 3. Attach each Kalshi ticker to its market (new, or one whose id went missing).
+    // 2. Attach each Kalshi ticker to its market (new, or one whose id went missing).
     await db.query(
       `with ${incoming}
        insert into external_ids (source, kind, external_id, market_id)
@@ -237,7 +229,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
        on conflict (source, kind, external_id) do nothing`,
       [rowsJson, kalshi.SOURCE],
     );
-    // 4. Refresh prices and status of markets we know, in market-id order like the price poller
+    // 3. Refresh prices and status of markets we know, in market-id order like the price poller
     //    (ADR-020 rule 3); newer data always wins (rule 4). Results are settlement's (ADR-004).
     await db.query(
       `with ${incoming},

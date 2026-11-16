@@ -186,66 +186,78 @@ test("two Kalshi players matching one ESPN athlete don't crash or merge", { skip
 
 // ------------------------------------------------------------------ postponed game
 
-/** The Nov 13 game replayed on Nov 15: same ESPN event, new date; Kalshi lists it under the new date. */
-const movedToNov15: Route[] = [
-  (url) => {
-    if (url.hostname !== "site.api.espn.com" || !url.pathname.endsWith("/scoreboard")) return undefined;
-    const body = fixture("espn-scoreboard-20261113.json") as { events: { date: string }[] };
-    if (url.searchParams.get("dates") !== "20261115") return json({ ...body, events: [] });
-    return json({ ...body, events: body.events.map((e) => ({ ...e, date: "2026-11-16T00:30Z" })) });
-  },
-  kalshiEdited((markets) => markets.map((m) => ({
-    ...m,
-    ticker: m.ticker.replace("26NOV13MILORL", "26NOV15MILORL"),
-    event_ticker: m.event_ticker.replace("26NOV13MILORL", "26NOV15MILORL"),
-  }))),
-];
+/**
+ * The Nov 13 game replayed on Nov 15. ESPN lists it on the new date only (under the same event
+ * ID, or a new one); Kalshi lists its markets under tickers with the new date.
+ */
+function replayedOnNov15(espnEventId?: string): Route[] {
+  return [
+    (url) => {
+      if (url.hostname !== "site.api.espn.com" || !url.pathname.endsWith("/scoreboard")) return undefined;
+      const body = fixture("espn-scoreboard-20261113.json") as { events: { id: string; date: string }[] };
+      if (url.searchParams.get("dates") !== "20261115") return json({ ...body, events: [] });
+      return json({ ...body, events: body.events.map((e) => ({ ...e, id: espnEventId ?? e.id, date: "2026-11-16T00:30Z" })) });
+    },
+    kalshiEdited((markets) => markets.map((m) => ({
+      ...m,
+      ticker: m.ticker.replace("26NOV13MILORL", "26NOV15MILORL"),
+      event_ticker: m.event_ticker.replace("26NOV13MILORL", "26NOV15MILORL"),
+    }))),
+  ];
+}
+const gamesBySlate = async (d: Db) => (await d.query(`
+  select g.id, g.slate_date::text, g.kalshi_game_key, g.status::text, g.tip_off_at,
+         (select count(*)::int from markets m where m.game_id = g.id) markets
+  from games g order by g.slate_date`)).rows;
 
-test("a postponed game moved to another night moves to that slate", { skip }, async () => {
-  const d = await db("postponed");
-  useFetch();
-  await ingest(d, SLATE);
-  const first = await counts(d);
-  const gameId = (await d.query(`select id from games`)).rows[0].id;
-  const marketId = await idOf(d, BLACK25);
+for (const [label, newEventId] of [["the same ESPN event ID", undefined], ["a new ESPN event ID", "401999999"]] as const) {
+  test(`a postponed game replayed another night is a new game; the original keeps its markets (${label})`, { skip }, async () => {
+    const d = await db(newEventId ? "postponed_new_id" : "postponed_same_id");
+    useFetch();
+    await ingest(d, SLATE);
+    const first = await counts(d);
+    const [original] = await gamesBySlate(d);
+    const marketId = await idOf(d, BLACK25);
+    // A card on the original night, as picks would have.
+    await d.query(
+      `insert into cards (slate_date, sort_key, game_id, subject, player_id, market_id, blurb)
+       select $1, 1, game_id, 'player', player_id, id, 'story' from markets where id = $2`, [SLATE, marketId]);
 
-  useFetch(...movedToNov15);
-  const s = await ingest(d, "2026-11-15");
-  assert.equal(s.games, 1);
-  assert.equal(s.markets.KXNBAPTS, 37, "the game's markets are found under its new key");
+    useFetch(...replayedOnNov15(newEventId));
+    const s = await ingest(d, "2026-11-15");   // before the fix: the original row moved (or nothing loaded)
+    assert.equal(s.games, 1);
+    assert.equal(s.markets.KXNBAPTS, 37);
 
-  const { rows: games } = await d.query(
-    `select id, slate_date::text, kalshi_game_key, tip_off_at from games`);
-  assert.equal(games.length, 1, "the game moved; it wasn't duplicated");
-  assert.equal(games[0].id, gameId);
-  assert.equal(games[0].slate_date, "2026-11-15");
-  assert.equal(games[0].kalshi_game_key, "26NOV15MILORL");
-  assert.equal(new Date(games[0].tip_off_at).toISOString(), "2026-11-16T00:30:00.000Z");
+    const games = await gamesBySlate(d);
+    assert.equal(games.length, 2, "the replay is a second game");
+    // The original night is untouched: same game, key, tip-off, markets and tickers, so Kalshi's
+    // void result on those tickers settles the picks made that night.
+    assert.equal(games[0].id, original.id);
+    assert.equal(games[0].slate_date, SLATE);
+    assert.equal(games[0].kalshi_game_key, "26NOV13MILORL");
+    assert.deepEqual(games[0].tip_off_at, original.tip_off_at);
+    assert.equal(games[0].markets, 211);
+    assert.equal(await idOf(d, BLACK25), marketId);
+    const { rows: [card] } = await d.query(`select game_id, market_id from cards`);
+    assert.deepEqual(card, { game_id: original.id, market_id: marketId }, "the card stays on the original game and market");
+    // We can only tell which game was replaced when ESPN reuses the event ID.
+    assert.equal(games[0].status, newEventId ? "scheduled" : "postponed");
 
-  // Same markets (same game, player, stat, line), now reachable by the tickers Kalshi lists.
-  assert.deepEqual(await counts(d), first);
-  assert.equal(await idOf(d, BLACK25.replace("26NOV13", "26NOV15")), marketId);
-  const { rows: [stale] } = await d.query(
-    `select count(*)::int n from external_ids where kind = 'market' and external_id like '%26NOV13%'`);
-  assert.equal(stale.n, 0, "no market is left with a ticker Kalshi no longer lists");
+    // The replay has its own markets under Kalshi's new tickers.
+    assert.equal(games[1].slate_date, "2026-11-15");
+    assert.equal(games[1].kalshi_game_key, "26NOV15MILORL");
+    assert.equal(games[1].status, "scheduled");
+    assert.equal(new Date(games[1].tip_off_at).toISOString(), "2026-11-16T00:30:00.000Z");
+    assert.equal(games[1].markets, 211);
+    assert.notEqual(await idOf(d, BLACK25.replace("26NOV13", "26NOV15")), marketId);
+    const after1 = await counts(d);
+    assert.deepEqual(after1, { ...first, g: 2, m: 422, x: 422 }, "no new players or teams");
 
-  // Re-running either night is safe: the old night is now empty and doesn't pull the game back.
-  await ingest(d, "2026-11-15");
-  const old = await ingest(d, SLATE);
-  assert.equal(old.games, 0);
-  assert.deepEqual(await counts(d), first);
-  assert.equal((await d.query(`select slate_date::text from games`)).rows[0].slate_date, "2026-11-15");
-});
-
-test("a game postponed before any markets were loaded moves too", { skip }, async () => {
-  const d = await db("postponed_early");
-  // Night one: ESPN has the game, Kalshi lists nothing for it yet.
-  useFetch(kalshiEdited(() => []));
-  await ingest(d, SLATE);
-  useFetch(...movedToNov15);
-  await ingest(d, "2026-11-15");
-  const c = await counts(d);
-  assert.equal(c.g, 1);
-  assert.equal(c.m, 211);
-  assert.equal(c.x, 211);
-});
+    // Re-running either night is safe.
+    await ingest(d, "2026-11-15");
+    const old = await ingest(d, SLATE);
+    assert.equal(old.games, 0);
+    assert.deepEqual(await counts(d), after1);
+    assert.deepEqual(await gamesBySlate(d), games);
+  });
+}
