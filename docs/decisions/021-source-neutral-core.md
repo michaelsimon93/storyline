@@ -27,13 +27,18 @@ Nothing is deployed yet, so changing this now costs only code.
 3. **One adapter per provider** (`worker/src/sources/*`, `worker/src/domain/<provider>Parse.ts`)
    is the only code that knows that provider's words and IDs. It maps unknown values to the safe
    side (an unknown market status → `paused`, so cards go out) and reports them loudly.
-4. **Provider IDs live in one cross-reference table**, as (source, kind, external ID → our ID),
-   unique per source and kind. Adding a provider adds rows, not columns.
+4. **Provider IDs live in one cross-reference table**, as (source, kind, league, external ID →
+   our ID), unique per source, kind and league. Adding a provider adds rows, not columns. The
+   league is part of the key because providers reuse IDs across leagues (ESPN team 16 is both
+   the Timberwolves and the Vikings). A game's ID is the exception to "unique": see rule 5.
 5. **A market is identified by what it is**: game, kind, player or team, stat and line
    (`markets_identity`), not by who lists it. Provider IDs attach to that market. A lost or
    re-sent provider ID re-attaches instead of creating a duplicate, racing runs are no-ops
    instead of errors, and two providers listing the same market map to one Storyline market.
-   (Found by the test adversary on STO-38.)
+   (Found by the test adversary on STO-38.) **A game likewise is its league, slate, home and away
+   team** (`games_identity`, STO-39). ESPN reuses an event ID when a postponed game is replayed
+   another night, and the replay is a new game (STO-32), so one ESPN event ID may point at one
+   game per slate. Assumes a team plays at most once per slate (true for the NBA and NFL).
 6. **Guardrail: no speculative frameworks.** Build only abstractions with a real provider
    behind them. One adapter each for Kalshi and ESPN; no generic plugin system.
 

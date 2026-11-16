@@ -50,8 +50,8 @@ update app_config set is_public = false where key = 'cards_per_day';
 update app_config set value = '10' where key = 'cards_per_day';
 
 -- ---------------------------------------------------------------- config: money reads from config
-insert into players (id, league, full_name, team_id, kalshi_player_id)
-  values ('00000000-0000-0000-0000-0000000000a5', 'nba', 'Config Tester', 2, 'k5');
+insert into players (id, league, full_name, team_id)
+  values ('00000000-0000-0000-0000-0000000000a5', 'nba', 'Config Tester', 2);
 insert into markets (id, league, game_id, kind, title, player_id, stat, strike,
                      yes_ask_cents, no_ask_cents, status, prices_updated_at)
   values (mid('CFG-10'), 'nba', '00000000-0000-0000-0000-0000000000b1', 'player_stat',

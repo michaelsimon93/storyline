@@ -9,6 +9,7 @@ import type { KalshiMarket } from "../src/sources/kalshi.js";
 import { freshDb } from "./helpers/testDb.js";
 import { fixture, installFetch, json, slateRoutes, type Route } from "./helpers/mockFetch.js";
 import { idOf } from "./helpers/markets.js";
+import { GAMES, PLAYERS } from "./helpers/externalIds.js";
 
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
 const SLATE = "2026-11-13";
@@ -43,7 +44,8 @@ function kalshiEdited(edit: (markets: KalshiMarket[], series: string) => KalshiM
 
 const counts = async (d: Db) => (await d.query(`
   select (select count(*) from games)::int g, (select count(*) from markets)::int m,
-         (select count(*) from external_ids)::int x, (select count(*) from players)::int p,
+         (select count(*) from external_ids where kind = 'market')::int x,
+         (select count(*) from external_ids where kind <> 'market')::int ids, (select count(*) from players)::int p,
          (select count(*) from teams)::int t`)).rows[0];
 const lastRun = async (d: Db) => (await d.query(
   `select status, outputs from pipeline_runs order by id desc limit 1`)).rows[0];
@@ -136,7 +138,7 @@ test("Kalshi re-issuing a player's id reuses the existing player row", { skip },
   await ingest(d, SLATE);
   const first = await counts(d);
   const { rows: [black] } = await d.query(
-    `select id, espn_athlete_id from players where kalshi_player_id = $1`, [BLACK_KALSHI_ID]);
+    `select id, espn_athlete_id from ${PLAYERS} where kalshi_player_id = $1`, [BLACK_KALSHI_ID]);
   assert.ok(black.espn_athlete_id, "Black is matched to ESPN");
   const marketId = await idOf(d, BLACK25);
 
@@ -146,7 +148,7 @@ test("Kalshi re-issuing a player's id reuses the existing player row", { skip },
 
   assert.deepEqual(await counts(d), first, "no new player, no new markets");
   const { rows } = await d.query(
-    `select id, kalshi_player_id from players where espn_athlete_id = $1`, [black.espn_athlete_id]);
+    `select id, kalshi_player_id from ${PLAYERS} where espn_athlete_id = $1`, [black.espn_athlete_id]);
   assert.deepEqual(rows, [{ id: black.id, kalshi_player_id: NEW_ID }]);
   const { rows: [m] } = await d.query(`select player_id from markets where id = $1`, [marketId]);
   assert.equal(m.player_id, black.id, "his markets still point at the same player");
@@ -162,7 +164,7 @@ const blackReissued = (inSeries: (series: string) => boolean = () => true) =>
     inSeries(series) && m.custom_strike?.basketball_player === BLACK_KALSHI_ID
       ? { ...m, custom_strike: { ...m.custom_strike, basketball_player: NEW_ID } } : m));
 const blackRows = async (d: Db) => (await d.query(
-  `select id, kalshi_player_id, espn_athlete_id from players where full_name = 'Anthony Black' order by kalshi_player_id`)).rows;
+  `select id, kalshi_player_id, espn_athlete_id from ${PLAYERS} where full_name = 'Anthony Black' order by kalshi_player_id`)).rows;
 
 // eng-lead B1: Kalshi rolls a new id out series by series, then finishes.
 test("a player id re-issued gradually (old and new id on one night) stays one player", { skip }, async () => {
@@ -198,7 +200,8 @@ test("two stored rows for one athlete (left by an older run) are reported, not a
   const d = await db("player_two_rows");
   useFetch();
   await ingest(d, SLATE);
-  await d.query(`insert into players (league, full_name, kalshi_player_id) values ('nba', 'Anthony Black', $1)`, [NEW_ID]);
+  await d.query(`with p as (insert into players (league, full_name) values ('nba', 'Anthony Black') returning id)
+                 insert into external_ids (source, kind, league, external_id, player_id) select 'kalshi', 'player', 'nba', $1, id from p`, [NEW_ID]);
   const first = await counts(d);
   useFetch(blackReissued());
   const s = await ingest(d, SLATE);
@@ -224,11 +227,11 @@ test("a different player who fuzzy-matches a stored player's athlete doesn't tak
   assert.deepEqual(s.players.reissued, []);
   assert.match(s.players.ambiguous.join(), /Andre Black.*Anthony Black/);
   assert.deepEqual(await blackRows(d), [black], "Anthony Black's row is untouched");
-  const { rows: [andre] } = await d.query(`select espn_athlete_id from players where kalshi_player_id = $1`, [NEW_ID]);
+  const { rows: [andre] } = await d.query(`select espn_athlete_id from ${PLAYERS} where kalshi_player_id = $1`, [NEW_ID]);
   assert.equal(andre.espn_athlete_id, null);
   // His tickers are ones we already know, so they keep their markets: no duplicates.
   const after1 = await counts(d);
-  assert.deepEqual(after1, { ...first, p: first.p + 1 });
+  assert.deepEqual(after1, { ...first, p: first.p + 1, ids: first.ids + 1 }, "a new player, with his Kalshi id and no ESPN id");
   await ingest(d, SLATE);
   assert.deepEqual(await counts(d), after1, "re-running is safe");
 });
@@ -247,7 +250,7 @@ test("two different Kalshi players matching one ESPN athlete in one run don't cr
 
   assert.equal(s.players.ambiguous.length, 1, "the second claimant is reported");
   const { rows } = await d.query(
-    `select kalshi_player_id, espn_athlete_id from players where kalshi_player_id = any($1) order by 1`,
+    `select kalshi_player_id, espn_athlete_id from ${PLAYERS} where kalshi_player_id = any($1) order by 1`,
     [[BLACK_KALSHI_ID, OTHER]]);
   assert.equal(rows.length, 2, "two Kalshi players stay two players");
   assert.ok(rows.find((r) => r.kalshi_player_id === BLACK_KALSHI_ID).espn_athlete_id);
@@ -337,7 +340,7 @@ function replayedOnNov15(espnEventId?: string): Route[] {
 const gamesBySlate = async (d: Db) => (await d.query(`
   select g.id, g.slate_date::text, g.kalshi_game_key, g.status::text, g.tip_off_at,
          (select count(*)::int from markets m where m.game_id = g.id) markets
-  from games g order by g.slate_date`)).rows;
+  from ${GAMES("g")} order by g.slate_date`)).rows;
 
 for (const [label, newEventId] of [["the same ESPN event ID", undefined], ["a new ESPN event ID", "401999999"]] as const) {
   test(`a postponed game replayed another night is a new game; the original keeps its markets (${label})`, { skip }, async () => {
@@ -380,7 +383,7 @@ for (const [label, newEventId] of [["the same ESPN event ID", undefined], ["a ne
     assert.equal(games[1].markets, 211);
     assert.notEqual(await idOf(d, BLACK25.replace("26NOV13", "26NOV15")), marketId);
     const after1 = await counts(d);
-    assert.deepEqual(after1, { ...first, g: 2, m: 422, x: 422 }, "no new players or teams");
+    assert.deepEqual(after1, { ...first, g: 2, m: 422, x: 422, ids: first.ids + 2 }, "no new players or teams; the replay's two game ids");
 
     // Re-running either night is safe.
     await ingest(d, "2026-11-15");
@@ -407,8 +410,12 @@ test("a replay doesn't mark a finished game or a later game as postponed", { ski
 
   // The same event also on a later slate: ingesting the earlier night must not touch it.
   await d.query(
-    `insert into games (league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at)
-     select league, espn_event_id, 'LATER', '2026-11-20', home_team_id, away_team_id, tip_off_at from games where slate_date = '2026-11-15'`);
+    `with g as (insert into games (league, slate_date, home_team_id, away_team_id, tip_off_at)
+                select league, '2026-11-20', home_team_id, away_team_id, tip_off_at from games where slate_date = '2026-11-15'
+                returning id, league)
+     insert into external_ids (source, kind, league, external_id, game_id)
+     select x.source, 'game', g.league, case x.source when 'kalshi' then 'LATER' else x.external_id end, g.id
+       from g, external_ids x join games o on o.id = x.game_id where o.slate_date = '2026-11-15'`);
   await ingest(d, "2026-11-15");
   assert.deepEqual((await gamesBySlate(d)).map((g) => g.status), ["final", "scheduled", "scheduled"]);
 });

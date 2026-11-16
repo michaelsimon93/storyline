@@ -18,12 +18,12 @@ before(async () => {
   db = await freshDb("storyline_concurrency_test");
   if (!db) return;
   await db.query(`
-    insert into teams (id, league, name, kalshi_abbr, espn_abbr, espn_id) values (1,'nba','Spurs','SAS','SA','24'), (2,'nba','Warriors','GSW','GS','9');
-    insert into players (id, league, full_name, team_id, kalshi_player_id) values
-      ('00000000-0000-0000-0000-0000000000b1','nba','Player One',1,'k1'),
-      ('00000000-0000-0000-0000-0000000000b2','nba','Player Two',2,'k2');
-    insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at)
-      values ('00000000-0000-0000-0000-0000000000e1','nba','e1','G1',storyline_today(),1,2, now() + interval '6 hours');
+    insert into teams (id, league, name) values (1,'nba','Spurs'), (2,'nba','Warriors');
+    insert into players (id, league, full_name, team_id) values
+      ('00000000-0000-0000-0000-0000000000b1','nba','Player One',1),
+      ('00000000-0000-0000-0000-0000000000b2','nba','Player Two',2);
+    insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at)
+      values ('00000000-0000-0000-0000-0000000000e1','nba',storyline_today(),1,2, now() + interval '6 hours');
     insert into markets (id, league, game_id, kind, title, player_id, stat, strike, yes_ask_cents, no_ask_cents, status, prices_updated_at) values
       (md5('M1')::uuid,'nba','00000000-0000-0000-0000-0000000000e1','player_stat','Player One: 20+ points','00000000-0000-0000-0000-0000000000b1','points',20,50,51,'open',now()),
       (md5('M2')::uuid,'nba','00000000-0000-0000-0000-0000000000e1','player_stat','Player Two: 20+ points','00000000-0000-0000-0000-0000000000b2','points',20,50,51,'open',now());

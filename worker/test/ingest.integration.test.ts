@@ -8,6 +8,7 @@ import type { Db } from "../src/lib/db.js";
 import { freshDb } from "./helpers/testDb.js";
 import { installFetch, slateRoutes } from "./helpers/mockFetch.js";
 import { idOf } from "./helpers/markets.js";
+import { GAMES, TEAMS } from "./helpers/externalIds.js";
 
 let db: Db | null = null;
 let restore = () => {};
@@ -35,11 +36,27 @@ test("ingests the MIL @ ORL slate", { skip }, async () => {
 
   const { rows: [g] } = await db!.query(`
     select g.kalshi_game_key, g.tip_off_at, a.kalshi_abbr away, h.kalshi_abbr home, g.broadcasts
-    from games g join teams a on a.id = g.away_team_id join teams h on h.id = g.home_team_id`);
+    from ${GAMES("g")} join ${TEAMS("a")} on a.id = g.away_team_id join ${TEAMS("h")} on h.id = g.home_team_id`);
   assert.equal(g.kalshi_game_key, "26NOV13MILORL");
   assert.equal(g.away, "MIL");
   assert.equal(g.home, "ORL");
   assert.equal(new Date(g.tip_off_at).toISOString(), "2026-11-14T00:00:00.000Z");
+});
+
+test("provider IDs for teams, players and games live in external_ids, one row each (STO-39)", { skip }, async () => {
+  const { rows } = await db!.query(`
+    select source, kind, count(*)::int n from external_ids where kind <> 'market' group by 1, 2 order by 1, 2`);
+  const players = (await db!.query(`select count(*)::int n from players`)).rows[0].n;
+  assert.deepEqual(rows, [
+    { source: "espn", kind: "game", n: 1 }, { source: "espn", kind: "player", n: players },
+    { source: "espn", kind: "team", n: 2 },
+    { source: "kalshi", kind: "game", n: 1 }, { source: "kalshi", kind: "player", n: players },
+    { source: "kalshi", kind: "team", n: 2 },
+  ], "every player matched, so each has both ids");
+  const { rows: [g] } = await db!.query(`select espn_event_id, kalshi_game_key from ${GAMES("g")}`);
+  assert.deepEqual(g, { espn_event_id: "401909297", kalshi_game_key: "26NOV13MILORL" });
+  const { rows: teams } = await db!.query(`select kalshi_abbr, espn_id from ${TEAMS("t")} order by 1`);
+  assert.deepEqual(teams, [{ kalshi_abbr: "MIL", espn_id: "15" }, { kalshi_abbr: "ORL", espn_id: "19" }]);
 });
 
 test("markets are written with correct kind, stat, strike and cents", { skip }, async () => {
@@ -55,7 +72,7 @@ test("markets are written with correct kind, stat, strike and cents", { skip }, 
   assert.equal(m.team_id, null);
 
   const { rows: winners } = await db!.query(`
-    select m.kind, t.kalshi_abbr from markets m join teams t on t.id = m.team_id where m.kind = 'game_winner' order by 2`);
+    select m.kind, t.kalshi_abbr from markets m join ${TEAMS("t")} on t.id = m.team_id where m.kind = 'game_winner' order by 2`);
   assert.deepEqual(winners.map((w) => w.kalshi_abbr), ["MIL", "ORL"]);
 });
 
@@ -69,8 +86,9 @@ test("markets from other nights are ignored", { skip }, async () => {
 test("re-running is safe: no duplicates, prices refresh", { skip }, async () => {
   const counts = async () => (await db!.query(`
     select (select count(*) from games)::int g, (select count(*) from markets)::int m,
-           (select count(*) from external_ids)::int x,
-           (select count(*) from players)::int p, (select count(*) from teams)::int t`)).rows[0];
+           (select count(*) from players)::int p, (select count(*) from teams)::int t,
+           (select json_object_agg(source || ':' || kind, n) from
+              (select source, kind, count(*)::int n from external_ids group by 1, 2) x) ids`)).rows[0];
   const before1 = await counts();
 
   const blackId = await idOf(db!, "KXNBAPTS-26NOV13MILORL-ORLABLACK0-25");

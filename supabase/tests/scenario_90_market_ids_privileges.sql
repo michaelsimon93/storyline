@@ -65,11 +65,11 @@ select t_eq('adv38 priv: external_ids has RLS and no policies',
      from pg_class where oid = 'public.external_ids'::regclass), true);
 
 -- ---------------------------------------------------------------- behavioral: as anon
-insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at, status) values
-  ('a9000000-0000-0000-0000-0000000000e1', 'nba', 'x90', 'X90', storyline_today(), 1, 2, now() + interval '1 day', 'scheduled');
+insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at, status) values
+  ('a9000000-0000-0000-0000-0000000000e1', 'nba', storyline_today(), 23, 24, now() + interval '1 day', 'scheduled');
 insert into markets (id, league, game_id, kind, title, team_id, status, result) values
   (mid('ADV90-A'), 'nba', 'a9000000-0000-0000-0000-0000000000e1', 'game_winner', 'A wins', 1, 'open', 'yes');
-insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'market', 'ADV90-A', mid('ADV90-A'));
+insert into external_ids (source, kind, league, external_id, market_id) values ('kalshi', 'market', 'nba', 'ADV90-A', mid('ADV90-A'));
 
 set role anon;
 -- Attack: anon reads external_ids / user_affinities / card_feed / markets.

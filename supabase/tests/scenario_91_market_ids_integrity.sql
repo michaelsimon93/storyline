@@ -5,17 +5,17 @@
 reset role;
 
 -- ---------------------------------------------------------------- seed: 2 games, 4 team markets
-insert into games (id, league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at, status) values
-  ('a9100000-0000-0000-0000-0000000000e1', 'nba', 'x91a', 'X91A', storyline_today(), 1, 2, now() + interval '1 day', 'scheduled'),
-  ('a9100000-0000-0000-0000-0000000000e2', 'nba', 'x91b', 'X91B', storyline_today(), 1, 2, now() + interval '1 day', 'scheduled');
+insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at, status) values
+  ('a9100000-0000-0000-0000-0000000000e1', 'nba', storyline_today(), 25, 26, now() + interval '1 day', 'scheduled'),
+  ('a9100000-0000-0000-0000-0000000000e2', 'nba', storyline_today(), 27, 28, now() + interval '1 day', 'scheduled');
 insert into markets (id, league, game_id, kind, title, team_id, yes_ask_cents, no_ask_cents, status, prices_updated_at) values
   (mid('ADV91-W'),  'nba', 'a9100000-0000-0000-0000-0000000000e1', 'game_winner', 'Team1 wins G1', 1, 1,  99, 'open', now()),
   (mid('ADV91-L'),  'nba', 'a9100000-0000-0000-0000-0000000000e1', 'game_winner', 'Team2 wins G1', 2, 99, 2,  'open', now()),
   (mid('ADV91-V'),  'nba', 'a9100000-0000-0000-0000-0000000000e2', 'game_winner', 'Team1 wins G2', 1, 40, 61, 'open', now()),
   (mid('ADV91-FV'), 'nba', 'a9100000-0000-0000-0000-0000000000e2', 'game_winner', 'Team2 wins G2', 2, 40, 61, 'open', now());
-insert into external_ids (source, kind, external_id, market_id) values
-  ('kalshi', 'market', 'ADV91-W', mid('ADV91-W')), ('kalshi', 'market', 'ADV91-L', mid('ADV91-L')),
-  ('kalshi', 'market', 'ADV91-V', mid('ADV91-V')), ('kalshi', 'market', 'ADV91-FV', mid('ADV91-FV'));
+insert into external_ids (source, kind, league, external_id, market_id) values
+  ('kalshi', 'market', 'nba', 'ADV91-W', mid('ADV91-W')), ('kalshi', 'market', 'nba', 'ADV91-L', mid('ADV91-L')),
+  ('kalshi', 'market', 'nba', 'ADV91-V', mid('ADV91-V')), ('kalshi', 'market', 'nba', 'ADV91-FV', mid('ADV91-FV'));
 insert into cards (id, slate_date, sort_key, game_id, subject, team_id, market_id, blurb) values
   ('a9100000-0000-0000-0000-0000000000c1', storyline_today(), 91, 'a9100000-0000-0000-0000-0000000000e1', 'team', 1, mid('ADV91-W'),  'w'),
   ('a9100000-0000-0000-0000-0000000000c2', storyline_today(), 92, 'a9100000-0000-0000-0000-0000000000e1', 'team', 2, mid('ADV91-L'),  'l'),
@@ -84,11 +84,11 @@ select t_err('adv38 integrity: a market with picks can''t be re-keyed',
 select t_err('adv38 integrity: a provider id can''t be re-pointed at a market that already has one',
   $q$update external_ids set market_id = mid('ADV91-L') where external_id = 'ADV91-W'$q$, '%external_ids_one_per_market%');
 select t_err('adv38 integrity: unknown kind rejected',
-  $q$insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'player', 'p1', mid('ADV91-W'))$q$, '%check%');
+  $q$insert into external_ids (source, kind, league, external_id, market_id) values ('kalshi', 'player', 'nba', 'p1', mid('ADV91-W'))$q$, '%check%');
 select t_err('adv38 integrity: provider name with trailing space rejected',
-  $q$insert into external_ids (source, kind, external_id, market_id) values ('kalshi ', 'market', 'ADV91-W', mid('ADV91-L'))$q$, '%external_ids_source_check%');
+  $q$insert into external_ids (source, kind, league, external_id, market_id) values ('kalshi ', 'market', 'nba', 'ADV91-W', mid('ADV91-L'))$q$, '%external_ids_source_check%');
 select t_err('adv38 integrity: external_ids can''t point at a market that doesn''t exist',
-  $q$insert into external_ids (source, kind, external_id, market_id) values ('otherx', 'market', 'ghost', gen_random_uuid())$q$, '%foreign key%');
+  $q$insert into external_ids (source, kind, league, external_id, market_id) values ('otherx', 'market', 'nba', 'ghost', gen_random_uuid())$q$, '%foreign key%');
 
 -- Attack: an empty provider id is accepted and silently claims a market's one Kalshi slot.
 -- (Distinct team totals: two game-winner markets for the same team would be the same market.)
@@ -96,9 +96,9 @@ insert into markets (id, league, game_id, kind, title, team_id, stat, strike, st
   (mid('ADV91-E'), 'nba', 'a9100000-0000-0000-0000-0000000000e2', 'team_stat', 'empty id', 1, 'points', 100.5, 'open'),
   (mid('ADV91-S'), 'nba', 'a9100000-0000-0000-0000-0000000000e2', 'team_stat', 'spaced id', 1, 'points', 101.5, 'open');
 select t_err('adv38 integrity: an empty external_id is rejected',
-  $q$insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'market', '', mid('ADV91-E'))$q$, '%check%');
+  $q$insert into external_ids (source, kind, league, external_id, market_id) values ('kalshi', 'market', 'nba', '', mid('ADV91-E'))$q$, '%check%');
 -- Attack: a whitespace-padded copy of an existing ticker becomes a second market for the same Kalshi market.
 select t_err('adv38 integrity: a whitespace-padded duplicate of an existing ticker is rejected',
-  $q$insert into external_ids (source, kind, external_id, market_id) values ('kalshi', 'market', 'ADV91-W ', mid('ADV91-S'))$q$, '%check%');
+  $q$insert into external_ids (source, kind, league, external_id, market_id) values ('kalshi', 'market', 'nba', 'ADV91-W ', mid('ADV91-S'))$q$, '%check%');
 delete from external_ids where market_id in (mid('ADV91-E'), mid('ADV91-S'));
 delete from markets where id in (mid('ADV91-E'), mid('ADV91-S'));
