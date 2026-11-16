@@ -140,12 +140,9 @@ test("Kalshi re-issuing a player's id reuses the existing player row", { skip },
   assert.ok(black.espn_athlete_id, "Black is matched to ESPN");
   const marketId = await idOf(d, BLACK25);
 
-  const NEW_ID = "11111111-2222-3333-4444-555555555555";
-  const reissued = kalshiEdited((markets) => markets.map((m) =>
-    m.custom_strike?.basketball_player === BLACK_KALSHI_ID
-      ? { ...m, custom_strike: { ...m.custom_strike, basketball_player: NEW_ID } } : m));
-  useFetch(reissued);
-  await ingest(d, SLATE);   // before the fix: duplicate key on players (league, espn_athlete_id)
+  useFetch(blackReissued());
+  const s = await ingest(d, SLATE);   // before the fix: duplicate key on players (league, espn_athlete_id)
+  assert.equal(s.players.reissued.length, 1, "the id change is reported");
 
   assert.deepEqual(await counts(d), first, "no new player, no new markets");
   const { rows } = await d.query(
@@ -158,15 +155,88 @@ test("Kalshi re-issuing a player's id reuses the existing player row", { skip },
   assert.deepEqual(await counts(d), first, "re-running is safe");
 });
 
-test("two Kalshi players matching one ESPN athlete don't crash or merge", { skip }, async () => {
+const NEW_ID = "11111111-2222-3333-4444-555555555555";
+/** Black's Kalshi id re-issued, in every series or only in some. */
+const blackReissued = (inSeries: (series: string) => boolean = () => true) =>
+  kalshiEdited((markets, series) => markets.map((m) =>
+    inSeries(series) && m.custom_strike?.basketball_player === BLACK_KALSHI_ID
+      ? { ...m, custom_strike: { ...m.custom_strike, basketball_player: NEW_ID } } : m));
+const blackRows = async (d: Db) => (await d.query(
+  `select id, kalshi_player_id, espn_athlete_id from players where full_name = 'Anthony Black' order by kalshi_player_id`)).rows;
+
+// eng-lead B1: Kalshi rolls a new id out series by series, then finishes.
+test("a player id re-issued gradually (old and new id on one night) stays one player", { skip }, async () => {
+  const d = await db("player_staggered");
+  useFetch();
+  await ingest(d, SLATE);
+  const first = await counts(d);
+  const [black] = await blackRows(d);
+
+  // Night 2: points still carries the old id, every other series the new one.
+  useFetch(blackReissued((series) => series !== "KXNBAPTS"));
+  const mixed = await ingest(d, SLATE);
+  assert.equal(mixed.players.reissued.length, 1, `reissued: ${mixed.players.reissued}`);
+  assert.deepEqual(mixed.players.ambiguous, []);
+  assert.deepEqual(await counts(d), first, "no second player row, no duplicate markets without a ticker");
+  assert.deepEqual((await blackRows(d)).map((r) => r.id), [black.id]);
+
+  // Night 3: every series carries the new id.
+  useFetch(blackReissued());
+  await ingest(d, SLATE);   // before the fix: duplicate key on players (league, kalshi_player_id)
+  assert.deepEqual(await counts(d), first);
+  assert.deepEqual(await blackRows(d), [{ id: black.id, kalshi_player_id: NEW_ID, espn_athlete_id: black.espn_athlete_id }]);
+
+  // Either order of nights, and re-runs, are safe.
+  useFetch(blackReissued((series) => series === "KXNBAPTS"));
+  await ingest(d, SLATE);
+  await ingest(d, SLATE);
+  assert.deepEqual(await counts(d), first);
+  assert.deepEqual((await blackRows(d)).map((r) => r.id), [black.id]);
+});
+
+test("two stored rows for one athlete (left by an older run) are reported, not a crash", { skip }, async () => {
+  const d = await db("player_two_rows");
+  useFetch();
+  await ingest(d, SLATE);
+  await d.query(`insert into players (league, full_name, kalshi_player_id) values ('nba', 'Anthony Black', $1)`, [NEW_ID]);
+  const first = await counts(d);
+  useFetch(blackReissued());
+  const s = await ingest(d, SLATE);
+  assert.match(s.players.ambiguous.join(), /Anthony Black.*manual merge/);
+  assert.equal((await counts(d)).p, first.p);
+  assert.equal((await blackRows(d)).find((r) => r.kalshi_player_id === BLACK_KALSHI_ID).espn_athlete_id !== null, true,
+    "the matched row keeps its ESPN athlete and its Kalshi id");
+});
+
+// eng-lead S2: a different name that only fuzzy-matches must not take over a stored player.
+test("a different player who fuzzy-matches a stored player's athlete doesn't take his row", { skip }, async () => {
+  const d = await db("player_fuzzy");
+  useFetch();
+  await ingest(d, SLATE);
+  const [black] = await blackRows(d);
+  // Black has no markets tonight; "Andre Black" (new Kalshi id) appears on the same team.
+  useFetch(kalshiEdited((markets) => markets.map((m) =>
+    m.custom_strike?.basketball_player === BLACK_KALSHI_ID
+      ? { ...m, title: m.title.replace("Anthony Black", "Andre Black"),
+          custom_strike: { ...m.custom_strike, basketball_player: NEW_ID } } : m)));
+  const s = await ingest(d, SLATE);
+  assert.deepEqual(s.players.reissued, []);
+  assert.match(s.players.ambiguous.join(), /Andre Black.*Anthony Black/);
+  assert.deepEqual(await blackRows(d), [black], "Anthony Black's row is untouched");
+  const { rows: [andre] } = await d.query(`select espn_athlete_id from players where kalshi_player_id = $1`, [NEW_ID]);
+  assert.equal(andre.espn_athlete_id, null);
+  await ingest(d, SLATE);   // safe to re-run
+});
+
+test("two different Kalshi players matching one ESPN athlete in one run don't crash or merge", { skip }, async () => {
   const d = await db("player_clash");
-  // A second Kalshi "Anthony Black" (different Kalshi id) on the same team, in the same run.
   const OTHER = "99999999-aaaa-bbbb-cccc-dddddddddddd";
   const TWIN = "KXNBAPTS-26NOV13MILORL-ORLABLACK9-25";
   useFetch(kalshiEdited((markets) => [
     ...markets,
     ...markets.filter((m) => m.ticker === BLACK25).map((m) => ({
-      ...m, ticker: TWIN, custom_strike: { ...m.custom_strike, basketball_player: OTHER } })),
+      ...m, ticker: TWIN, title: m.title.replace("Anthony Black", "Andre Black"),
+      custom_strike: { ...m.custom_strike, basketball_player: OTHER } })),
   ]));
   const s = await ingest(d, SLATE);
 
@@ -182,6 +252,37 @@ test("two Kalshi players matching one ESPN athlete don't crash or merge", { skip
   const first = await counts(d);
   await ingest(d, SLATE);
   assert.deepEqual(await counts(d), first, "re-running is safe");
+});
+
+test("two tickers for the same market in one run load as one market", { skip }, async () => {
+  const d = await db("same_market");
+  // The same player (same name, second Kalshi id) and the same line under a second ticker.
+  const TWIN = "KXNBAPTS-26NOV13MILORL-ORLABLACK9-25";
+  useFetch(kalshiEdited((markets) => [
+    ...markets,
+    ...markets.filter((m) => m.ticker === BLACK25).map((m) => ({
+      ...m, ticker: TWIN, custom_strike: { ...m.custom_strike, basketball_player: NEW_ID } })),
+  ]));
+  const s = await ingest(d, SLATE);
+  assert.deepEqual(s.skipped, [`${TWIN}: same market as ${BLACK25}`]);
+  const first = await counts(d);
+  assert.equal(first.m, 211);
+  assert.equal(first.x, 211);
+  await ingest(d, SLATE);
+  assert.deepEqual(await counts(d), first);
+});
+
+// eng-lead S1: skipping must not hide a Kalshi format change.
+test("a series with every market skipped fails the run loudly, after loading the rest", { skip }, async () => {
+  const d = await db("all_skipped");
+  useFetch(kalshiEdited((markets) => markets.map((m) => {
+    const { custom_strike, ...rest } = m;   // as if Kalshi renamed the field
+    return rest as KalshiMarket;
+  })));
+  await assert.rejects(ingest(d, SLATE), /every KXNBAPTS, KXNBAREB, KXNBAAST, KXNBA3PT, KXNBAPRA market for tonight was skipped \(209/);
+  const run = await lastRun(d);
+  assert.equal(run.status, "failed");
+  assert.equal((await counts(d)).m, 2, "the game-winner markets still loaded");
 });
 
 // ------------------------------------------------------------------ postponed game
@@ -261,3 +362,21 @@ for (const [label, newEventId] of [["the same ESPN event ID", undefined], ["a ne
     assert.deepEqual(await gamesBySlate(d), games);
   });
 }
+
+// eng-lead S3: only an earlier game that hasn't finished is marked postponed.
+test("a replay doesn't mark a finished game or a later game as postponed", { skip }, async () => {
+  const d = await db("postponed_guard");
+  useFetch();
+  await ingest(d, SLATE);
+  await d.query(`update games set status = 'final'`);
+  useFetch(...replayedOnNov15());
+  await ingest(d, "2026-11-15");
+  assert.deepEqual((await gamesBySlate(d)).map((g) => g.status), ["final", "scheduled"], "a final game stays final");
+
+  // The same event also on a later slate: ingesting the earlier night must not touch it.
+  await d.query(
+    `insert into games (league, espn_event_id, kalshi_game_key, slate_date, home_team_id, away_team_id, tip_off_at)
+     select league, espn_event_id, 'LATER', '2026-11-20', home_team_id, away_team_id, tip_off_at from games where slate_date = '2026-11-15'`);
+  await ingest(d, "2026-11-15");
+  assert.deepEqual((await gamesBySlate(d)).map((g) => g.status), ["final", "scheduled", "scheduled"]);
+});

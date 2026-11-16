@@ -7,7 +7,7 @@ import { dbNow, withRun } from "../lib/db.js";
 import * as espn from "../sources/espn.js";
 import * as kalshi from "../sources/kalshi.js";
 import { kalshiFromEspn } from "../domain/nbaTeams.js";
-import { matchPlayer } from "../domain/names.js";
+import { matchPlayer, normalizeName } from "../domain/names.js";
 import {
   GAME_WINNER_SERIES, PLAYER_PROP_SERIES, gameKey, kalshiDateCode, parseMarket, splitTicker,
   type ParsedMarket,
@@ -17,7 +17,11 @@ export interface IngestSummary {
   slateDate: string;
   games: number;
   markets: Record<string, number>;
-  players: { total: number; exact: number; fuzzy: number; unmatched: string[]; ambiguous: string[] };
+  players: {
+    total: number; exact: number; fuzzy: number; unmatched: string[]; ambiguous: string[];
+    /** Players whose Kalshi id changed (or who are listed under two ids), as readable notes. */
+    reissued: string[];
+  };
   outOrDoubtful: string[];
   /** Malformed Kalshi markets left out of this run, as "ticker: reason". */
   skipped: string[];
@@ -43,7 +47,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     const games = await espn.getGames(slateDate);
     const summary: IngestSummary = {
       slateDate, games: games.length, markets: {},
-      players: { total: 0, exact: 0, fuzzy: 0, unmatched: [], ambiguous: [] },
+      players: { total: 0, exact: 0, fuzzy: 0, unmatched: [], ambiguous: [], reissued: [] },
       outOrDoubtful: [], skipped: [], snapshots: 0,
     };
     if (games.length === 0) return summary;
@@ -95,24 +99,27 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
 
     // ---------------------------------------------------------------- markets (Kalshi)
     const seriesList = [...Object.keys(PLAYER_PROP_SERIES), GAME_WINNER_SERIES];
-    const tonight: ParsedMarket[] = [];
+    const tonight: (ParsedMarket & { series: string })[] = [];
+    const seenTonight: Record<string, number> = {};   // per series, before any skip
+    const skip = (ticker: string | undefined, reason: unknown) =>
+      summary.skipped.push(`${ticker ?? "(no ticker)"}: ${reason instanceof Error ? reason.message : String(reason)}`);
     // When we read Kalshi, on the database's clock (the clock the staleness checks use).
     // Market rows are only updated if this is newer than what they hold, so a price poll that
     // lands while ingest is busy with ESPN isn't overwritten (STO-9).
     const kalshiFetchedAt = await dbNow(db);
     for (const series of seriesList) {
-      summary.markets[series] = 0;
+      seenTonight[series] = 0;
       for (const m of await kalshi.listMarkets(series)) {
         // One malformed market is skipped and reported in the run output; it must not cost
         // the rest of the slate (STO-32).
         try {
           if (!gameIdByKey.has(splitTicker(String(m.ticker ?? "")).gameKey)) continue;   // another night
+          seenTonight[series]!++;
           const parsed = parseMarket(m, series);
           if (!teamIdByKalshi.has(parsed.team)) throw new Error(`unknown team ${parsed.team}`);
-          tonight.push(parsed);
-          summary.markets[series]!++;
+          tonight.push({ ...parsed, series });
         } catch (e) {
-          summary.skipped.push(`${m.ticker ?? "(no ticker)"}: ${e instanceof Error ? e.message : String(e)}`);
+          skip(m.ticker, e);
         }
       }
     }
@@ -129,48 +136,83 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
       kalshi_id: string; name: string; team_id: number | undefined;
       espn_id: string | null; injury: string | null; headshot: string | null;
     }
-    const players = new Map<string, PlayerRow>();
-    const matchedEspnIds = new Set<string>();
+    // Each Kalshi player on tonight's markets, matched against his team's ESPN roster.
+    const claims = new Map<string, { name: string; team: string; match: ReturnType<typeof matchPlayer> }>();
     for (const m of tonight) {
-      if (!m.player || players.has(m.player.kalshiId)) continue;
-      const { kalshiId, name } = m.player;
-      const match = matchPlayer(name, rosters.get(m.team) ?? []);
+      if (!m.player || claims.has(m.player.kalshiId)) continue;
+      claims.set(m.player.kalshiId, { name: m.player.name, team: m.team, match: matchPlayer(m.player.name, rosters.get(m.team) ?? []) });
+    }
+    const athleteOf = (c: { match: ReturnType<typeof matchPlayer> }) =>
+      c.match.kind === "exact" || c.match.kind === "fuzzy" ? (c.match.player as espn.EspnRosterPlayer) : null;
 
-      const row: PlayerRow = { kalshi_id: kalshiId, name, team_id: teamIdByKalshi.get(m.team),
+    // Who we already have: the ESPN athlete is the stable identity, Kalshi's id can change.
+    const stored = await db.query<{ id: string; full_name: string; espn_athlete_id: string | null; kalshi_player_id: string | null }>(
+      `select id, full_name, espn_athlete_id, kalshi_player_id from players
+        where league = 'nba' and (espn_athlete_id = any($1) or kalshi_player_id = any($2))`,
+      [[...claims.values()].flatMap((c) => athleteOf(c)?.espnId ?? []), [...claims.keys()]],
+    );
+    const storedByEspn = new Map(stored.rows.filter((r) => r.espn_athlete_id).map((r) => [r.espn_athlete_id!, r]));
+    const storedKalshiIds = new Set(stored.rows.map((r) => r.kalshi_player_id));
+    const sameName = (a: string, b: string) => normalizeName(a) === normalizeName(b);
+
+    const players = new Map<string, PlayerRow>();
+    const aliasOf = new Map<string, string>();        // a second Kalshi id for a player in this run → his first
+    const repoint: { player_id: string; kalshi_id: string }[] = [];
+    const claimedBy = new Map<string, { kalshiId: string; name: string }>();   // ESPN athlete → Kalshi player
+    for (const [kalshiId, c] of claims) {
+      const { name, team } = c;
+      const row: PlayerRow = { kalshi_id: kalshiId, name, team_id: teamIdByKalshi.get(team),
                                espn_id: null, injury: null, headshot: null };
-      if (match.kind === "exact" || match.kind === "fuzzy") {
-        const p = match.player as espn.EspnRosterPlayer;
-        if (matchedEspnIds.has(p.espnId)) {
-          // Two Kalshi players can't both be one ESPN athlete. Keep the first match; leave this
-          // one unmatched and report it, rather than merge two people or fail the run.
-          summary.players.ambiguous.push(`${name} (${m.team}): ESPN athlete ${p.espnId} already matched`);
-        } else {
-          matchedEspnIds.add(p.espnId);
-          summary.players[match.kind]++;
-          Object.assign(row, { espn_id: p.espnId, injury: p.injuryStatus, headshot: p.headshotUrl });
-          if (p.injuryStatus === "Out" || p.injuryStatus === "Doubtful") {
-            summary.outOrDoubtful.push(`${name} (${m.team}): ${p.injuryStatus}`);
+      const p = athleteOf(c);
+      // Why this Kalshi player can't take the ESPN athlete he matched (he then stays unmatched
+      // and is reported, rather than merging two people or failing the run).
+      let blocked: string | null = null;
+      if (p) {
+        const owner = claimedBy.get(p.espnId);
+        const holder = storedByEspn.get(p.espnId);
+        if (owner && sameName(owner.name, name)) {
+          // Same name, same team, same athlete, two Kalshi ids in one run: Kalshi is part-way
+          // through re-issuing his id. One player; both ids lead to the same row.
+          aliasOf.set(kalshiId, owner.kalshiId);
+          summary.players.reissued.push(`${name} (${team}): listed under ${owner.kalshiId} and ${kalshiId}`);
+          continue;
+        } else if (owner) {
+          blocked = `ESPN athlete ${p.espnId} already matched to ${owner.name}`;
+        } else if (holder && holder.kalshi_player_id !== kalshiId) {
+          if (!sameName(holder.full_name, name)) {
+            blocked = `ESPN athlete ${p.espnId} belongs to stored player ${holder.full_name}`;
+          } else if (storedKalshiIds.has(kalshiId)) {
+            blocked = `two stored rows for ESPN athlete ${p.espnId}; needs a manual merge`;
+          } else {
+            // Kalshi re-issued his id: the row we have takes the new id and keeps its markets.
+            repoint.push({ player_id: holder.id, kalshi_id: kalshiId });
+            summary.players.reissued.push(`${name} (${team}): ${holder.kalshi_player_id} -> ${kalshiId}`);
           }
         }
-      } else if (match.kind === "ambiguous") {
-        summary.players.ambiguous.push(`${name} (${m.team})`);
+      }
+      if (p && !blocked) {
+        claimedBy.set(p.espnId, { kalshiId, name });
+        summary.players[c.match.kind as "exact" | "fuzzy"]++;
+        Object.assign(row, { espn_id: p.espnId, injury: p.injuryStatus, headshot: p.headshotUrl });
+        if (p.injuryStatus === "Out" || p.injuryStatus === "Doubtful") {
+          summary.outOrDoubtful.push(`${name} (${team}): ${p.injuryStatus}`);
+        }
+      } else if (blocked) {
+        summary.players.ambiguous.push(`${name} (${team}): ${blocked}`);
+      } else if (c.match.kind === "ambiguous") {
+        summary.players.ambiguous.push(`${name} (${team})`);
       } else {
-        summary.players.unmatched.push(`${name} (${m.team})`);
+        summary.players.unmatched.push(`${name} (${team})`);
       }
       players.set(kalshiId, row);
     }
     summary.players.total = players.size;
 
-    const playersJson = JSON.stringify([...players.values()]);
-    // Kalshi can re-issue a player's id. The ESPN match says who the player is, so the row we
-    // already have takes the new Kalshi id (and keeps its markets) instead of colliding with a
-    // second row for the same athlete.
     await db.query(
-      `update players p set kalshi_player_id = i.kalshi_id, updated_at = now()
-         from jsonb_to_recordset($1) as i(espn_id text, kalshi_id text)
-        where p.league = 'nba' and p.espn_athlete_id = i.espn_id
-          and p.kalshi_player_id is distinct from i.kalshi_id`,
-      [playersJson],
+      `update players p set kalshi_player_id = r.kalshi_id, updated_at = now()
+         from jsonb_to_recordset($1) as r(player_id uuid, kalshi_id text)
+        where p.id = r.player_id`,
+      [JSON.stringify(repoint)],
     );
     const playerRows = await db.query<{ id: string; kalshi_player_id: string }>(
       `insert into players (league, full_name, team_id, espn_athlete_id, kalshi_player_id, injury_status, headshot_url, updated_at)
@@ -181,22 +223,36 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
              espn_athlete_id = coalesce(excluded.espn_athlete_id, players.espn_athlete_id),
              injury_status = excluded.injury_status, headshot_url = excluded.headshot_url, updated_at = now()
        returning id, kalshi_player_id`,
-      [playersJson],
+      [JSON.stringify([...players.values()])],
     );
     const playerIdByKalshi = new Map(playerRows.rows.map((r) => [r.kalshi_player_id, r.id]));
+    for (const [alias, first] of aliasOf) playerIdByKalshi.set(alias, playerIdByKalshi.get(first)!);
 
     // ---------------------------------------------------------------- write markets
-    const marketRows = tonight.map((m) => ({
-      ticker: m.ticker,
-      game_id: gameIdByKey.get(m.gameKey),
-      kind: m.kind,
-      title: m.title,
-      player_id: m.player ? playerIdByKalshi.get(m.player.kalshiId) : null,
-      team_id: m.player ? null : teamIdByKalshi.get(m.team),
-      stat: m.stat,
-      strike: m.strike,
-      ...m.quote,
-    }));
+    // One row per market. A market is what it is (game, kind, player or team, stat, line), so
+    // two tickers for the same thing in one run are one market: the first is kept.
+    const marketRows = [];
+    const tickerByIdentity = new Map<string, string>();
+    for (const series of seriesList) summary.markets[series] = 0;
+    for (const m of tonight) {
+      const row = {
+        ticker: m.ticker,
+        game_id: gameIdByKey.get(m.gameKey),
+        kind: m.kind,
+        title: m.title,
+        player_id: m.player ? playerIdByKalshi.get(m.player.kalshiId) : null,
+        team_id: m.player ? null : teamIdByKalshi.get(m.team),
+        stat: m.stat,
+        strike: m.strike,
+        ...m.quote,
+      };
+      const identity = [row.game_id, row.kind, row.player_id, row.team_id, row.stat, row.strike].join("|");
+      const first = tickerByIdentity.get(identity);
+      if (first) { skip(m.ticker, `same market as ${first}`); continue; }
+      tickerByIdentity.set(identity, m.ticker);
+      marketRows.push(row);
+      summary.markets[m.series]!++;
+    }
     // Markets are keyed by our own id and identified by what they are (game, kind, player or
     // team, stat, line: markets_identity). Kalshi's ticker is attached in external_ids (ADR-021).
     // Every step is idempotent and safe if another run races it: conflicts are no-ops.
@@ -259,9 +315,17 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     // with every market paused there'd be no deck, so the poller would never notice (ADR-021).
     const unknown = marketRows.filter((r) => r.unknown !== undefined)
       .map((r) => `${r.ticker} ("${r.unknown}")`).sort();
+    const problems: string[] = [];
     if (unknown.length) {
-      throw new Error(`unknown Kalshi status for ${unknown.length} market(s), treated as paused: ${unknown.join(", ")}`);
+      problems.push(`unknown Kalshi status for ${unknown.length} market(s), treated as paused: ${unknown.join(", ")}`);
     }
+    // Skipping one bad market is fine. A whole series skipped means Kalshi changed its format
+    // and there may be no deck tonight: also fail loudly, after writing what did load.
+    const lost = seriesList.filter((x) => seenTonight[x]! > 0 && summary.markets[x] === 0);
+    if (lost.length) {
+      problems.push(`every ${lost.join(", ")} market for tonight was skipped (${summary.skipped.length} skipped in all), e.g. ${summary.skipped[0]}`);
+    }
+    if (problems.length) throw new Error(problems.join("; "));
     return summary;
   });
 }
