@@ -203,7 +203,7 @@ test("two stored rows for one athlete (left by an older run) are reported, not a
   useFetch(blackReissued());
   const s = await ingest(d, SLATE);
   assert.match(s.players.ambiguous.join(), /Anthony Black.*manual merge/);
-  assert.equal((await counts(d)).p, first.p);
+  assert.deepEqual(await counts(d), first, "no new player and no duplicate markets without a ticker");
   assert.equal((await blackRows(d)).find((r) => r.kalshi_player_id === BLACK_KALSHI_ID).espn_athlete_id !== null, true,
     "the matched row keeps its ESPN athlete and its Kalshi id");
 });
@@ -213,6 +213,7 @@ test("a different player who fuzzy-matches a stored player's athlete doesn't tak
   const d = await db("player_fuzzy");
   useFetch();
   await ingest(d, SLATE);
+  const first = await counts(d);
   const [black] = await blackRows(d);
   // Black has no markets tonight; "Andre Black" (new Kalshi id) appears on the same team.
   useFetch(kalshiEdited((markets) => markets.map((m) =>
@@ -225,7 +226,11 @@ test("a different player who fuzzy-matches a stored player's athlete doesn't tak
   assert.deepEqual(await blackRows(d), [black], "Anthony Black's row is untouched");
   const { rows: [andre] } = await d.query(`select espn_athlete_id from players where kalshi_player_id = $1`, [NEW_ID]);
   assert.equal(andre.espn_athlete_id, null);
-  await ingest(d, SLATE);   // safe to re-run
+  // His tickers are ones we already know, so they keep their markets: no duplicates.
+  const after1 = await counts(d);
+  assert.deepEqual(after1, { ...first, p: first.p + 1 });
+  await ingest(d, SLATE);
+  assert.deepEqual(await counts(d), after1, "re-running is safe");
 });
 
 test("two different Kalshi players matching one ESPN athlete in one run don't crash or merge", { skip }, async () => {
@@ -254,22 +259,45 @@ test("two different Kalshi players matching one ESPN athlete in one run don't cr
   assert.deepEqual(await counts(d), first, "re-running is safe");
 });
 
-test("two tickers for the same market in one run load as one market", { skip }, async () => {
+// The same player (same name, second Kalshi id) and the same line under a second ticker.
+const TWIN25 = "KXNBAPTS-26NOV13MILORL-ORLABLACK9-25";
+const withTwin = (twinFirst: boolean) => kalshiEdited((markets) => {
+  const twins = markets.filter((m) => m.ticker === BLACK25).map((m) => ({
+    ...m, ticker: TWIN25, custom_strike: { ...m.custom_strike, basketball_player: NEW_ID } }));
+  return twinFirst ? [...twins, ...markets] : [...markets, ...twins];
+});
+
+test("two tickers for the same market load as one market, whichever is listed first", { skip }, async () => {
   const d = await db("same_market");
-  // The same player (same name, second Kalshi id) and the same line under a second ticker.
-  const TWIN = "KXNBAPTS-26NOV13MILORL-ORLABLACK9-25";
-  useFetch(kalshiEdited((markets) => [
-    ...markets,
-    ...markets.filter((m) => m.ticker === BLACK25).map((m) => ({
-      ...m, ticker: TWIN, custom_strike: { ...m.custom_strike, basketball_player: NEW_ID } })),
-  ]));
+  useFetch(withTwin(true));
   const s = await ingest(d, SLATE);
-  assert.deepEqual(s.skipped, [`${TWIN}: same market as ${BLACK25}`]);
+  assert.deepEqual(s.skipped, [`${TWIN25}: same market as ${BLACK25}`]);
+  assert.equal(s.markets.KXNBAPTS, 37);
   const first = await counts(d);
   assert.equal(first.m, 211);
   assert.equal(first.x, 211);
+  for (const twinFirst of [false, true]) {   // eng-lead round 2 S2: the stored ticker stays, in either order
+    useFetch(withTwin(twinFirst));
+    const again = await ingest(d, SLATE);
+    assert.deepEqual(again.skipped, [`${TWIN25}: same market as ${BLACK25}`]);
+    assert.deepEqual(await counts(d), first);
+  }
+});
+
+test("a market Kalshi re-lists under a new ticker is skipped and reported, not a crash", { skip }, async () => {
+  const d = await db("relisted");
+  useFetch();
   await ingest(d, SLATE);
+  const first = await counts(d);
+  const id = await idOf(d, BLACK25);
+  const RELISTED = "KXNBAPTS-26NOV13MILORL-ORLABLACK7-25";
+  useFetch(kalshiEdited((markets) => markets.map((m) => m.ticker === BLACK25 ? { ...m, ticker: RELISTED } : m)));
+  const s = await ingest(d, SLATE);   // before the fix: duplicate key on external_ids_one_per_market
+  assert.deepEqual(s.skipped, [`${RELISTED}: same market as ${BLACK25}`]);
   assert.deepEqual(await counts(d), first);
+  assert.equal(await idOf(d, BLACK25), id, "the market keeps the ticker it has");
+  await ingest(d, SLATE);
+  assert.deepEqual(await counts(d), first, "re-running is safe");
 });
 
 // eng-lead S1: skipping must not hide a Kalshi format change.
@@ -372,6 +400,10 @@ test("a replay doesn't mark a finished game or a later game as postponed", { ski
   useFetch(...replayedOnNov15());
   await ingest(d, "2026-11-15");
   assert.deepEqual((await gamesBySlate(d)).map((g) => g.status), ["final", "scheduled"], "a final game stays final");
+  await d.query(`update games set status = 'canceled' where slate_date = $1`, [SLATE]);
+  await ingest(d, "2026-11-15");
+  assert.deepEqual((await gamesBySlate(d)).map((g) => g.status), ["canceled", "scheduled"], "a canceled game stays canceled");
+  await d.query(`update games set status = 'final' where slate_date = $1`, [SLATE]);
 
   // The same event also on a later slate: ingesting the earlier night must not touch it.
   await d.query(

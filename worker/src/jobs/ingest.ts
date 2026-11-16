@@ -109,6 +109,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     const kalshiFetchedAt = await dbNow(db);
     for (const series of seriesList) {
       seenTonight[series] = 0;
+      summary.markets[series] = 0;
       for (const m of await kalshi.listMarkets(series)) {
         // One malformed market is skipped and reported in the run output; it must not cost
         // the rest of the slate (STO-32).
@@ -118,6 +119,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
           const parsed = parseMarket(m, series);
           if (!teamIdByKalshi.has(parsed.team)) throw new Error(`unknown team ${parsed.team}`);
           tonight.push({ ...parsed, series });
+          summary.markets[series]!++;
         } catch (e) {
           skip(m.ticker, e);
         }
@@ -229,30 +231,17 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     for (const [alias, first] of aliasOf) playerIdByKalshi.set(alias, playerIdByKalshi.get(first)!);
 
     // ---------------------------------------------------------------- write markets
-    // One row per market. A market is what it is (game, kind, player or team, stat, line), so
-    // two tickers for the same thing in one run are one market: the first is kept.
-    const marketRows = [];
-    const tickerByIdentity = new Map<string, string>();
-    for (const series of seriesList) summary.markets[series] = 0;
-    for (const m of tonight) {
-      const row = {
-        ticker: m.ticker,
-        game_id: gameIdByKey.get(m.gameKey),
-        kind: m.kind,
-        title: m.title,
-        player_id: m.player ? playerIdByKalshi.get(m.player.kalshiId) : null,
-        team_id: m.player ? null : teamIdByKalshi.get(m.team),
-        stat: m.stat,
-        strike: m.strike,
-        ...m.quote,
-      };
-      const identity = [row.game_id, row.kind, row.player_id, row.team_id, row.stat, row.strike].join("|");
-      const first = tickerByIdentity.get(identity);
-      if (first) { skip(m.ticker, `same market as ${first}`); continue; }
-      tickerByIdentity.set(identity, m.ticker);
-      marketRows.push(row);
-      summary.markets[m.series]!++;
-    }
+    const marketRows = tonight.map((m) => ({
+      ticker: m.ticker,
+      game_id: gameIdByKey.get(m.gameKey),
+      kind: m.kind,
+      title: m.title,
+      player_id: m.player ? playerIdByKalshi.get(m.player.kalshiId) : null,
+      team_id: m.player ? null : teamIdByKalshi.get(m.team),
+      stat: m.stat,
+      strike: m.strike,
+      ...m.quote,
+    }));
     // Markets are keyed by our own id and identified by what they are (game, kind, player or
     // team, stat, line: markets_identity). Kalshi's ticker is attached in external_ids (ADR-021).
     // Every step is idempotent and safe if another run races it: conflicts are no-ops.
@@ -261,8 +250,9 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
            player_id uuid, team_id smallint, stat text, strike numeric, yes_bid smallint, yes_ask smallint,
            no_bid smallint, no_ask smallint, volume integer, status market_status))`;
     const rowsJson = JSON.stringify(marketRows);
-    // 1. Create markets we've never seen. One that already exists (even if its Kalshi id was
-    //    lost) is left alone, so a Kalshi market can never become two Storyline markets.
+    // 1. Create markets we've never seen. A ticker we already know keeps the market it is
+    //    attached to, and a market that already exists (even if its Kalshi id was lost) is left
+    //    alone, so a Kalshi market can never become two Storyline markets.
     await db.query(
       `with ${incoming}
        insert into markets (league, game_id, kind, title, player_id, team_id, stat, strike,
@@ -270,21 +260,48 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
                             prices_updated_at, updated_at)
        select 'nba', game_id, kind::market_kind, title, player_id, team_id, stat, strike,
               yes_bid, yes_ask, no_bid, no_ask, volume, status, $2, now()
-       from incoming
+       from incoming i
+       where not exists (select 1 from external_ids x
+                         where x.source = $3 and x.kind = 'market' and x.external_id = i.ticker)
        on conflict (game_id, kind, player_id, team_id, stat, strike) do nothing`,
-      [rowsJson, kalshiFetchedAt],
+      [rowsJson, kalshiFetchedAt, kalshi.SOURCE],
     );
-    // 2. Attach each Kalshi ticker to its market (new, or one whose id went missing).
+    // 2. Attach a Kalshi ticker to each market that has none (new, or one whose id went
+    //    missing). A market has one Kalshi ticker: if two are listed for it, one is attached.
     await db.query(
       `with ${incoming}
        insert into external_ids (source, kind, external_id, market_id)
-       select $2, 'market', i.ticker, mk.id
+       select distinct on (mk.id) $2, 'market', i.ticker, mk.id
        from incoming i
        join markets mk on (mk.game_id, mk.kind, mk.player_id, mk.team_id, mk.stat, mk.strike)
                           is not distinct from (i.game_id, i.kind::market_kind, i.player_id, i.team_id, i.stat, i.strike)
+       where not exists (select 1 from external_ids y
+                         where y.source = $2 and y.kind = 'market' and y.market_id = mk.id)
+       order by mk.id, i.ticker
        on conflict (source, kind, external_id) do nothing`,
       [rowsJson, kalshi.SOURCE],
     );
+    //    A ticker left unattached is a second listing of a market that already has one (a
+    //    duplicate, or Kalshi re-listed it under a new ticker). It's skipped and reported: the
+    //    market keeps the ticker it has.
+    const unattached = await db.query<{ ticker: string; other: string | null }>(
+      `with ${incoming}
+       select i.ticker,
+              (select y.external_id from markets mk
+                 join external_ids y on y.market_id = mk.id and y.source = $2 and y.kind = 'market'
+                where (mk.game_id, mk.kind, mk.player_id, mk.team_id, mk.stat, mk.strike)
+                      is not distinct from (i.game_id, i.kind::market_kind, i.player_id, i.team_id, i.stat, i.strike)) as other
+         from incoming i
+        where not exists (select 1 from external_ids x
+                          where x.source = $2 and x.kind = 'market' and x.external_id = i.ticker)
+        order by 1`,
+      [rowsJson, kalshi.SOURCE],
+    );
+    const seriesOf = new Map(tonight.map((m) => [m.ticker, m.series]));
+    for (const u of unattached.rows) {
+      skip(u.ticker, `same market as ${u.other ?? "another ticker"}`);
+      summary.markets[seriesOf.get(u.ticker)!]!--;
+    }
     // 3. Refresh prices and status of markets we know, in market-id order like the price poller
     //    (ADR-020 rule 3); newer data always wins (rule 4). Results are settlement's (ADR-004).
     await db.query(
