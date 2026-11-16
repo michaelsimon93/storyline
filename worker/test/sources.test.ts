@@ -44,3 +44,14 @@ test("Kalshi listMarkets follows pagination cursors", async () => {
   assert.deepEqual(markets.map((x) => x.ticker), ["A", "B", "C"]);
   assert.equal(m.calls.length, 3);
 });
+
+test("Kalshi listMarkets returns a market once when pages overlap, keeping the later copy", async () => {
+  const pages: Record<string, unknown> = {
+    "": { markets: [{ ticker: "A", status: "active" }, { ticker: "B" }], cursor: "p2" },
+    p2: { markets: [{ ticker: "A", status: "closed" }, { ticker: "C" }], cursor: "" },
+  };
+  restore = installFetch((url) => json(pages[url.searchParams.get("cursor") ?? ""])).restore;
+  const markets = await kalshi.listMarkets("KXNBAPTS");
+  assert.deepEqual(markets.map((x) => x.ticker), ["A", "B", "C"]);
+  assert.equal(markets[0]!.status, "closed");
+});

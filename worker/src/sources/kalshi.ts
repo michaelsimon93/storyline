@@ -25,19 +25,22 @@ export interface KalshiMarket {
   volume_fp?: string;
 }
 
-/** All markets in a series with the given status, following pagination. */
+/**
+ * All markets in a series with the given status, following pagination. A market that shows up
+ * twice (it can shift across pages while we read them) is returned once, as its latest copy.
+ */
 export async function listMarkets(seriesTicker: string, status = "open"): Promise<KalshiMarket[]> {
-  const out: KalshiMarket[] = [];
+  const byTicker = new Map<string, KalshiMarket>();
   let cursor = "";
   do {
     await pace();
     const qs = new URLSearchParams({ series_ticker: seriesTicker, status, limit: "1000" });
     if (cursor) qs.set("cursor", cursor);
     const page = await fetchJson<{ markets: KalshiMarket[]; cursor?: string }>(`${BASE}/markets?${qs}`);
-    out.push(...page.markets);
+    for (const m of page.markets) byTicker.set(m.ticker, m);
     cursor = page.cursor ?? "";
   } while (cursor);
-  return out;
+  return [...byTicker.values()];
 }
 
 // Kalshi accepts up to 100 tickers per request on GET /markets?tickers=...
