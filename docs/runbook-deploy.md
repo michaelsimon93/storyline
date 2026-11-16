@@ -120,7 +120,7 @@ cd worker && npm ci
 railway run -- env DATABASE_URL=postgres://nobody:none@127.0.0.1:1/none npm start
 ```
 
-Within a few seconds Discord should get **`[storyline-worker] … worker failed to start`**. That tests the deployed `ALERT_WEBHOOK_URL` without touching production. If nothing arrives, the terminal shows why (`alert webhook returned 4xx`, or `ALERT_WEBHOOK_URL not set`).
+Within a few seconds Discord should get **`[storyline-worker] … worker failed to start`**. That tests the deployed `ALERT_WEBHOOK_URL` without touching production. If nothing arrives, the terminal shows why (`alerts webhook returned 4xx`, or `ALERT_WEBHOOK_URL not set`).
 
 ## 4. Roll back
 
