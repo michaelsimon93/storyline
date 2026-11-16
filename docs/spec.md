@@ -36,6 +36,8 @@
 
 ## 2. Data sources
 
+These are v1's sources, not a fixed list. Markets, context and curation each sit behind one interface, so more sources can be added (ADR-024).
+
 | Source | Used for | Access |
 |---|---|---|
 | **Kalshi** public REST API (`external-api.kalshi.com/trade-api/v2`) | Prop markets, live prices, results | No API key for market data. Rate-limited (we got a 429 after ~4 quick calls). |
@@ -56,7 +58,7 @@
 
 **Acceptance criteria**
 - [ ] Unmatched players are logged and excluded from curation. They are never silently dropped without a log entry.
-- [ ] A failed ESPN response (bad shape or non-200) is logged with an alert, and that day's curation still runs on the Kalshi data alone.
+- [ ] A failed ESPN response (bad shape or non-200) is logged with an alert, and that day's curation still publishes, with fewer facts (ADR-024 rule 7): ESPN signals from the last successful pull (dated), then X stories and attributed reporting, then market facts alone.
 
 ---
 
@@ -64,26 +66,23 @@
 
 Runs once each morning (default **10:00 ET**; Kalshi lists the day's props around 7:30 ET). It must publish before the first tip-off of the day, which matters for weekend afternoon games.
 
-**Steps**
-1. **Gather:** today's games from ESPN, and every open prop market for those games from Kalshi.
-2. **Candidate lines:** for each player + stat, keep every strike on the ladder priced within the **price band (default 25–75%)**. The story picks the line (step 6), not the price (ADR-014).
-3. **Filter:**
-   - Bid/ask spread ≤ 5¢
-   - Player matched to ESPN
-   - Player not listed Out or Doubtful
-   - No starters-only rule: relevant bench players are eligible. Kalshi only lists props for rotation players (about 13 per game), so its own listings act as the "real role" filter.
-4. **Enrich:** for each candidate, attach ESPN context: last 5–10 games, home/away split, season series vs. opponent, teammate injuries, recent news.
-5. **Shortlist:** take the top ~30 candidates by liquidity and data completeness.
-6. **Curate and write (Claude API):** Claude chooses the final **N cards** (default **N = 10**, configurable). For each one it picks the storyline, then **the strike that best fits that storyline** from the in-band ladder, and writes a blurb that cites fact IDs. Rules:
+**Steps** (stories first, then markets: ADR-024)
+1. **Discover:** for every player on today's slate who isn't listed Out or Doubtful, collect signals from the discover-stage context sources. ESPN: last 5–10 games, home/away split, season series vs. opponent, teammate injuries, recent news, run through story detectors (hot streak, revenge game, backup stepping in…). X (via one slate-wide Grok search, behind its flag): the storylines fans and reporters are talking about.
+2. **Story candidates:** group each player's signals into stories: the angle, the stat it's about, the signals behind it, and a rough score.
+3. **Match:** walk the candidates by score. For each story, look for an open market on that player and stat with a strike in the **price band (default 25–75%)** and a bid/ask spread ≤ 5¢. No market → log it as "no market" and move to the next story. Stop at a shortlist of ~50 matched stories.
+   - No starters-only rule. Kalshi only lists props for rotation players (about 13 per game), so a deep-bench story drops out here for lack of a market.
+4. **Enrich:** run the enrich-stage context sources on the shortlist only (X buzz and late news per player, behind its flag).
+5. **Rank, curate and write (Claude API):** Claude ranks the shortlist by "why should a fan care?" using ESPN facts and X buzz, chooses the final **N cards** (default **N = 10**, configurable), picks **the strike that best fits each story** from the in-band ladder (ADR-014), and writes a blurb that cites signal IDs. Rules:
    - At most 1 card per player
    - Spread across games and stat types
    - Favor the strongest storylines
-7. **Validate:** check each blurb, and regenerate any that fail (see criteria below).
-8. **Publish:** cards go live immediately. There's no review queue in v1. Michael reviews the published cards and gives feedback afterward.
+6. **Validate:** check each blurb, and regenerate any that fail (see criteria below).
+7. **Publish:** cards go live immediately. There's no review queue in v1. Michael reviews the published cards and gives feedback afterward.
 
 **Blurb rules**
 - ≤ 200 characters.
 - **Every claim is grounded:** the model receives facts with IDs (stats *and* news: suspensions, injury returns, trades, matchups) and must cite the fact ID behind each claim. A validator rejects uncited claims. A number isn't required; "back from suspension" is a valid storyline (ADR-014).
+- **Reporting from X is attributed:** a claim from a post by an approved account names the source and links the post ("Per Shams, he's back tonight"). Posts from accounts not yet approved can shape ranking but never appear in a blurb. Michael approves accounts as they first show up (ADR-024).
 - Written about the player and the stat's storyline, not as betting advice. No "lock", "hammer", "smash".
 - Tone: punchy, fan-first, entertaining.
 
