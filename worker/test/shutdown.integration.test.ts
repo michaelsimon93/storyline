@@ -32,20 +32,22 @@ after(async () => { await db?.end(); });
 
 const isRunning = (pgid: number) => { try { process.kill(-pgid, 0); return true; } catch { return false; } };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-/** What's left in the process group, for the failure message. */
-const leftovers = (pgid: number) => {
-  try { return execSync("ps -eo pid,pgid,stat,args --no-headers").toString().split("\n")
-    .filter((l) => l.trim().split(/\s+/)[1] === String(pgid)).join("\n"); } catch { return "(ps failed)"; }
-};
+
+/** Processes in the group that can still run: zombies (stat Z) are dead, just not yet reaped. */
+const liveMembers = (pgid: number): string[] =>
+  execSync("ps -eo pid,pgid,stat,args --no-headers").toString().split("\n")
+    .map((l) => l.trim()).filter(Boolean)
+    .filter((l) => { const [, group, stat] = l.split(/\s+/); return group === String(pgid) && !stat!.startsWith("Z"); });
 
 /**
- * True once nothing in the group is left. Helpers (tsx's esbuild service) exit a few milliseconds
- * after node and can briefly linger until reaped, so allow a short grace period. An orphaned
- * worker, the regression this guards against, keeps running indefinitely and still fails.
+ * True once nothing in the group can run. With a cold tsx cache, node starts an esbuild helper
+ * that becomes a zombie when node exits and can wait ~2s to be reaped; a zombie runs nothing, so
+ * it doesn't count. The short grace is for the helper to notice its stdin closed and exit.
+ * An orphaned worker (the regression this guards against) stays live and fails.
  */
-async function groupExits(pgid: number, graceMs = 2_000): Promise<boolean> {
+async function groupExits(pgid: number, graceMs = 500): Promise<boolean> {
   const end = Date.now() + graceMs;
-  while (isRunning(pgid)) {
+  while (liveMembers(pgid).length) {
     if (Date.now() > end) return false;
     await sleep(50);
   }
@@ -77,7 +79,7 @@ for (const shell of ["bash", "sh"]) test(`the start command shuts down cleanly o
     const code = await Promise.race([exited, new Promise<"hung">((r) => setTimeout(() => r("hung"), 10_000))]);
     assert.equal(code, 0, `expected a clean exit, got ${code}:\n${out}`);
     assert.match(out, /SIGTERM: stopping scheduler, waiting for running jobs/);
-    assert.ok(await groupExits(child.pid!), `a process outlived the shutdown:\n${leftovers(child.pid!)}\n${out}`);
+    assert.ok(await groupExits(child.pid!), `a process outlived the shutdown:\n${liveMembers(child.pid!).join("\n")}\n${out}`);
   } finally {
     // Whatever happened, leave nothing running: an orphan would hold the test's pipes open.
     if (isRunning(child.pid!)) process.kill(-child.pid!, "SIGKILL");
