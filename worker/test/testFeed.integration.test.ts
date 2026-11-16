@@ -64,3 +64,17 @@ test("each ingest posts one summary of what it loaded, including on a re-run", {
   assert.match(text, /Jalen Suggs \(ORL\): Out/);
   assert.ok(text.length < 2000);
 });
+
+test("nothing the test feed does can fail an ingest that succeeded", { skip }, async () => {
+  const quiet = console.error;
+  console.error = () => {};
+  const restore = installFetch(slateRoutes).restore;
+  try {
+    const broken = { post: async () => { throw new Error("feed bug"); } };
+    const outcome = await runJob(db!, ingestJob(broken, "2026-11-13"), async () => { throw new Error("no alert expected"); });
+    assert.equal(outcome.status, "ok");
+  } finally {
+    restore();
+    console.error = quiet;
+  }
+});

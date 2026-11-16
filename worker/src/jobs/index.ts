@@ -14,7 +14,12 @@ export function ingestJob(feed: TestFeed, date?: string): Job {
     name: "ingest",
     run: async (db) => {
       const summary = await ingest(db, date);
-      await feed.post(ingestSummaryText(summary));   // never throws, so it can't fail the run (STO-40)
+      // The run is already recorded ok: nothing about the test feed may fail it (STO-40).
+      try {
+        await feed.post(ingestSummaryText(summary));
+      } catch (err) {
+        console.error(`test feed: could not post ingest summary: ${err instanceof Error ? err.message : err}`);
+      }
       return summary;
     },
   };

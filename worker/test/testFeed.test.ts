@@ -67,7 +67,7 @@ test("unset URL: the feed is a no-op and says so once", async () => {
 });
 
 test("DISCORD_TEST_FEED_ENABLED=false turns the feed off while keeping the URL", async () => {
-  for (const value of ["false", "0", "off", " OFF "]) {
+  for (const value of ["false", "0", "off", "no", " OFF "]) {
     const posts = captureFetch();
     const logs: string[] = [];
     const feed = testFeed({ DISCORD_TEST_WEBHOOK_URL: TEST_URL, DISCORD_TEST_FEED_ENABLED: value }, (l) => logs.push(l));
