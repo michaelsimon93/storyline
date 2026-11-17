@@ -2,7 +2,8 @@
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { fixture, installFetch, json, type Route } from "./helpers/mockFetch.js";
+import { fixture, installFetch, json } from "./helpers/mockFetch.js";
+import { espnRoutes } from "./helpers/espnRoutes.js";
 import { createEspnSource, type CollectStats } from "../src/sources/espnContext.js";
 import type { Slate, SlatePlayer } from "../src/sources/types.js";
 
@@ -24,21 +25,6 @@ const slate: Slate = {
     player({ id: "p-doubtful", externalId: "2222", injuryStatus: "Doubtful" }),
     player({ id: "p-unmatched", externalId: null }),
   ],
-};
-
-const espnRoutes = (over: Record<string, () => Response> = {}): Route => (url) => {
-  const hit = (k: string) => over[k] ? over[k]!() : undefined;
-  const p = url.pathname;
-  let m;
-  if (url.hostname === "site.api.espn.com") {
-    if (p.endsWith("/injuries")) return hit("injuries") ?? json(fixture("espn-injuries.json"));
-    if (p.endsWith("/news")) return hit(`news-${url.searchParams.get("team")}`) ?? json(url.searchParams.get("team") === "28" ? fixture("espn-news-28.json") : { articles: [] });
-    if ((m = p.match(/\/teams\/(\d+)\/schedule$/))) return hit(`schedule-${m[1]}`) ?? json(fixture("espn-schedule-18.json"));
-  }
-  if (url.hostname === "site.web.api.espn.com" && (m = p.match(/\/athletes\/(\d+)\/(gamelog)$/))) {
-    return hit(`gamelog-${m[1]}`) ?? json(fixture(`espn-gamelog-${m[1]}.json`));
-  }
-  return undefined;
 };
 
 const make = (onStats?: (s: CollectStats) => void) => createEspnSource({
