@@ -151,6 +151,8 @@ test("feature flags evaluate server-side, allowlist first", { skip }, async () =
 });
 
 test("ingest reads markets through the MarketSource it is given (ADR-024)", { skip }, async () => {
+  restore();   // an earlier test left ESPN returning 404
+  restore = installFetch(slateRoutes).restore;
   const asked: string[] = [];
   const source: MarketSource<KalshiMarket> = {
     name: "kalshi",
@@ -163,6 +165,8 @@ test("ingest reads markets through the MarketSource it is given (ADR-024)", { sk
 });
 
 test("a failing market source stops the run and records it failed (ADR-024 rule 6)", { skip }, async () => {
+  restore();
+  restore = installFetch(slateRoutes).restore;
   const source: MarketSource<KalshiMarket> = {
     name: "kalshi",
     listOpen: async () => { throw new Error("kalshi is down"); },
