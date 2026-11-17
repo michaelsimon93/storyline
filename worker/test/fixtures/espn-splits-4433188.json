@@ -1,0 +1,356 @@
+{
+ "filters": [
+  {
+   "displayName": "League",
+   "name": "league",
+   "value": "nba",
+   "options": [
+    {
+     "value": "mens-college-basketball",
+     "displayValue": "NCAA Men's Basketball",
+     "shortDisplayName": "NCAAM"
+    },
+    {
+     "value": "nba",
+     "displayValue": "National Basketball Association",
+     "shortDisplayName": "NBA"
+    }
+   ]
+  },
+  {
+   "displayName": "Season",
+   "name": "season",
+   "value": "2027",
+   "options": [
+    {
+     "value": "2027",
+     "displayValue": "2026-27"
+    },
+    {
+     "value": "2026",
+     "displayValue": "2025-26"
+    },
+    {
+     "value": "2025",
+     "displayValue": "2024-25"
+    }
+   ]
+  },
+  {
+   "displayName": "Category",
+   "name": "category",
+   "value": "perGame",
+   "options": [
+    {
+     "value": "perGame",
+     "displayValue": "Per Game"
+    },
+    {
+     "value": "total",
+     "displayValue": "Total"
+    },
+    {
+     "value": "per48",
+     "displayValue": "Per 48 Minutes"
+    }
+   ]
+  }
+ ],
+ "displayName": "2026-27 Splits",
+ "labels": [
+  "GP",
+  "MIN",
+  "FG",
+  "FG%",
+  "3PT",
+  "3P%",
+  "FT",
+  "FT%",
+  "OR",
+  "DR",
+  "REB",
+  "AST",
+  "BLK",
+  "STL",
+  "PF",
+  "TO",
+  "PTS"
+ ],
+ "names": [
+  "gamesPlayed",
+  "avgMinutes",
+  "avgFieldGoalsMade-avgFieldGoalsAttempted",
+  "fieldGoalPct",
+  "avgThreePointFieldGoalsMade-avgThreePointFieldGoalsAttempted",
+  "threePointFieldGoalPct",
+  "Free Throws Made-Attempted Per Game",
+  "freeThrowPct",
+  "avgOffensiveRebounds",
+  "avgDefensiveRebounds",
+  "avgRebounds",
+  "avgAssists",
+  "avgBlocks",
+  "avgSteals",
+  "avgFouls",
+  "avgTurnovers",
+  "avgPoints"
+ ],
+ "displayNames": [
+  "Games Played",
+  "Minutes Per Game",
+  "Field Goals Made-Attempted Per Game",
+  "Field Goal Percentage",
+  "3-Point Field Goals Made-Attempted Per Game",
+  "3-Point Field Goal Percentage",
+  "Free Throws Made-Attempted Per Game",
+  "Free Throw Percentage",
+  "Offensive Rebounds Per Game",
+  "Defensive Rebounds Per Game",
+  "Rebounds Per Game",
+  "Assists Per Game",
+  "Blocks Per Game",
+  "Steals Per Game",
+  "Fouls Per Game",
+  "Turnovers Per Game",
+  "Points Per Game"
+ ],
+ "descriptions": [
+  "Games Played",
+  "The average number of minutes per game.",
+  "avgFieldGoalsMade-avgFieldGoalsAttempted",
+  "The ratio of field goals made to field goals attempted: FGM / FGA",
+  "avgThreePointFieldGoalsMade-avgThreePointFieldGoalsAttempted",
+  "The ratio of 3pt field goals made to 3pt field goals attempted: 3PM / 3PA.",
+  "avgFreeThrowsMade-avgFreeThrowsAttempted",
+  "The ratio of free throws made to free throws attempted: FTM / FTA",
+  "The average offensive rebounds per game.",
+  "The average defensive rebounds per game.",
+  "The average rebounds per game.",
+  "The average assists per game.",
+  "The average blocks per game.",
+  "The average steals per game.",
+  "The average fouls committed per game.",
+  "The average turnovers committed per game.",
+  "The average number of points scored per game."
+ ],
+ "splitCategories": [
+  {
+   "name": "split",
+   "displayName": "split",
+   "splits": [
+    {
+     "displayName": "All Splits",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "Total"
+    },
+    {
+     "displayName": "Home",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "Home"
+    },
+    {
+     "displayName": "3+ Days Rest",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "3+ Days Re"
+    }
+   ]
+  },
+  {
+   "name": "byMonth",
+   "displayName": "Month",
+   "splits": [
+    {
+     "displayName": "November",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "November"
+    },
+    {
+     "displayName": "Pre All-Star",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "Pre All-St"
+    }
+   ]
+  },
+  {
+   "name": "byResult",
+   "displayName": "Result",
+   "splits": [
+    {
+     "displayName": "Wins",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "In wins"
+    }
+   ]
+  },
+  {
+   "name": "byPosition",
+   "displayName": "Position"
+  },
+  {
+   "name": "byDay",
+   "displayName": "Day",
+   "splits": [
+    {
+     "displayName": "Sunday",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "Sunday"
+    }
+   ]
+  },
+  {
+   "name": "byOpponent",
+   "displayName": "Opponent",
+   "splits": [
+    {
+     "displayName": "Dallas Mavericks",
+     "stats": [
+      "1",
+      "12.0",
+      "0.0-2.0",
+      "0.0",
+      "0.0-1.0",
+      "0.0",
+      "0.0-0.0",
+      "0.0",
+      "0.0",
+      "2.0",
+      "2.0",
+      "1.0",
+      "0.0",
+      "0.0",
+      "3.0",
+      "2.0",
+      "0.0"
+     ],
+     "abbreviation": "vs DAL"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,641 @@
+{
+ "team": {
+  "id": "18",
+  "abbreviation": "NY"
+ },
+ "events": [
+  {
+   "id": "401909089",
+   "date": "2026-10-20T23:00Z",
+   "name": "Philadelphia 76ers at New York Knicks",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": false,
+       "score": {
+        "value": 100.0,
+        "displayValue": "100"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": true,
+       "score": {
+        "value": 106.0,
+        "displayValue": "106"
+       },
+       "team": {
+        "id": "20",
+        "abbreviation": "PHI"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909095",
+   "date": "2026-10-23T23:00Z",
+   "name": "New York Knicks at Boston Celtics",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": true,
+       "score": {
+        "value": 107.0,
+        "displayValue": "107"
+       },
+       "team": {
+        "id": "2",
+        "abbreviation": "BOS"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": false,
+       "score": {
+        "value": 103.0,
+        "displayValue": "103"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909863",
+   "date": "2026-10-25T23:00Z",
+   "name": "Orlando Magic at New York Knicks",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": false,
+       "score": {
+        "value": 102.0,
+        "displayValue": "102"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": true,
+       "score": {
+        "value": 111.0,
+        "displayValue": "111"
+       },
+       "team": {
+        "id": "19",
+        "abbreviation": "ORL"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909878",
+   "date": "2026-10-28T00:00Z",
+   "name": "Detroit Pistons at New York Knicks",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": true,
+       "score": {
+        "value": 111.0,
+        "displayValue": "111"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": false,
+       "score": {
+        "value": 97.0,
+        "displayValue": "97"
+       },
+       "team": {
+        "id": "8",
+        "abbreviation": "DET"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909886",
+   "date": "2026-10-29T00:00Z",
+   "name": "New York Knicks at Chicago Bulls",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": false,
+       "score": {
+        "value": 127.0,
+        "displayValue": "127"
+       },
+       "team": {
+        "id": "4",
+        "abbreviation": "CHI"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": true,
+       "score": {
+        "value": 133.0,
+        "displayValue": "133"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909280",
+   "date": "2026-10-30T23:30Z",
+   "name": "New York Knicks at Philadelphia 76ers",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": true,
+       "score": {
+        "value": 98.0,
+        "displayValue": "98"
+       },
+       "team": {
+        "id": "20",
+        "abbreviation": "PHI"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": false,
+       "score": {
+        "value": 93.0,
+        "displayValue": "93"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909910",
+   "date": "2026-11-03T00:30Z",
+   "name": "Brooklyn Nets at New York Knicks",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": true,
+       "score": {
+        "value": 103.0,
+        "displayValue": "103"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": false,
+       "score": {
+        "value": 90.0,
+        "displayValue": "90"
+       },
+       "team": {
+        "id": "17",
+        "abbreviation": "BKN"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909926",
+   "date": "2026-11-05T00:30Z",
+   "name": "Chicago Bulls at New York Knicks",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": true,
+       "score": {
+        "value": 135.0,
+        "displayValue": "135"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": false,
+       "score": {
+        "value": 105.0,
+        "displayValue": "105"
+       },
+       "team": {
+        "id": "4",
+        "abbreviation": "CHI"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909940",
+   "date": "2026-11-08T01:00Z",
+   "name": "New York Knicks at Cleveland Cavaliers",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": false,
+       "score": {
+        "value": 97.0,
+        "displayValue": "97"
+       },
+       "team": {
+        "id": "5",
+        "abbreviation": "CLE"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": true,
+       "score": {
+        "value": 109.0,
+        "displayValue": "109"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909960",
+   "date": "2026-11-11T00:30Z",
+   "name": "Milwaukee Bucks at New York Knicks",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": true,
+       "score": {
+        "value": 117.0,
+        "displayValue": "117"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": false,
+       "score": {
+        "value": 85.0,
+        "displayValue": "85"
+       },
+       "team": {
+        "id": "15",
+        "abbreviation": "MIL"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909967",
+   "date": "2026-11-12T00:00Z",
+   "name": "Cleveland Cavaliers at New York Knicks",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": false,
+       "score": {
+        "value": 107.0,
+        "displayValue": "107"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": true,
+       "score": {
+        "value": 115.0,
+        "displayValue": "115"
+       },
+       "team": {
+        "id": "5",
+        "abbreviation": "CLE"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909296",
+   "date": "2026-11-14T00:00Z",
+   "name": "New York Knicks at Indiana Pacers",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": true,
+       "score": {
+        "value": 106.0,
+        "displayValue": "106"
+       },
+       "team": {
+        "id": "11",
+        "abbreviation": "IND"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": false,
+       "score": {
+        "value": 104.0,
+        "displayValue": "104"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909990",
+   "date": "2026-11-15T23:00Z",
+   "name": "New York Knicks at Toronto Raptors",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": false,
+       "score": {
+        "value": 108.0,
+        "displayValue": "108"
+       },
+       "team": {
+        "id": "28",
+        "abbreviation": "TOR"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": true,
+       "score": {
+        "value": 112.0,
+        "displayValue": "112"
+       },
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910002",
+   "date": "2026-11-18T00:30Z",
+   "name": "New York Knicks at Toronto Raptors",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_SCHEDULED"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": null,
+       "score": null,
+       "team": {
+        "id": "28",
+        "abbreviation": "TOR"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": null,
+       "score": null,
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401910021",
+   "date": "2026-11-20T01:00Z",
+   "name": "New York Knicks at Minnesota Timberwolves",
+   "seasonType": {
+    "id": "2"
+   },
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_SCHEDULED"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "winner": null,
+       "score": null,
+       "team": {
+        "id": "16",
+        "abbreviation": "MIN"
+       }
+      },
+      {
+       "homeAway": "away",
+       "winner": null,
+       "score": null,
+       "team": {
+        "id": "18",
+        "abbreviation": "NY"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
