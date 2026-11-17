@@ -13,10 +13,13 @@ import {
   type InjuryEntry, type Article, type Parsed,
 } from "../domain/espnParse.js";
 import { playerSignals, teamInjurySignals, seriesSignal, newsSignals } from "../domain/espnSignals.js";
+import { isWontPlay, mostSevere, type InjuryStatus } from "../domain/injuryStatus.js";
 import type { ContextSource, SignalDraft, Slate } from "./types.js";
 
 export interface CollectStats {
-  players: { fetched: number; skippedOutOrDoubtful: number; unmatched: number; failed: number };
+  players: { fetched: number; skippedWontPlay: number; unmatched: number; failed: number };
+  /** Injury statuses we have no name for, as `player: "raw"`. Treated as won't-play; the runner alerts so we learn the new status. */
+  unknownStatuses: string[];
   /** One line per failed call, for the alert. */
   failures: string[];
   /** One line per row a parser skipped inside an otherwise good response (a degraded pull, not a failed call). */
@@ -37,9 +40,6 @@ export interface EspnSourceOptions {
   onStats?: (stats: CollectStats) => void;
 }
 
-/** ESPN's own words for a player who won't play. Compared case-insensitively. */
-const WONT_PLAY = new Set(["out", "doubtful"]);
-
 export function createEspnSource(opts: EspnSourceOptions): ContextSource {
   // Config comes from the database in 3b; a bad value must stop here, not turn into `slice(0, -1)`.
   if (!Number.isInteger(opts.windowGames) || opts.windowGames < 1) throw new Error(`windowGames must be a positive integer, got ${opts.windowGames}`);
@@ -53,7 +53,7 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
     async collect(slate: Slate): Promise<SignalDraft[]> {
       const observedAt = (opts.now ?? (() => new Date()))().toISOString();
       const wait = throttle(opts.pauseMs);
-      const stats: CollectStats = { players: { fetched: 0, skippedOutOrDoubtful: 0, unmatched: 0, failed: 0 }, failures: [], skippedRows: [] };
+      const stats: CollectStats = { players: { fetched: 0, skippedWontPlay: 0, unmatched: 0, failed: 0 }, unknownStatuses: [], failures: [], skippedRows: [] };
       let calls = 0, inARow = 0, aborted = false;
       const drafts: SignalDraft[] = [];
 
@@ -79,8 +79,10 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
 
       // League injuries: one call a day covers every team.
       let injuries = new Map<string, InjuryEntry[]>();
+      let feedOk = false; // an empty feed that loaded means "nobody is hurt"; a failed one means "we don't know"
       if (slate.teams.length > 0) {
-        injuries = (await get("injuries", `${BASE}/injuries`, parseInjuries)) ?? injuries;
+        const feed = await get("injuries", `${BASE}/injuries`, parseInjuries);
+        if (feed) { injuries = feed; feedOk = true; }
         for (const [espnId, teamId] of Object.entries(teamByEspn)) {
           drafts.push(...teamInjurySignals({ teamId, entries: injuries.get(espnId) ?? [], observedAt }));
         }
@@ -108,10 +110,22 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
         drafts.push(...newsSignals({ articles, game: { id: g.id, homeEspnId: home, awayEspnId: away }, teamIds: teamByEspn, observedAt }));
       }
 
-      // Per player: form and home/road split, both from the one game-log call. Out and Doubtful players aren't playing, so form tells us nothing.
+      // Today's status per athlete, across all their injuries (STO-90). Ingest stored only a first injury, at ingest time.
+      const feedStatus = new Map<string, InjuryStatus>();
+      if (feedOk) {
+        const byAthlete = new Map<string, string[]>();
+        for (const entries of injuries.values()) for (const e of entries) byAthlete.set(e.athleteId, [...(byAthlete.get(e.athleteId) ?? []), e.status]);
+        for (const [id, raws] of byAthlete) { const w = mostSevere(raws); if (w) feedStatus.set(id, w); }
+      }
+
+      // Per player: form and home/road split, both from the one game-log call. Players who won't play tell us nothing.
       for (const p of slate.players) {
         if (aborted) break;
-        if (p.injuryStatus && WONT_PLAY.has(p.injuryStatus.toLowerCase())) { stats.players.skippedOutOrDoubtful++; continue; }
+        // The fresh feed is authoritative when it loaded (absent = healthy, even if ingest said Out this morning).
+        // Without it, or for a player we can't look up, ingest's status is the best we have.
+        const status = feedOk && p.externalId ? (feedStatus.get(p.externalId) ?? null) : p.injuryStatus;
+        if (status?.status === "Unknown") stats.unknownStatuses.push(`${p.name}: ${JSON.stringify(status.raw)}`);
+        if (isWontPlay(status)) { stats.players.skippedWontPlay++; continue; }
         if (!p.externalId) { stats.players.unmatched++; continue; } // never invent a match
         const before = stats.failures.length;
         const log = await get(`gamelog ${p.externalId}`, `${WEB_BASE}/athletes/${p.externalId}/gamelog`, parseGameLog);

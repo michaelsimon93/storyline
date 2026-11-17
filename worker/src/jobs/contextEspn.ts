@@ -68,7 +68,7 @@ export async function runEspnContext(db: Db, opts: ContextRunOptions): Promise<C
       const s = stats!;
       return {
         runId, stored, players: s.players, failedCalls: s.failures.length, skippedRows: s.skippedRows.length,
-        firstFailures: s.failures.slice(0, 5), firstSkipped: s.skippedRows.slice(0, 5),
+        firstFailures: s.failures.slice(0, 5), firstSkipped: s.skippedRows.slice(0, 5), unknownStatuses: s.unknownStatuses,
       };
     });
     const degraded = out.players.failed > config.espnDegradedFailedPlayers || out.skippedRows > 0;
@@ -78,6 +78,14 @@ export async function runEspnContext(db: Db, opts: ContextRunOptions): Promise<C
         headline: `${JOB} pull degraded: ${out.players.failed} players failed, ${out.skippedRows} bad rows skipped`,
         note: `stored ${out.stored} signals anyway (the rest of the pull is fine). ` +
           [...out.firstFailures, ...out.firstSkipped].slice(0, 6).join(" | "),
+      }));
+    }
+    if (out.unknownStatuses.length > 0) {
+      // Not a failure: the player was skipped as won't-play. But a status we have no name for needs a person to name it (STO-81).
+      await opts.alert(alertText({
+        severity: "warning", job: JOB,
+        headline: `${JOB}: ${out.unknownStatuses.length} player(s) have an injury status we don't recognise`,
+        note: `treated as won't-play, so skipped. Raw values: ${out.unknownStatuses.slice(0, 8).join(", ")}. Add each to KNOWN_STATUSES in worker/src/domain/injuryStatus.ts, or confirm it is a real new status`,
       }));
     }
     return { status: degraded ? "degraded" : "ok", slateDate, runId: out.runId, stored: out.stored, stats: stats! };
