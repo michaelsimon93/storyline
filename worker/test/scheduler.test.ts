@@ -74,9 +74,9 @@ test("alerts redact credentials and stay under the webhook's size limit", () => 
   assert.match(long, /truncated/);
 });
 
-test("the job registry schedules ingest by cron and the price poller by config interval", async () => {
+test("the job registry schedules ingest and the ESPN context pull by cron and the price poller by config interval", async () => {
   const { scheduledJobs } = await import("../src/jobs/index.js");
-  const jobs = scheduledJobs({ ingestScheduleEt: "0 8-22/2 * * *", pollerIntervalSeconds: 30 } as never, { post: async () => {} });
+  const jobs = scheduledJobs({ ingestScheduleEt: "0 8-22/2 * * *", pollerIntervalSeconds: 30, contextEspnScheduleEt: "30 9 * * *" } as never, { post: async () => {} }, async () => {});
   assert.deepEqual(jobs.map((s) => [s.job.name, s.pattern ?? null, s.everySeconds ?? null]),
-    [["ingest", "0 8-22/2 * * *", null], ["price_poll", null, 30]]);
+    [["ingest", "0 8-22/2 * * *", null], ["context:espn", "30 9 * * *", null], ["price_poll", null, 30]]);
 });

@@ -16,7 +16,7 @@ import {
 } from "../domain/kalshiParse.js";
 
 /** The only league ingest loads today. Every provider ID is scoped to a league (external_ids). */
-const LEAGUE = "nba";
+export const LEAGUE = "nba";
 
 export interface IngestSummary {
   slateDate: string;

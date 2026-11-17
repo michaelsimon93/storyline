@@ -27,7 +27,7 @@ async function main() {
   switch (command) {
     case "run": {
       const config = await loadConfig(db);
-      const scheduler = startScheduler(db, scheduledJobs(config, feed), alert);
+      const scheduler = startScheduler(db, scheduledJobs(config, feed, alert), alert);
       for (const { job, next } of scheduler.nextRuns()) {
         console.log(`scheduled ${job}: next run ${next?.toISOString() ?? "never"}`);
       }
@@ -48,7 +48,7 @@ async function main() {
     }
     case "job": {
       const config = await loadConfig(db);
-      const entry = scheduledJobs(config, feed).find((s) => s.job.name === arg);
+      const entry = scheduledJobs(config, feed, alert).find((s) => s.job.name === arg);
       if (!entry) throw new Error(`Unknown job: ${arg}`);
       report(await runJob(db, entry.job, alert));
       break;
