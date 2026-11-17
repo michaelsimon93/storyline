@@ -48,7 +48,7 @@ CI runs Postgres 17 and is the source of truth.
 - **Product calls go to Michael as `needs-decision`**: label the issue, state the question and options, and don't build past it.
 - Labels: one area (`db`, `worker`, `curation`, `web`, `infra`) per issue. No cycles, no estimates.
 - **One PR = one concern**, ~10 minutes to review (<400 changed lines excluding tests). Refactors go in their own PR first. Every commit passes tests on its own. Stack only true dependencies (2–3 max, merge commits, not squash).
-- **Opening a PR: run `/ship`.** It has the review steps, report format and follow-up rules.
+- **When the work is done and tests pass locally, run `/ship` without asking.** It opens the PR and runs the reviews. Rename the branch to the convention first if needed. Ask Michael only for product calls, things you can't get yourself (like data from a blocked network), and merges.
 
 ### Review depth (ADR-022)
 | PR type | Reviewers |
