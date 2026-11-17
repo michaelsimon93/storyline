@@ -16,6 +16,12 @@ const valid = [
   { key: "curation_time_et", value: "10:00" },
   { key: "ingest_schedule_et", value: "0 8-22/2 * * *" },
   { key: "poller_interval_seconds", value: 30 },
+  { key: "espn_form_window_games", value: 5 },
+  { key: "espn_pause_ms", value: 250 },
+  { key: "espn_max_consecutive_failures", value: 5 },
+  { key: "espn_degraded_failed_players", value: 5 },
+  { key: "espn_fallback_max_age_days", value: 2 },
+  { key: "context_espn_schedule_et", value: "30 9 * * *" },
 ];
 const without = (k: string) => valid.filter((r) => r.key !== k);
 const withValue = (k: string, v: unknown) => valid.map((r) => (r.key === k ? { key: k, value: v } : r));
@@ -41,4 +47,12 @@ test("reports every problem at once, not just the first", () => {
   const bad = withValue("cards_per_day", "ten").filter((r) => r.key !== "max_spread_cents");
   assert.throws(() => parseConfig(bad), (e: unknown) =>
     e instanceof Error && /cards_per_day/.test(e.message) && /max_spread_cents/.test(e.message));
+});
+
+test("the ESPN context settings come through typed", () => {
+  const c = parseConfig(valid);
+  assert.deepEqual(
+    [c.espnFormWindowGames, c.espnPauseMs, c.espnMaxConsecutiveFailures, c.espnDegradedFailedPlayers, c.espnFallbackMaxAgeDays, c.contextEspnScheduleEt],
+    [5, 250, 5, 5, 2, "30 9 * * *"]);
+  assert.throws(() => parseConfig(without("espn_pause_ms")), /missing espn_pause_ms/);
 });

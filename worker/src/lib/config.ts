@@ -19,6 +19,12 @@ const SPEC = {
   curationTimeEt:          { key: "curation_time_et",          type: "string" },
   ingestScheduleEt:        { key: "ingest_schedule_et",        type: "string" },
   pollerIntervalSeconds:   { key: "poller_interval_seconds",   type: "int" },
+  espnFormWindowGames:     { key: "espn_form_window_games",     type: "int" },
+  espnPauseMs:             { key: "espn_pause_ms",              type: "int" },
+  espnMaxConsecutiveFailures: { key: "espn_max_consecutive_failures", type: "int" },
+  espnDegradedFailedPlayers:  { key: "espn_degraded_failed_players",  type: "int" },
+  espnFallbackMaxAgeDays:  { key: "espn_fallback_max_age_days", type: "int" },
+  contextEspnScheduleEt:   { key: "context_espn_schedule_et",   type: "string" },
 } as const;
 
 type Spec = typeof SPEC;
@@ -58,4 +64,13 @@ export async function loadConfig(db: Db): Promise<Config> {
 export async function flagEnabled(db: Db, key: string, userId: string | null): Promise<boolean> {
   const { rows } = await db.query<{ on: boolean }>(`select flag_enabled($1, $2) as on`, [key, userId]);
   return rows[0]?.on ?? false;
+}
+
+/**
+ * Is a feature flag's master switch on? For worker jobs, which have no user: flag_enabled() needs
+ * a user (allowlist or rollout bucket), so it is always false for null. A missing flag is off.
+ */
+export async function flagOn(db: Db, key: string): Promise<boolean> {
+  const { rows } = await db.query<{ enabled: boolean }>(`select enabled from feature_flags where key = $1`, [key]);
+  return rows[0]?.enabled ?? false;
 }
