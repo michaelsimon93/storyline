@@ -4,6 +4,7 @@
 
 import type { Db } from "../lib/db.js";
 import type { Slate } from "./types.js";
+import { parseInjuryStatus } from "../domain/injuryStatus.js";
 
 /** Games that won't be played tonight have no use for form or news. */
 const NOT_PLAYING = ["postponed", "canceled"];
@@ -38,6 +39,6 @@ export async function loadSlate(db: Db, slateDate: string, league: string, sourc
     slateDate, league,
     games: games.rows.map((g) => ({ id: g.id, homeTeamId: g.home, awayTeamId: g.away, externalId: g.ext })),
     teams: teams.rows.map((t) => ({ id: t.id, externalId: t.ext })),
-    players: players.rows.map((p) => ({ id: p.id, name: p.name, teamId: p.team_id, externalId: p.ext, injuryStatus: p.injury })),
+    players: players.rows.map((p) => ({ id: p.id, name: p.name, teamId: p.team_id, externalId: p.ext, injuryStatus: p.injury ? parseInjuryStatus(p.injury) : null })),
   };
 }

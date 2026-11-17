@@ -2,6 +2,7 @@
 // implementation each today. Adding a source is a new module, not a plugin system (ADR-021).
 
 import type { FetchOptions } from "../lib/http.js";
+import type { InjuryStatus } from "../domain/injuryStatus.js";
 
 // ---------------------------------------------------------------- markets
 
@@ -66,7 +67,8 @@ export interface SlatePlayer {
   teamId: number;
   /** This source's own ID for the player (external_ids), or null if we haven't matched one. */
   externalId: string | null;
-  injuryStatus: string | null;
+  /** What ingest stored, parsed. Only a fallback: a source with a fresher injuries feed should prefer it (STO-90). */
+  injuryStatus: InjuryStatus | null;
 }
 
 export interface SlateTeam { id: number; externalId: string | null }

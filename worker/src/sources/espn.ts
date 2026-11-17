@@ -3,6 +3,7 @@
 
 import { fetchJson } from "../lib/http.js";
 import type { RosterPlayer } from "../domain/names.js";
+import { mostSevere } from "../domain/injuryStatus.js";
 
 /** This provider's name in external_ids (ADR-021). */
 export const SOURCE = "espn";
@@ -27,7 +28,7 @@ export interface EspnGame {
 }
 
 export interface EspnRosterPlayer extends RosterPlayer {
-  injuryStatus: string | null; // "Out", "Day-To-Day", ...
+  injuryStatus: string | null; // ESPN's own string for the most severe injury: "Out", "Day-To-Day", ...
   headshotUrl: string | null;
 }
 
@@ -75,7 +76,7 @@ export async function getRoster(teamEspnId: string): Promise<EspnRosterPlayer[]>
   return athletes.map((a) => ({
     espnId: String(must(a.id, "athlete id")),
     fullName: must(a.fullName, "athlete name"),
-    injuryStatus: a.injuries?.[0]?.status ?? null,
+    injuryStatus: mostSevere((a.injuries ?? []).map((i: any) => String(i?.status ?? "")))?.raw ?? null, // all injuries, worst wins (STO-90)
     headshotUrl: a.headshot?.href ?? null,
   }));
 }
