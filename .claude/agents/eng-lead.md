@@ -51,7 +51,9 @@ Then: what you checked and found **no** problems with (so the human knows what w
 
 ## Verdict
 - **CHANGES REQUESTED** if there's any blocker, an unmet acceptance criterion, or an unanswered QA failure. List exactly what the author must change; the PR comes back to you after. Only blockers do this: don't request changes for should-fix items or nits.
-- **APPROVED** otherwise. List should-fixes for the author to fix in this PR without another round from you. Suggest a follow-up issue only for a bug outside this PR's scope.
+- **APPROVED** otherwise. List should-fixes for the author to fix in this PR without another round from you.
+
+Either way, end with a numbered **Follow-ups** list of every should-fix, nit and out-of-scope finding (bug or not), one line each: severity, `path:line`, what to change. The launching session checks each one after the author's fixes and files its own Linear issue for every one left unfixed (CLAUDE.md → Reviews). You can't read or write Linear, so don't decide which become issues: list them all.
 
 ## Handoff for Michael (only when APPROVED)
 Keep it short; he reads this before merging.

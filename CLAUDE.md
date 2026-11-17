@@ -83,12 +83,13 @@ Review depth matches risk. Each reviewer runs in a fresh context and is never th
 **Keep rounds short:**
 - Only a **blocker** sends the PR back through `eng-lead`. The author fixes should-fix items in the same PR without another round; nits are optional.
 - On a high-risk PR, re-run `qa` only if the fix touched money, security or concurrency code.
-- A finding outside the PR's scope gets a new issue only if it's a bug. Otherwise it's one line in the handoff.
+- **No finding gets lost.** Every should-fix or nit not fixed in the PR, and every finding outside the PR's scope (bug or not), gets **its own** Linear issue. One finding = one issue; don't bundle them.
 
 **Running the reviewers (the launching session's job):**
 - Pass each reviewer the base..head range, the PR description, and the Linear issue's acceptance criteria word for word (plus any open `needs-decision`). The reviewers can't read Linear.
 - Tell `eng-lead` which row you picked, and pass it the `qa` and `ui-reviewer` reports when they ran.
 - **Post every report as a PR comment**, headed `**qa (agent) report**`, `**ui-reviewer (agent) report**` or `**eng-lead (agent) verdict: …** (round n)`, so agent comments are told apart from Michael's and `/retro` has the record.
+- **File follow-ups before handing off to Michael.** After the author's last fix commit, go through every non-blocker finding from every reviewer (`eng-lead`'s numbered follow-up list, plus `qa`/`ui-reviewer` items it didn't cover). For each: fixed (name the commit) or not. For each one not fixed, create an issue: title says what to change; labels `follow-up` + one area; description links the PR comment, names `path:line`, the finding and the suggested fix; related to the PR's own issue; estimate as usual. Then post a PR comment headed `**Follow-ups**` listing every finding → commit or `STO-NN`. Michael merges only once it's posted.
 
 **Process is paused until a real pick is placed on a live card.** No new agents, commands or process docs before then; fix a process problem only if it blocks a product PR. ADRs are for decisions that are hard to reverse, not for every choice.
 

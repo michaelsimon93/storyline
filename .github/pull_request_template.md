@@ -22,3 +22,4 @@ Fixes STO-<!-- issue number -->
 - [ ] `qa` run and findings answered (high-risk only)
 - [ ] `ui-reviewer` run (`web/` only)
 - [ ] `eng-lead` verdict: APPROVED (not needed for docs-only)
+- [ ] **Follow-ups** comment posted: every unfixed finding has its own Linear issue (not needed for docs-only)
