@@ -37,7 +37,7 @@ export type ContextRunResult =
   | {
       status: "fallback"; slateDate: string; runId: number | undefined; error: string;
       /** Which rung of ADR-024 rule 7 stood in. Only the first (the last good ESPN pull) exists so far. */
-      level: "last_good_pull" | "none";
+      level: "last_good_pull" | "none";   // "none" is still status "fallback": a reader must check signals.length
       signals: StoredSignal[];
     };
 
@@ -96,7 +96,7 @@ export async function runEspnContext(db: Db, opts: ContextRunOptions): Promise<C
 function fallbackAlert(err: SourceDown, signals: StoredSignal[], config: Config, runId: number | undefined): string {
   const dates = signals.map((s) => s.evidence.observedAt).sort();
   return alertText({
-    severity: "failed", job: JOB,
+    severity: "failed", job: JOB,   // red on purpose: ESPN fully down is worse than a partial pull (that one is a warning)
     headline: signals.length
       ? `${JOB} degraded: ESPN is down, using ${signals.length} signals from earlier pulls`
       : `${JOB} degraded: ESPN is down and there is no earlier pull to use`,
@@ -104,6 +104,6 @@ function fallbackAlert(err: SourceDown, signals: StoredSignal[], config: Config,
     note: signals.length
       ? `fallback level 1 of 3 (last good ESPN pull, dated ${dates[0]} to ${dates[dates.length - 1]}); ` +
         `the X and market-only levels aren't built yet. Blurbs must treat these as dated, not tonight's news`
-      : `nothing from the last ${config.espnFallbackMaxAgeDays} slate days covers tonight's players; curation would have no ESPN facts`,
+      : `nothing usable from today or the last ${config.espnFallbackMaxAgeDays} slate day(s) (stats only) covers tonight's slate; curation would have no ESPN facts`,
   });
 }

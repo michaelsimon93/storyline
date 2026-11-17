@@ -268,26 +268,29 @@ test("a postponed game is not on the slate", { skip }, async () => {
   } finally { await db!.query(`update games set status = 'scheduled' where id = $1`, [GAME]); }
 });
 
-test("the fallback window: tonight and the allowed days before it, only about tonight's subjects, only from ok runs", { skip }, async () => {
-  const mk = async (status: "ok" | "failed", day: string, key: string, subject: any, summary: string) => {
+test("the fallback window: stats reach back, injuries and news are today only, only tonight's subjects, only from ok runs", { skip }, async () => {
+  const mk = async (status: "ok" | "failed", day: string, kind: "stat" | "news" | "injury", key: string, subject: any, summary: string) => {
     const id = (await q(`insert into pipeline_runs (job, slate_date, status) values ('context:espn', $1, $2) returning id`, [day, status]))[0].id;
-    await storeSignals(db!, id, "espn", day, [{ kind: "stat", subject, summary, trust: "verified", key,
+    await storeSignals(db!, id, "espn", day, [{ kind, subject, summary, trust: "verified", key,
       evidence: { url: "https://example.test/x", observedAt: `${day}T10:00:00.000Z` } }]);
   };
   const OLD_GAME = "c0000000-0000-0000-0000-0000000000a3";
   await db!.query(`insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at) values ($1,'nba','2026-11-16',${NY},${TOR},'2026-11-16T23:30:00Z')`, [OLD_GAME]);
   const vet = { kind: "player", id: VET }, bench = { kind: "player", id: BENCH };
-  await mk("ok", "2026-11-14", "form:pts", vet, "three days old");        // outside a 2-day window
-  await mk("ok", "2026-11-15", "form:reb", vet, "two days old");
-  await mk("ok", "2026-11-16", "form:ast", vet, "yesterday");
-  await mk("ok", "2026-11-17", "form:3pm", vet, "tonight");
-  await mk("ok", "2026-11-18", "form:stl", vet, "tomorrow's slate");        // a future day is not a past pull
-  await mk("ok", "2026-11-16", "form:pts", bench, "not playing tonight");
-  await mk("ok", "2026-11-16", "news:1", { kind: "game", id: OLD_GAME }, "yesterday's game");
-  await mk("failed", "2026-11-16", "form:blk", vet, "only a failed run saw this");
+  await mk("ok", "2026-11-14", "stat", "form:pts", vet, "three days old");
+  await mk("ok", "2026-11-15", "stat", "form:reb", vet, "two days old");
+  await mk("ok", "2026-11-16", "stat", "form:ast", vet, "yesterday stat");
+  await mk("ok", "2026-11-16", "injury", "injury:9", { kind: "team", id: NY }, "yesterday injury");   // injuries and news are about a day
+  await mk("ok", "2026-11-16", "news", "news:2", vet, "yesterday news");
+  await mk("ok", "2026-11-17", "stat", "form:3pm", vet, "tonight");
+  await mk("ok", "2026-11-17", "news", "news:3", { kind: "game", id: GAME }, "tonight news");           // today's own earlier pull may stand in
+  await mk("ok", "2026-11-18", "stat", "form:stl", vet, "tomorrow's slate");                           // a future day is not a past pull
+  await mk("ok", "2026-11-16", "stat", "form:pts", bench, "not playing tonight");
+  await mk("ok", "2026-11-16", "news", "news:1", { kind: "game", id: OLD_GAME }, "yesterday's game");
+  await mk("failed", "2026-11-16", "stat", "form:blk", vet, "only a failed run saw this");
   const got = async (maxAgeDays: number) => (await lastGoodSignals(db!, { job: "context:espn", source: "espn", slateDate: DAY, maxAgeDays,
     playerIds: [VET, ROOKIE], teamIds: [NY, TOR], gameIds: [GAME] })).map((s) => s.summary).sort();
-  assert.deepEqual(await got(2), ["tonight", "two days old", "yesterday"]);
-  assert.deepEqual(await got(0), ["tonight"], "0 = today only");
-  assert.deepEqual(await got(14), ["three days old", "tonight", "two days old", "yesterday"]);
+  assert.deepEqual(await got(1), ["tonight", "tonight news", "yesterday stat"]);
+  assert.deepEqual(await got(0), ["tonight", "tonight news"], "0 = today only");
+  assert.deepEqual(await got(14), ["three days old", "tonight", "tonight news", "two days old", "yesterday stat"], "even at 14 days, yesterday's injury and news never come back");
 });

@@ -43,6 +43,8 @@ export interface StoredSignal {
  * - Per signal (subject + key), the newest row across the window wins, so a player a partial run
  *   missed still comes from the pull that had him, and each signal keeps its own `observed_at`.
  * - Only about tonight's players, teams and games: yesterday's game-level news says nothing about tonight.
+ * - Only `stat` signals (form, home/road, series: history by nature) may come from an earlier day. Injuries and
+ *   news are about a given day, so they stand in only from today's own earlier pulls (decided with Michael, Nov 17).
  * - Window: the slate day itself and `maxAgeDays` Storyline days before it (the caller's slateDate
  *   comes from storyline_today(), so the 3am ET rollover is the database's, not ours).
  * - Accepted (STO-82): a failed run may have refreshed a signal's text; the signal is still dated honestly.
@@ -57,6 +59,7 @@ export async function lastGoodSignals(
        from signals s
       where s.source = $2
         and s.slate_date between $3::date - $4::int and $3::date
+        and (s.kind = 'stat' or s.slate_date = $3::date)
         and (s.player_id = any($5::uuid[]) or s.team_id = any($6::smallint[]) or s.game_id = any($7::uuid[]))
         and exists (select 1 from signal_sightings ss join pipeline_runs r on r.id = ss.run_id
                      where ss.signal_id = s.id and r.job = $1 and r.status = 'ok')

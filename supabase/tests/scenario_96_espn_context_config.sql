@@ -11,7 +11,7 @@ select t_eq('espn cfg: the five numeric settings are int rows with explicit boun
      'espn_degraded_failed_players', 'espn_fallback_max_age_days') and value_type = 'int' and min_value is not null and max_value is not null and not is_public), 5);
 select t_eq('espn cfg: readable through config_int() like every other setting',
   (select array[config_int('espn_form_window_games'), config_int('espn_pause_ms'), config_int('espn_max_consecutive_failures'),
-                config_int('espn_degraded_failed_players'), config_int('espn_fallback_max_age_days')]), array[5, 250, 5, 5, 2]);
+                config_int('espn_degraded_failed_players'), config_int('espn_fallback_max_age_days')]), array[5, 250, 5, 5, 1]);
 select t_eq('espn cfg: the pull has a schedule', (select value #>> '{}' from app_config where key = 'context_espn_schedule_et'), '30 9 * * *');
 
 -- ---------------------------------------------------------------- out-of-range values are rejected
@@ -39,7 +39,7 @@ select t_eq('espn cfg: the lowest valid values are accepted',
 update app_config set value = '5' where key = 'espn_form_window_games';
 update app_config set value = '250' where key = 'espn_pause_ms';
 update app_config set value = '5' where key = 'espn_degraded_failed_players';
-update app_config set value = '2' where key = 'espn_fallback_max_age_days';
+update app_config set value = '1' where key = 'espn_fallback_max_age_days';
 
 -- ---------------------------------------------------------------- the flag ships off and private
 select t_eq('espn flag: exists, off, not public',

@@ -20,7 +20,7 @@ const valid = [
   { key: "espn_pause_ms", value: 250 },
   { key: "espn_max_consecutive_failures", value: 5 },
   { key: "espn_degraded_failed_players", value: 5 },
-  { key: "espn_fallback_max_age_days", value: 2 },
+  { key: "espn_fallback_max_age_days", value: 1 },
   { key: "context_espn_schedule_et", value: "30 9 * * *" },
 ];
 const without = (k: string) => valid.filter((r) => r.key !== k);
@@ -53,6 +53,6 @@ test("the ESPN context settings come through typed", () => {
   const c = parseConfig(valid);
   assert.deepEqual(
     [c.espnFormWindowGames, c.espnPauseMs, c.espnMaxConsecutiveFailures, c.espnDegradedFailedPlayers, c.espnFallbackMaxAgeDays, c.contextEspnScheduleEt],
-    [5, 250, 5, 5, 2, "30 9 * * *"]);
+    [5, 250, 5, 5, 1, "30 9 * * *"]);
   assert.throws(() => parseConfig(without("espn_pause_ms")), /missing espn_pause_ms/);
 });

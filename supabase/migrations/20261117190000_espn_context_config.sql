@@ -11,8 +11,8 @@ insert into app_config (key, value, value_type, min_value, max_value, is_public,
    'Stop and call ESPN down after this many failed calls in a row, so an outage fails in minutes'),
   ('espn_degraded_failed_players', '5', 'int', 0, 1000, false,
    'Alert that a pull is degraded when MORE than this many players had no game log (0 = alert on any)'),
-  ('espn_fallback_max_age_days', '2', 'int', 0, 14, false,
-   'When ESPN is down, signals from pulls up to this many slate days old may stand in, dated (0 = today only)');
+  ('espn_fallback_max_age_days', '1', 'int', 0, 14, false,
+   'When ESPN is down, STAT signals (form, home/road, series) from pulls up to this many slate days old may stand in, dated; injuries and news only ever from today (0 = today only)');
 
 -- When the ESPN pull runs (cron, ET; validated by the _schedule_et trigger). After the 8am ingest, before curation.
 insert into app_config (key, value, value_type, is_public, description) values

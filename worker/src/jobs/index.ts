@@ -33,7 +33,9 @@ export function contextEspnJob(alert: Alert, date?: string): Job {
     name: CONTEXT_ESPN_JOB,
     run: async (db) => {
       const r: ContextRunResult = await runEspnContext(db, { alert, date });
-      return r.status === "fallback" ? { ...r, signals: r.signals.length } : r;
+      if (r.status !== "fallback") return r;
+      const dates = r.signals.map((s) => s.evidence.observedAt).sort();   // how stale the stand-in is, for whoever reads the log
+      return { ...r, signals: r.signals.length, oldestObservedAt: dates[0] ?? null, newestObservedAt: dates[dates.length - 1] ?? null };
     },
   };
 }
