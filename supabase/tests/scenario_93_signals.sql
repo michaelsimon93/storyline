@@ -21,8 +21,8 @@ select store_signals(930002, 'espn', storyline_today(), jsonb_build_array(sig('l
 select t_eq('sig: re-run adds no duplicates', (select count(*)::int from signals where source = 'espn'), 2);
 select t_eq('sig: ids are stable across re-runs (blurbs cite them)',
   (select count(*)::int from signals s join ids i using (key, id)), 2);
-select t_eq('sig: re-run re-stamps run_id so the newest ok run owns what it saw',
-  (select count(*)::int from signals where run_id = 930002), 2);
+select t_eq('sig: the re-run is recorded as seeing both signals; the first run still has its sightings',
+  (select array[(select count(*)::int from signal_sightings where run_id = 930001), (select count(*)::int from signal_sightings where run_id = 930002)]), array[2, 2]);
 -- newer sighting refreshes; older one doesn't
 select store_signals(930002, 'espn', storyline_today(), jsonb_build_array(sig('last5:pts', 'v2', '2026-11-17T11:00:00Z'))) \g /dev/null
 select t_eq('sig: newer sighting refreshes summary', (select summary from signals where key = 'last5:pts'), 'v2');
@@ -32,7 +32,8 @@ select t_eq('sig: older sighting does not overwrite', (select summary from signa
 -- an older run replayed can't take ownership back
 insert into pipeline_runs (id, job, slate_date, status) values (930003, 'context:test', storyline_today(), 'ok');
 select store_signals(930001, 'espn', storyline_today(), jsonb_build_array(sig('last5:pts', 'v2', '2026-11-17T11:00:00Z'))) \g /dev/null
-select t_eq('sig: replaying an older run does not reclaim run_id', (select run_id from signals where key = 'last5:pts'), 930002::bigint);
+select t_eq('sig: replaying an older run changes neither first-storing run_id nor the text',
+  (select run_id || '/' || summary from signals where key = 'last5:pts'), '930001/v2');
 -- same fact twice in one batch
 select store_signals(930003, 'espn', storyline_today(), jsonb_build_array(sig('dup', 'a', '2026-11-17T10:00:00Z'), sig('dup', 'b', '2026-11-17T12:00:00Z'))) \g /dev/null
 select t_eq('sig: same key twice in one batch stores once, newest wins', (select summary from signals where key = 'dup'), 'b');
@@ -72,8 +73,12 @@ select t_eq('sig priv: no privilege of any kind on signals for anon/authenticate
 select t_eq('sig priv: no column grants on signals for app roles',
   (select count(*)::int from information_schema.column_privileges
     where table_schema = 'public' and table_name = 'signals' and grantee in ('anon', 'authenticated', 'PUBLIC')), 0);
-select t_eq('sig priv: signals has RLS and no policies',
-  (select relrowsecurity and not exists (select 1 from pg_policies where tablename = 'signals') from pg_class where oid = 'public.signals'::regclass), true);
+select t_eq('sig priv: signals and signal_sightings have RLS and no policies',
+  (select bool_and(relrowsecurity) and not exists (select 1 from pg_policies where tablename in ('signals', 'signal_sightings'))
+     from pg_class where oid in ('public.signals'::regclass, 'public.signal_sightings'::regclass)), true);
+select t_eq('sig priv: no privilege of any kind on signal_sightings for app roles',
+  (select count(*)::int from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'signal_sightings' and grantee in ('anon', 'authenticated', 'PUBLIC')), 0);
 select t_eq('sig priv: store_signals only for service_role',
   (select array[has_function_privilege('anon', 'public.store_signals(bigint,text,date,jsonb)', 'execute'),
                 has_function_privilege('authenticated', 'public.store_signals(bigint,text,date,jsonb)', 'execute'),
@@ -81,6 +86,7 @@ select t_eq('sig priv: store_signals only for service_role',
 set role anon;
 select t_err('sig priv: anon can''t read signals', $q$select * from signals$q$, 'permission denied%');
 select t_err('sig priv: anon can''t write signals', $q$delete from signals$q$, 'permission denied%');
+select t_err('sig priv: anon can''t read signal_sightings', $q$select * from signal_sightings$q$, 'permission denied%');
 select t_err('sig priv: anon can''t call store_signals', $q$select store_signals(930001, 'espn', storyline_today(), '[]')$q$, 'permission denied%');
 reset role;
 set role authenticated;
@@ -89,6 +95,8 @@ select t_err('sig priv: authenticated can''t read signals', $q$select * from sig
 select t_err('sig priv: authenticated can''t insert signals', $q$insert into signals (source) values ('x')$q$, 'permission denied%');
 select t_err('sig priv: authenticated can''t update signals', $q$update signals set summary = 'x'$q$, 'permission denied%');
 select t_err('sig priv: authenticated can''t delete signals', $q$delete from signals$q$, 'permission denied%');
+select t_err('sig priv: authenticated can''t read signal_sightings', $q$select * from signal_sightings$q$, 'permission denied%');
+select t_err('sig priv: authenticated can''t write signal_sightings', $q$insert into signal_sightings values (1, 1)$q$, 'permission denied%');
 select t_err('sig priv: authenticated can''t truncate signals', $q$truncate signals$q$, 'permission denied%');
 select t_err('sig priv: authenticated can''t call store_signals', $q$select store_signals(930001, 'espn', storyline_today(), '[]')$q$, 'permission denied%');
 reset role;

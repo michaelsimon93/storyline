@@ -37,7 +37,10 @@ test("a re-run for the same day inserts nothing twice and keeps IDs", { skip }, 
   assert.equal(await storeSignals(db!, r2, "espn", day, drafts), 2);
   assert.equal(await count(), 2);
   assert.deepEqual((await db!.query(`select id, key from signals order by key`)).rows, before);
-  assert.equal((await db!.query(`select count(*) from signals where run_id = $1`, [r2])).rows[0].count, "2");
+  // Both runs are recorded as having seen both signals (the fallback reads sightings).
+  for (const r of [r1, r2]) {
+    assert.equal((await db!.query(`select count(*) from signal_sightings where run_id = $1`, [r])).rows[0].count, "2");
+  }
 });
 
 test("two runs racing on the same signals leave one row each", { skip }, async () => {
