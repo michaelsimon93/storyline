@@ -28,3 +28,6 @@ Two review roles, modeled on a real team:
 
 ## Amendment (2026-11-15): review depth matches risk
 Running `qa` and `eng-lead` on every PR cost more than it caught: a two-line docs change went through two review rounds, and three days of work went mostly to process. The roles stay the same; what changes is when they run. Docs-only PRs get no agent review, ordinary code gets `eng-lead`, and only high-risk code (money, security, concurrency) gets `qa` first. Only blockers trigger a re-review. Michael still merges every PR. The table lives in `CLAUDE.md`.
+
+## Amendment (2026-11-17): reviewer models and reading scope
+Usage limits were slowing the build, and each review reloaded the full spec. `eng-lead` and `ui-reviewer` now run on Sonnet. `qa` stays on Opus because it only runs on high-risk PRs (money, security, concurrency), where a missed bug costs the most. Reviewers read the diff, the acceptance criteria, and the spec sections and ADRs the issue links, not the whole spec. The PR-time steps moved from `CLAUDE.md` into the `/ship` command so they load only when used. Revisit after about a week of PRs: if usage is still the bottleneck, drop `eng-lead` from ordinary code PRs and keep it for high-risk ones. If a Sonnet review lets a bug through, move that reviewer back to Opus.
