@@ -1,5 +1,5 @@
 // Writes a run's signals to the signals table (ADR-024 rule 2). The rules (one signal per
-// source/subject/day/key, newer sighting refreshes, run_id re-stamped) live in store_signals in
+// source/subject/day/key, newer sighting refreshes, a sighting recorded per run) live in store_signals in
 // SQL, so they exist once. This is only the call.
 
 import type { Db } from "../lib/db.js";
