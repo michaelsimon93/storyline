@@ -10,7 +10,7 @@ import { fetchJson, throttle, type FetchOptions } from "../lib/http.js";
 import { BASE, WEB_BASE } from "./espn.js";
 import {
   parseGameLog, parseInjuries, parseSchedule, parseNews,
-  type InjuryEntry, type Article,
+  type InjuryEntry, type Article, type Parsed,
 } from "../domain/espnParse.js";
 import { playerSignals, teamInjurySignals, seriesSignal, newsSignals } from "../domain/espnSignals.js";
 import type { ContextSource, SignalDraft, Slate } from "./types.js";
@@ -19,6 +19,8 @@ export interface CollectStats {
   players: { fetched: number; skippedOutOrDoubtful: number; unmatched: number; failed: number };
   /** One line per failed call, for the alert. */
   failures: string[];
+  /** One line per row a parser skipped inside an otherwise good response (a degraded pull, not a failed call). */
+  skippedRows: string[];
 }
 
 export interface EspnSourceOptions {
@@ -28,6 +30,8 @@ export interface EspnSourceOptions {
   windowGames: number;
   /** Minimum gap between ESPN calls (app_config). */
   pauseMs: number;
+  /** Stop and call ESPN down after this many failed calls in a row (app_config), so an outage fails in minutes, not after hundreds of slow retries. */
+  maxConsecutiveFailures: number;
   fetchOpts?: FetchOptions;
   now?: () => Date;
   onStats?: (stats: CollectStats) => void;
@@ -37,6 +41,11 @@ export interface EspnSourceOptions {
 const WONT_PLAY = new Set(["out", "doubtful"]);
 
 export function createEspnSource(opts: EspnSourceOptions): ContextSource {
+  // Config comes from the database in 3b; a bad value must stop here, not turn into `slice(0, -1)`.
+  if (!Number.isInteger(opts.windowGames) || opts.windowGames < 1) throw new Error(`windowGames must be a positive integer, got ${opts.windowGames}`);
+  if (!Number.isFinite(opts.pauseMs) || opts.pauseMs < 0) throw new Error(`pauseMs must be >= 0, got ${opts.pauseMs}`);
+  if (!Number.isInteger(opts.maxConsecutiveFailures) || opts.maxConsecutiveFailures < 1) throw new Error(`maxConsecutiveFailures must be a positive integer, got ${opts.maxConsecutiveFailures}`);
+
   return {
     name: "espn",
     stage: "discover",
@@ -44,18 +53,23 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
     async collect(slate: Slate): Promise<SignalDraft[]> {
       const observedAt = (opts.now ?? (() => new Date()))().toISOString();
       const wait = throttle(opts.pauseMs);
-      const stats: CollectStats = { players: { fetched: 0, skippedOutOrDoubtful: 0, unmatched: 0, failed: 0 }, failures: [] };
-      let calls = 0;
+      const stats: CollectStats = { players: { fetched: 0, skippedOutOrDoubtful: 0, unmatched: 0, failed: 0 }, failures: [], skippedRows: [] };
+      let calls = 0, inARow = 0, aborted = false;
       const drafts: SignalDraft[] = [];
 
-      /** One ESPN call, parsed. A failure of any kind is recorded and returns undefined. */
-      const get = async <T>(label: string, url: string, parse: (raw: unknown) => T): Promise<T | undefined> => {
+      /** One ESPN call, parsed. A failure of any kind is recorded and returns undefined; too many in a row stops all further calls. */
+      const get = async <T>(label: string, url: string, parse: (raw: unknown) => Parsed<T>): Promise<T | undefined> => {
+        if (aborted) return undefined;
         calls++;
         await wait();
         try {
-          return parse(await fetchJson<unknown>(url, opts.fetchOpts));
+          const { rows, skipped } = parse(await fetchJson<unknown>(url, opts.fetchOpts));
+          stats.skippedRows.push(...skipped.map((s) => `${label}: ${s}`));
+          inARow = 0;
+          return rows;
         } catch (e) {
           stats.failures.push(`${label}: ${(e as Error).message}`);
+          if (++inARow >= opts.maxConsecutiveFailures) aborted = true;
           return undefined;
         }
       };
@@ -79,9 +93,9 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
         if (!home || !away) { stats.failures.push(`game ${g.id}: a team has no ESPN id`); continue; }
         const abbr = {} as Record<string, string>;
         const schedule = await get(`schedule ${away}`, `${BASE}/teams/${away}/schedule`, (raw) => {
-          const games = parseSchedule(raw);
-          for (const x of games) { abbr[x.homeId] = x.homeAbbr; abbr[x.awayId] = x.awayAbbr; }
-          return games;
+          const parsed = parseSchedule(raw);
+          for (const x of parsed.rows) { abbr[x.homeId] = x.homeAbbr; abbr[x.awayId] = x.awayAbbr; }
+          return parsed;
         });
         if (schedule && abbr[home] && abbr[away]) {
           const s = seriesSignal({ gameId: g.id, teamA: { espnId: away, abbr: abbr[away]! }, teamB: { espnId: home, abbr: abbr[home]! }, games: schedule, observedAt });
@@ -96,6 +110,7 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
 
       // Per player: form and home/road split, both from the one game-log call. Out and Doubtful players aren't playing, so form tells us nothing.
       for (const p of slate.players) {
+        if (aborted) break;
         if (p.injuryStatus && WONT_PLAY.has(p.injuryStatus.toLowerCase())) { stats.players.skippedOutOrDoubtful++; continue; }
         if (!p.externalId) { stats.players.unmatched++; continue; } // never invent a match
         const before = stats.failures.length;
@@ -107,6 +122,9 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
       }
 
       opts.onStats?.(stats);
+      if (aborted) {
+        throw new Error(`ESPN down: stopped after ${opts.maxConsecutiveFailures} failed calls in a row (${calls} calls made), first: ${stats.failures[0]}`);
+      }
       if (drafts.length === 0 && stats.failures.length > 0) {
         throw new Error(`ESPN down: ${stats.failures.length} of ${calls} calls failed, first: ${stats.failures[0]}`);
       }

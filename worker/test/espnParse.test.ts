@@ -9,7 +9,7 @@ import {
 } from "../src/domain/espnParse.js";
 
 test("game log: regular season only, newest first, stats matched by label", () => {
-  const rows = parseGameLog(fixture("espn-gamelog-2993874.json"));
+  const rows = parseGameLog(fixture("espn-gamelog-2993874.json")).rows;
   // 12 rows in the file: 9 regular season, 3 preseason. Preseason must not count as form.
   assert.equal(rows.length, 9);
   assert.deepEqual(rows.slice(0, 2).map((r) => r.eventId), ["401909976", "401909968"]);
@@ -24,27 +24,36 @@ test("game log: regular season only, newest first, stats matched by label", () =
 });
 
 test("game log: a player with one regular-season game returns one row", () => {
-  const rows = parseGameLog(fixture("espn-gamelog-4433188.json"));
+  const rows = parseGameLog(fixture("espn-gamelog-4433188.json")).rows;
   assert.equal(rows.length, 1);
 });
 
-test("game log: shape drift fails loudly", () => {
+test("game log: whole-response shape drift fails loudly", () => {
   const good = fixture("espn-gamelog-2993874.json") as any;
   assert.throws(() => parseGameLog({}), /labels/);
-  assert.throws(() => parseGameLog({ ...good, labels: ["MIN", "PTS"] }), /REB/); // a label we read is gone
-  const shortRow = structuredClone(good);
-  shortRow.seasonTypes[0].categories[0].events[0].stats = ["5"];
-  assert.throws(() => parseGameLog(shortRow), /stats/);
-  const orphan = structuredClone(good);
-  orphan.seasonTypes[0].categories[0].events[0].eventId = "999";
-  assert.throws(() => parseGameLog(orphan), /999/);
-  const noScore = structuredClone(good);
-  noScore.seasonTypes[0].categories[0].events[0].stats[13] = "--";
-  assert.throws(() => parseGameLog(noScore), /PTS/);
+  assert.throws(() => parseGameLog({ ...good, labels: ["MIN", "PTS"] }), /REB/); // a column we read is gone
+  assert.throws(() => parseGameLog({ ...good, events: undefined }), /events/);
+});
+
+test("game log: one bad row is skipped and reported, the rest still count", () => {
+  const good = fixture("espn-gamelog-2993874.json") as any;
+  const rowsOf = (g: any) => g.seasonTypes[0].categories[0].events;
+  const clean = parseGameLog(good).rows.length;
+
+  const shortRow = structuredClone(good); rowsOf(shortRow)[0].stats = ["5"];
+  const orphan = structuredClone(good); rowsOf(orphan)[0].eventId = "999";
+  const noScore = structuredClone(good); rowsOf(noScore)[0].stats[13] = "--"; // e.g. a did-not-play row
+  for (const [bad, why] of [[shortRow, /stats/], [orphan, /999/], [noScore, /PTS/]] as const) {
+    const r = parseGameLog(bad);
+    assert.equal(r.rows.length, clean - 1);
+    assert.equal(r.skipped.length, 1);
+    assert.match(r.skipped[0]!, why);
+  }
+  assert.deepEqual(parseGameLog(good).skipped, []);
 });
 
 test("injuries: grouped by team, athlete id read from the player-card link", () => {
-  const byTeam = parseInjuries(fixture("espn-injuries.json"));
+  const byTeam = parseInjuries(fixture("espn-injuries.json")).rows;
   const tor = byTeam.get("28")!;
   assert.ok(tor.length >= 3);
   const kawhi = tor.find((i) => i.name === "Kawhi Leonard")!;
@@ -53,15 +62,21 @@ test("injuries: grouped by team, athlete id read from the player-card link", () 
   assert.ok(kawhi.comment.length > 0);
 });
 
-test("injuries: an entry with no player-card link fails loudly, not silently misattributed", () => {
+test("injuries: one entry with no player-card link is skipped, not misattributed, and the rest survive", () => {
+  const clean = parseInjuries(fixture("espn-injuries.json")).rows;
   const bad = structuredClone(fixture("espn-injuries.json")) as any;
-  bad.injuries[0].injuries[0].athlete.links = [];
-  assert.throws(() => parseInjuries(bad), /athlete id/);
+  const firstTeam = bad.injuries[0];
+  firstTeam.injuries[0].athlete.links = [];
+  const r = parseInjuries(bad);
+  assert.equal(r.skipped.length, 1);
+  assert.match(r.skipped[0]!, /athlete id/);
+  assert.equal(r.rows.get(firstTeam.id)!.length, clean.get(firstTeam.id)!.length - 1);
+  assert.equal(r.rows.get("28")!.length, clean.get("28")!.length, "other teams are untouched");
   assert.throws(() => parseInjuries({}), /injuries/);
 });
 
 test("schedule: finished regular-season games only, with scores", () => {
-  const games = parseSchedule(fixture("espn-schedule-18.json"));
+  const games = parseSchedule(fixture("espn-schedule-18.json")).rows;
   assert.ok(games.length > 5);
   const vsTor = games.filter((g) => g.homeId === "28" || g.awayId === "28");
   assert.ok(vsTor.length >= 1, "NY and TOR have already met this season");
@@ -70,16 +85,19 @@ test("schedule: finished regular-season games only, with scores", () => {
   assert.ok(!games.some((g) => g.date > "2026-11-17"), "scheduled games are not results");
 });
 
-test("schedule: a finished game with no score fails loudly", () => {
+test("schedule: a finished game with no score is skipped and reported", () => {
+  const clean = parseSchedule(fixture("espn-schedule-18.json")).rows.length;
   const bad = structuredClone(fixture("espn-schedule-18.json")) as any;
   const final = bad.events.find((e: any) => e.competitions[0].status.type.name === "STATUS_FINAL");
   delete final.competitions[0].competitors[0].score;
-  assert.throws(() => parseSchedule(bad), /score/);
+  const r = parseSchedule(bad);
+  assert.equal(r.rows.length, clean - 1);
+  assert.match(r.skipped[0]!, /score/);
   assert.throws(() => parseSchedule({}), /events/);
 });
 
 test("news: ids, urls and tagged teams; athlete tags are ignored", () => {
-  const a = parseNews(fixture("espn-news-28.json"));
+  const a = parseNews(fixture("espn-news-28.json")).rows;
   assert.equal(a.length, 6);
   const preview = a.find((x) => x.id === "50499326")!;
   assert.equal(preview.url, "http://www.espn.com/nba/preview?gameId=401910002");
@@ -88,9 +106,11 @@ test("news: ids, urls and tagged teams; athlete tags are ignored", () => {
   assert.ok(roundup.teamIds.length > 4, "a league roundup is tagged to many teams");
 });
 
-test("news: an article with no id or link fails loudly", () => {
+test("news: an article with no link is skipped and reported; a missing feed fails loudly", () => {
   const bad = structuredClone(fixture("espn-news-28.json")) as any;
   delete bad.articles[0].links;
-  assert.throws(() => parseNews(bad), /link/);
+  const r = parseNews(bad);
+  assert.equal(r.rows.length, 5);
+  assert.match(r.skipped[0]!, /link/);
   assert.throws(() => parseNews({}), /articles/);
 });

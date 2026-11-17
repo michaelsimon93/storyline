@@ -27,7 +27,7 @@ export function playerSignals(a: {
     for (const s of STATS) {
       const vals = recent.map(s.pick);
       out.push({
-        kind: "stat", subject, key: `last${a.windowGames}:${s.key}`, trust: "verified",
+        kind: "stat", subject, key: `form:${s.key}`, trust: "verified",
         summary: `Last ${n} ${n === 1 ? "game" : "games"}: ${avg(vals)} ${s.label} (${vals.join(", ")})`,
         evidence: { url, quote: `ESPN game log, ${recent.map((r) => day(r.date)).join(", ")}: ${vals.join(", ")} ${s.label}`, observedAt: a.observedAt },
       });
@@ -83,6 +83,7 @@ export function seriesSignal(a: {
  * An article tagged to both of tonight's teams, and no others, belongs to the game; tagged to just
  * one of them, to that team. Anything tagged to other teams (a league roundup) is about nobody
  * in particular and is dropped. Deduped by article id, since both teams' feeds carry the same pieces.
+ * Dedup is per game on purpose: a team plays once a day, so one article can't qualify for two games.
  */
 export function newsSignals(a: {
   articles: Article[]; game: { id: string; homeEspnId: string; awayEspnId: string };

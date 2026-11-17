@@ -42,7 +42,7 @@ const espnRoutes = (over: Record<string, () => Response> = {}): Route => (url) =
 };
 
 const make = (onStats?: (s: CollectStats) => void) => createEspnSource({
-  flag: "context_espn", windowGames: 5, pauseMs: 0, fetchOpts: { retries: 1, baseDelayMs: 1 }, now: () => new Date("2026-11-17T15:00:00Z"), onStats,
+  flag: "context_espn", windowGames: 5, pauseMs: 0, maxConsecutiveFailures: 3, fetchOpts: { retries: 1, baseDelayMs: 1 }, now: () => new Date("2026-11-17T15:00:00Z"), onStats,
 });
 
 test("declares itself as the ESPN discover source", () => {
@@ -55,7 +55,7 @@ test("collects player, team and game signals for the slate", async () => {
   let stats!: CollectStats;
   const drafts = await make((s) => { stats = s; }).collect(slate);
   const keys = (k: string) => drafts.filter((d) => d.subject.kind === k).map((d) => d.key);
-  assert.ok(keys("player").includes("last5:pts"));
+  assert.ok(keys("player").includes("form:pts"));
   assert.ok(drafts.some((d) => d.subject.kind === "player" && d.subject.id === "p-rookie"));
   assert.ok(keys("team").some((k) => k.startsWith("injury:")));
   assert.ok(keys("game").includes("series:season"));
@@ -120,4 +120,50 @@ test("a slate with nothing to ask about is not an error", async () => {
   restore = installFetch(espnRoutes()).restore;
   const drafts = await make().collect({ ...slate, games: [], teams: [], players: [] });
   assert.deepEqual(drafts, []);
+});
+
+test("an outage stops after N failures in a row instead of working through every player", async () => {
+  const many: Slate = { ...slate, players: Array.from({ length: 50 }, (_, i) => player({ id: `p${i}`, externalId: String(5000 + i) })) };
+  const net = installFetch((url) => (url.hostname.includes("espn") ? json({ error: "x" }, 503) : undefined));
+  restore = net.restore;
+  const source = createEspnSource({ flag: "f", windowGames: 5, pauseMs: 0, maxConsecutiveFailures: 3, fetchOpts: { retries: 0 }, now: () => new Date() });
+  await assert.rejects(source.collect(many), /ESPN down: stopped after 3 failed calls in a row \(3 calls made\)/);
+  assert.equal(net.calls.length, 3, "3 calls, not 50+");
+});
+
+test("failures that aren't in a row don't trip the breaker", async () => {
+  // gamelog for the first player fails, the rest are fine: one failure, then successes reset the count.
+  restore = installFetch(espnRoutes({ "gamelog-2993874": () => json({}, 500) })).restore;
+  const drafts = await createEspnSource({ flag: "f", windowGames: 5, pauseMs: 0, maxConsecutiveFailures: 1, fetchOpts: { retries: 0 }, now: () => new Date() }).collect(slate)
+    .then((d) => d, (e: Error) => e);
+  assert.ok(drafts instanceof Error, "with a limit of 1 the first failure does trip it");
+  restore();
+  restore = installFetch(espnRoutes({ "gamelog-2993874": () => json({}, 500) })).restore;
+  const ok = await make().collect(slate); // limit 3: one failure is fine
+  assert.ok(ok.length > 0);
+});
+
+test("one bad injury row is skipped and reported; every other signal still arrives", async () => {
+  const bad = structuredClone(fixture("espn-injuries.json")) as any;
+  const team = bad.injuries.find((t: any) => t.id === "28");
+  team.injuries[0].athlete.links = [];
+  const clean = (await (async () => { restore = installFetch(espnRoutes()).restore; return make().collect(slate); })()).filter((d) => d.kind === "injury").length;
+  restore();
+  restore = installFetch(espnRoutes({ injuries: () => json(bad) })).restore;
+  let stats!: CollectStats;
+  const drafts = await make((s) => { stats = s; }).collect(slate);
+  assert.equal(drafts.filter((d) => d.kind === "injury").length, clean - 1);
+  assert.equal(stats.skippedRows.length, 1);
+  assert.match(stats.skippedRows[0]!, /^injuries: .*athlete id/);
+  assert.equal(stats.failures.length, 0, "a skipped row is not a failed call");
+});
+
+test("options that would silently misbehave are rejected up front", () => {
+  const base = { flag: "f", windowGames: 5, pauseMs: 0, maxConsecutiveFailures: 3 };
+  assert.throws(() => createEspnSource({ ...base, windowGames: 0 }), /windowGames/);
+  assert.throws(() => createEspnSource({ ...base, windowGames: -1 }), /windowGames/);
+  assert.throws(() => createEspnSource({ ...base, windowGames: Number.NaN }), /windowGames/);
+  assert.throws(() => createEspnSource({ ...base, windowGames: 2.5 }), /windowGames/);
+  assert.throws(() => createEspnSource({ ...base, pauseMs: -1 }), /pauseMs/);
+  assert.throws(() => createEspnSource({ ...base, maxConsecutiveFailures: 0 }), /maxConsecutiveFailures/);
 });
