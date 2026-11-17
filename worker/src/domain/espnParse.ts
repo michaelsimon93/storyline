@@ -81,34 +81,6 @@ export function parseGameLog(raw: unknown): GameLogRow[] {
   return rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
-// ---------------------------------------------------------------- splits
-
-export interface SplitLine { gp: number; min: number; reb: number; ast: number; pts: number }
-export interface Splits { home?: SplitLine; road?: SplitLine }
-
-/** Season averages at home and on the road. A split ESPN doesn't list (no road games yet) is absent, not zero. */
-export function parseSplits(raw: unknown): Splits {
-  const data = obj(raw, "splits");
-  const labels = arr(data.labels, "labels").map(String);
-  const cats = arr(data.splitCategories, "splitCategories").map((c) => obj(c, "split category"));
-  const cat = cats.find((c) => c.name === "split");
-  if (!cat) throw new Error("ESPN splits: no 'split' category");
-  const at = (label: string) => {
-    const i = labels.indexOf(label);
-    if (i < 0) throw new Error(`ESPN splits: no ${label} column`);
-    return i;
-  };
-  const col = { gp: at("GP"), min: at("MIN"), reb: at("REB"), ast: at("AST"), pts: at("PTS") };
-  const line = (name: string): SplitLine | undefined => {
-    const s = arr(cat.splits ?? [], "splits").map((x) => obj(x, "split")).find((x) => x.displayName === name);
-    if (!s) return undefined;
-    const st = arr(s.stats, `${name} stats`);
-    if (st.length !== labels.length) throw new Error(`ESPN splits: ${name} has ${st.length} values, expected ${labels.length}`);
-    return { gp: num(st[col.gp], "GP"), min: num(st[col.min], "MIN"), reb: num(st[col.reb], "REB"), ast: num(st[col.ast], "AST"), pts: num(st[col.pts], "PTS") };
-  };
-  return { home: line("Home"), road: line("Road") };
-}
-
 // ---------------------------------------------------------------- injuries
 
 export interface InjuryEntry { athleteId: string; name: string; status: string; date: string; comment: string }

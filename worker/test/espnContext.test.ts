@@ -35,8 +35,8 @@ const espnRoutes = (over: Record<string, () => Response> = {}): Route => (url) =
     if (p.endsWith("/news")) return hit(`news-${url.searchParams.get("team")}`) ?? json(url.searchParams.get("team") === "28" ? fixture("espn-news-28.json") : { articles: [] });
     if ((m = p.match(/\/teams\/(\d+)\/schedule$/))) return hit(`schedule-${m[1]}`) ?? json(fixture("espn-schedule-18.json"));
   }
-  if (url.hostname === "site.web.api.espn.com" && (m = p.match(/\/athletes\/(\d+)\/(gamelog|splits)$/))) {
-    return hit(`${m[2]}-${m[1]}`) ?? json(fixture(`espn-${m[2] === "gamelog" ? "gamelog" : "splits"}-${m[1]}.json`));
+  if (url.hostname === "site.web.api.espn.com" && (m = p.match(/\/athletes\/(\d+)\/(gamelog)$/))) {
+    return hit(`gamelog-${m[1]}`) ?? json(fixture(`espn-gamelog-${m[1]}.json`));
   }
   return undefined;
 };
@@ -65,6 +65,8 @@ test("collects player, team and game signals for the slate", async () => {
   assert.equal(stats.failures.length, 0);
   // Out and Doubtful players, and players we haven't matched, cost no calls.
   assert.ok(!net.calls.some((u) => u.includes("/1111/") || u.includes("/2222/")));
+  // One call per player: form and home/road both come from the game log.
+  assert.equal(net.calls.filter((u) => u.includes("/athletes/")).length, 2);
   // League injuries are fetched once, not once per team.
   assert.equal(net.calls.filter((u) => u.endsWith("/injuries")).length, 1);
 });

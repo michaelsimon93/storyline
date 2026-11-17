@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "./helpers/mockFetch.js";
 import {
-  parseGameLog, parseSplits, parseInjuries, parseSchedule, parseNews,
+  parseGameLog, parseInjuries, parseSchedule, parseNews,
 } from "../src/domain/espnParse.js";
 
 test("game log: regular season only, newest first, stats matched by label", () => {
@@ -41,24 +41,6 @@ test("game log: shape drift fails loudly", () => {
   const noScore = structuredClone(good);
   noScore.seasonTypes[0].categories[0].events[0].stats[13] = "--";
   assert.throws(() => parseGameLog(noScore), /PTS/);
-});
-
-test("splits: home and road averages by label", () => {
-  const s = parseSplits(fixture("espn-splits-2993874.json"));
-  assert.deepEqual(s.home, { gp: 4, min: 9.3, reb: s.home!.reb, ast: s.home!.ast, pts: s.home!.pts });
-  assert.equal(s.road!.gp, 5);
-});
-
-test("splits: a missing Road split is absent, not zero", () => {
-  const s = parseSplits(fixture("espn-splits-4433188.json"));
-  assert.equal(s.home!.gp, 1);
-  assert.equal(s.road, undefined);
-});
-
-test("splits: shape drift fails loudly", () => {
-  assert.throws(() => parseSplits({ labels: [] }), /splitCategories/);
-  const noSplit = { labels: ["GP"], splitCategories: [{ name: "byDay", splits: [] }] };
-  assert.throws(() => parseSplits(noSplit), /'split' category/);
 });
 
 test("injuries: grouped by team, athlete id read from the player-card link", () => {

@@ -2,7 +2,7 @@
 // A key names the fact and never the run, so a re-run reports the same signal (see store_signals).
 
 import type { SignalDraft } from "../sources/types.js";
-import type { GameLogRow, Splits, InjuryEntry, FinishedGame, Article } from "./espnParse.js";
+import type { GameLogRow, InjuryEntry, FinishedGame, Article } from "./espnParse.js";
 
 const avg = (xs: number[]) => (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1);
 const day = (iso: string) => iso.slice(0, 10);
@@ -16,7 +16,7 @@ const STATS: { key: string; label: string; pick: (r: GameLogRow) => number }[] =
 
 export function playerSignals(a: {
   playerId: string; espnId: string;
-  log: GameLogRow[]; splits: Splits; windowGames: number; observedAt: string;
+  log: GameLogRow[]; windowGames: number; observedAt: string;
 }): SignalDraft[] {
   const subject = { kind: "player", id: a.playerId } as const;
   const url = `https://www.espn.com/nba/player/gamelog/_/id/${a.espnId}`;
@@ -33,13 +33,15 @@ export function playerSignals(a: {
       });
     }
   }
-  const { home, road } = a.splits;
-  if (home && road) {
-    const fmt = (l: NonNullable<Splits["home"]>) => `${l.pts} PTS, ${l.reb} REB, ${l.ast} AST in ${l.gp} GP`;
+  // Home/road comes from the same game log (`atVs`), so it costs no extra call.
+  const side = (home: boolean) => a.log.filter((r) => r.home === home);
+  const [home, road] = [side(true), side(false)];
+  if (home.length > 0 && road.length > 0) {
+    const fmt = (rows: GameLogRow[]) => `${avg(rows.map((r) => r.pts))} PTS, ${avg(rows.map((r) => r.reb))} REB, ${avg(rows.map((r) => r.ast))} AST in ${rows.length} GP`;
     out.push({
       kind: "stat", subject, key: "split:home-road", trust: "verified",
       summary: `Home: ${fmt(home)}. Road: ${fmt(road)}.`,
-      evidence: { url, quote: `ESPN season splits, home ${fmt(home)}; road ${fmt(road)}`, observedAt: a.observedAt },
+      evidence: { url, quote: `ESPN game log, season: home ${fmt(home)}; road ${fmt(road)}`, observedAt: a.observedAt },
     });
   }
   return out;

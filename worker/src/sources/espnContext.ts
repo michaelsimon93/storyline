@@ -9,8 +9,8 @@
 import { fetchJson, throttle, type FetchOptions } from "../lib/http.js";
 import { BASE, WEB_BASE } from "./espn.js";
 import {
-  parseGameLog, parseSplits, parseInjuries, parseSchedule, parseNews,
-  type Splits, type InjuryEntry, type Article,
+  parseGameLog, parseInjuries, parseSchedule, parseNews,
+  type InjuryEntry, type Article,
 } from "../domain/espnParse.js";
 import { playerSignals, teamInjurySignals, seriesSignal, newsSignals } from "../domain/espnSignals.js";
 import type { ContextSource, SignalDraft, Slate } from "./types.js";
@@ -94,18 +94,16 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
         drafts.push(...newsSignals({ articles, game: { id: g.id, homeEspnId: home, awayEspnId: away }, teamIds: teamByEspn, observedAt }));
       }
 
-      // Per player: form and home/road split. Out and Doubtful players aren't playing, so form tells us nothing.
+      // Per player: form and home/road split, both from the one game-log call. Out and Doubtful players aren't playing, so form tells us nothing.
       for (const p of slate.players) {
         if (p.injuryStatus && WONT_PLAY.has(p.injuryStatus.toLowerCase())) { stats.players.skippedOutOrDoubtful++; continue; }
         if (!p.externalId) { stats.players.unmatched++; continue; } // never invent a match
         const before = stats.failures.length;
         const log = await get(`gamelog ${p.externalId}`, `${WEB_BASE}/athletes/${p.externalId}/gamelog`, parseGameLog);
-        // Splits are worth a call only if the game log came back; losing them still leaves the form signals.
-        const splits = log ? await get(`splits ${p.externalId}`, `${WEB_BASE}/athletes/${p.externalId}/splits`, parseSplits) : undefined;
         if (stats.failures.length > before) stats.players.failed++;
         if (!log) continue;
         stats.players.fetched++;
-        drafts.push(...playerSignals({ playerId: p.id, espnId: p.externalId, log, splits: splits ?? {}, windowGames: opts.windowGames, observedAt }));
+        drafts.push(...playerSignals({ playerId: p.id, espnId: p.externalId, log, windowGames: opts.windowGames, observedAt }));
       }
 
       opts.onStats?.(stats);
