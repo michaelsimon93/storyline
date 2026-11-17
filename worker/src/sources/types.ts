@@ -50,11 +50,12 @@ export interface SignalDraft {
   /** One line, written to be read by the curator. */
   summary: string;
   /** Where it came from: a URL or a quote, plus when we saw it. */
+  /** `observedAt` is an ISO 8601 UTC timestamp: when we saw it. The ESPN-down fallback keeps it as the signal's date. */
   evidence: { url?: string; quote?: string; observedAt: string };
   trust: TrustLevel;
   /**
-   * Stable within one source, subject and slate day: the same fact reported again by a re-run has
-   * the same key, so re-running a day doesn't duplicate it. e.g. "last5:pts" or "news:<article id>".
+   * Unique per (source, subject, slate day): the signals table's unique constraint will be exactly
+   * that, so the same fact reported again by a re-run has the same key and doesn't duplicate. e.g. "last5:pts" or "news:<article id>".
    */
   key: string;
 }

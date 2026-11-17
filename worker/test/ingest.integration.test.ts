@@ -172,7 +172,10 @@ test("a failing market source stops the run and records it failed (ADR-024 rule 
     listOpen: async () => { throw new Error("kalshi is down"); },
     getByIds: kalshiSource.getByIds,
   };
+  const count = async () => (await db!.query(`select (select count(*) from markets)::int m, (select count(*) from market_price_snapshots)::int s`)).rows[0];
+  const before = await count();
   await assert.rejects(ingest(db!, "2026-11-13", source), /kalshi is down/);
+  assert.deepEqual(await count(), before, "no markets or snapshots written by the failed run");
   const { rows: [r] } = await db!.query(`select status, error from pipeline_runs where job = 'ingest' order by id desc limit 1`);
   assert.equal(r.status, "failed");
   assert.match(r.error, /kalshi is down/);
