@@ -7,6 +7,7 @@ import type { Db } from "../lib/db.js";
 import { dbNow, withRun } from "../lib/db.js";
 import * as espn from "../sources/espn.js";
 import * as kalshi from "../sources/kalshi.js";
+import type { MarketSource } from "../sources/types.js";
 import { abbrFromEspn, kalshiFromEspn } from "../domain/nbaTeams.js";
 import { matchPlayer, normalizeName } from "../domain/names.js";
 import {
@@ -44,7 +45,9 @@ export async function resolveSlateDate(db: Db, explicit?: string): Promise<strin
   return rows[0]!.d;
 }
 
-export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
+export async function ingest(
+  db: Db, date?: string, marketSource: MarketSource<kalshi.KalshiMarket> = kalshi.kalshiSource,
+): Promise<IngestSummary> {
   const slateDate = await resolveSlateDate(db, date);
   return withRun(db, "ingest", slateDate, async () => {
     const dateCode = kalshiDateCode(slateDate);
@@ -206,7 +209,7 @@ export async function ingest(db: Db, date?: string): Promise<IngestSummary> {
     for (const series of seriesList) {
       seenTonight[series] = 0;
       summary.markets[series] = 0;
-      for (const m of await kalshi.listMarkets(series)) {
+      for (const m of await marketSource.listOpen(series)) {
         // One malformed market is skipped and reported in the run output; it must not cost
         // the rest of the slate (STO-32).
         try {

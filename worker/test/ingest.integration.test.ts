@@ -7,6 +7,8 @@ import { ingest, resolveSlateDate } from "../src/jobs/ingest.js";
 import type { Db } from "../src/lib/db.js";
 import { freshDb } from "./helpers/testDb.js";
 import { installFetch, slateRoutes } from "./helpers/mockFetch.js";
+import { kalshiSource, type KalshiMarket } from "../src/sources/kalshi.js";
+import type { MarketSource } from "../src/sources/types.js";
 import { idOf } from "./helpers/markets.js";
 import { GAMES, TEAMS } from "./helpers/externalIds.js";
 
@@ -146,4 +148,28 @@ test("feature flags evaluate server-side, allowlist first", { skip }, async () =
   assert.equal(await flagEnabled(db!, "worker_test", me), true);
   assert.equal(await flagEnabled(db!, "worker_test", "22222222-2222-2222-2222-222222222222"), false);
   assert.equal(await flagEnabled(db!, "missing_flag", me), false);
+});
+
+test("ingest reads markets through the MarketSource it is given (ADR-024)", { skip }, async () => {
+  const asked: string[] = [];
+  const source: MarketSource<KalshiMarket> = {
+    name: "kalshi",
+    listOpen: async (series) => { asked.push(series); return kalshiSource.listOpen(series); },
+    getByIds: kalshiSource.getByIds,
+  };
+  const s = await ingest(db!, "2026-11-13", source);
+  assert.deepEqual(asked, ["KXNBAPTS", "KXNBAREB", "KXNBAAST", "KXNBA3PT", "KXNBAPRA", "KXNBAGAME"]);
+  assert.equal(s.markets.KXNBAPTS, 37, "same result as through the default source");
+});
+
+test("a failing market source stops the run and records it failed (ADR-024 rule 6)", { skip }, async () => {
+  const source: MarketSource<KalshiMarket> = {
+    name: "kalshi",
+    listOpen: async () => { throw new Error("kalshi is down"); },
+    getByIds: kalshiSource.getByIds,
+  };
+  await assert.rejects(ingest(db!, "2026-11-13", source), /kalshi is down/);
+  const { rows: [r] } = await db!.query(`select status, error from pipeline_runs where job = 'ingest' order by id desc limit 1`);
+  assert.equal(r.status, "failed");
+  assert.match(r.error, /kalshi is down/);
 });
