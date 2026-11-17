@@ -1,0 +1,440 @@
+{
+ "articles": [
+  {
+   "id": 50502518,
+   "type": "Story",
+   "headline": "What the NBA's first month has revealed about all 30 teams",
+   "description": "With the season's first month nearly in the books, Ben Golliver examines the biggest storyline so far for all 30 teams.",
+   "published": "2026-11-17T13:13:34Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/nba/story/_/id/50502518/first-month-lakers-knicks-spurs-celtics"
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "teamId": 20,
+     "description": "Philadelphia 76ers"
+    },
+    {
+     "type": "team",
+     "teamId": 5,
+     "description": "Cleveland Cavaliers"
+    },
+    {
+     "type": "team",
+     "teamId": 7,
+     "description": "Denver Nuggets"
+    },
+    {
+     "type": "team",
+     "teamId": 10,
+     "description": "Houston Rockets"
+    },
+    {
+     "type": "team",
+     "teamId": 24,
+     "description": "San Antonio Spurs"
+    },
+    {
+     "type": "team",
+     "teamId": 2,
+     "description": "Boston Celtics"
+    },
+    {
+     "type": "team",
+     "teamId": 17,
+     "description": "Brooklyn Nets"
+    },
+    {
+     "type": "team",
+     "teamId": 30,
+     "description": "Charlotte Hornets"
+    },
+    {
+     "type": "team",
+     "teamId": 4,
+     "description": "Chicago Bulls"
+    },
+    {
+     "type": "team",
+     "teamId": 6,
+     "description": "Dallas Mavericks"
+    },
+    {
+     "type": "team",
+     "teamId": 9,
+     "description": "Golden State Warriors"
+    },
+    {
+     "type": "team",
+     "teamId": 11,
+     "description": "Indiana Pacers"
+    },
+    {
+     "type": "team",
+     "teamId": 12,
+     "description": "LA Clippers"
+    },
+    {
+     "type": "team",
+     "teamId": 13,
+     "description": "Los Angeles Lakers"
+    },
+    {
+     "type": "team",
+     "teamId": 29,
+     "description": "Memphis Grizzlies"
+    },
+    {
+     "type": "team",
+     "teamId": 14,
+     "description": "Miami Heat"
+    },
+    {
+     "type": "team",
+     "teamId": 15,
+     "description": "Milwaukee Bucks"
+    },
+    {
+     "type": "team",
+     "teamId": 16,
+     "description": "Minnesota Timberwolves"
+    },
+    {
+     "type": "team",
+     "teamId": 3,
+     "description": "New Orleans Pelicans"
+    },
+    {
+     "type": "team",
+     "teamId": 18,
+     "description": "New York Knicks"
+    },
+    {
+     "type": "team",
+     "teamId": 25,
+     "description": "Oklahoma City Thunder"
+    },
+    {
+     "type": "team",
+     "teamId": 19,
+     "description": "Orlando Magic"
+    },
+    {
+     "type": "team",
+     "teamId": 21,
+     "description": "Phoenix Suns"
+    },
+    {
+     "type": "team",
+     "teamId": 22,
+     "description": "Portland Trail Blazers"
+    },
+    {
+     "type": "team",
+     "teamId": 23,
+     "description": "Sacramento Kings"
+    },
+    {
+     "type": "team",
+     "teamId": 28,
+     "description": "Toronto Raptors"
+    },
+    {
+     "type": "team",
+     "teamId": 26,
+     "description": "Utah Jazz"
+    },
+    {
+     "type": "team",
+     "teamId": 27,
+     "description": "Washington Wizards"
+    },
+    {
+     "type": "team",
+     "teamId": 1,
+     "description": "Atlanta Hawks"
+    },
+    {
+     "type": "team",
+     "teamId": 8,
+     "description": "Detroit Pistons"
+    }
+   ]
+  },
+  {
+   "id": 50499326,
+   "type": "Preview",
+   "headline": "New York visits Toronto following overtime win against Toronto",
+   "description": "New York Knicks (7-6, sixth in the Eastern Conference) vs. Toronto Raptors (5-8, ninth in the Eastern Conference)",
+   "published": "2026-11-16T07:04:46Z",
+   "links": {
+    "web": {
+     "href": "http://www.espn.com/nba/preview?gameId=401910002"
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "teamId": 28,
+     "description": "Toronto Raptors"
+    },
+    {
+     "type": "team",
+     "teamId": 18,
+     "description": "New York Knicks"
+    }
+   ]
+  },
+  {
+   "id": 50497509,
+   "type": "Recap",
+   "headline": "Brunson hits tiebreaking 3-pointer in OT, Knicks earn 14th straight win over slumping Raptors",
+   "description": "\u2014 Jalen Brunson made a tiebreaking 3-pointer with 33 seconds remaining in overtime and the New York Knicks beat Toronto 112-108 on Sunday night, their 14th straight win over the Raptors.",
+   "published": "2026-11-16T02:12:37Z",
+   "links": {
+    "web": {
+     "href": "http://www.espn.com/nba/recap?gameId=401909990"
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "teamId": 28,
+     "description": "Toronto Raptors"
+    },
+    {
+     "type": "team",
+     "teamId": 18,
+     "description": "New York Knicks"
+    }
+   ]
+  },
+  {
+   "id": 50497484,
+   "type": "Media",
+   "headline": "New York Knicks vs. Toronto Raptors: Game Highlights",
+   "description": "New York Knicks vs. Toronto Raptors: Game Highlights",
+   "published": "2026-11-16T02:15:58Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/video/clip/_/id/50497484/game-highlights"
+    }
+   },
+   "categories": [
+    {
+     "type": "athlete",
+     "description": "Karl-Anthony Towns"
+    },
+    {
+     "type": "team",
+     "teamId": 28,
+     "description": "Toronto Raptors"
+    },
+    {
+     "type": "team",
+     "teamId": 18,
+     "description": "New York Knicks"
+    },
+    {
+     "type": "athlete",
+     "description": "Jalen Brunson"
+    },
+    {
+     "type": "athlete",
+     "description": "Scottie Barnes"
+    }
+   ]
+  },
+  {
+   "id": 50478197,
+   "type": "Preview",
+   "headline": "Toronto plays New York, looks to end home skid",
+   "description": "New York Knicks (6-6, sixth in the Eastern Conference) vs. Toronto Raptors (5-7, eighth in the Eastern Conference)",
+   "published": "2026-11-14T07:04:40Z",
+   "links": {
+    "web": {
+     "href": "http://www.espn.com/nba/preview?gameId=401909990"
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "teamId": 28,
+     "description": "Toronto Raptors"
+    },
+    {
+     "type": "team",
+     "teamId": 18,
+     "description": "New York Knicks"
+    }
+   ]
+  },
+  {
+   "id": 49577473,
+   "type": "Story",
+   "headline": "2026 NBA Cup: Schedule, format, groups, updates and more",
+   "description": "Here's everything you need to know about the fourth annual in-season tournament, including the recent wins from the Pacers and the Spurs.",
+   "published": "2026-11-14T06:29:36Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/nba/story/_/id/49577473/2026-nba-season-tournament-cup-format-highlights-updates"
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "teamId": 1,
+     "description": "Atlanta Hawks"
+    },
+    {
+     "type": "team",
+     "teamId": 2,
+     "description": "Boston Celtics"
+    },
+    {
+     "type": "team",
+     "teamId": 17,
+     "description": "Brooklyn Nets"
+    },
+    {
+     "type": "team",
+     "teamId": 30,
+     "description": "Charlotte Hornets"
+    },
+    {
+     "type": "team",
+     "teamId": 4,
+     "description": "Chicago Bulls"
+    },
+    {
+     "type": "team",
+     "teamId": 5,
+     "description": "Cleveland Cavaliers"
+    },
+    {
+     "type": "team",
+     "teamId": 6,
+     "description": "Dallas Mavericks"
+    },
+    {
+     "type": "team",
+     "teamId": 7,
+     "description": "Denver Nuggets"
+    },
+    {
+     "type": "team",
+     "teamId": 8,
+     "description": "Detroit Pistons"
+    },
+    {
+     "type": "team",
+     "teamId": 9,
+     "description": "Golden State Warriors"
+    },
+    {
+     "type": "team",
+     "teamId": 10,
+     "description": "Houston Rockets"
+    },
+    {
+     "type": "team",
+     "teamId": 11,
+     "description": "Indiana Pacers"
+    },
+    {
+     "type": "team",
+     "teamId": 12,
+     "description": "LA Clippers"
+    },
+    {
+     "type": "team",
+     "teamId": 13,
+     "description": "Los Angeles Lakers"
+    },
+    {
+     "type": "team",
+     "teamId": 29,
+     "description": "Memphis Grizzlies"
+    },
+    {
+     "type": "team",
+     "teamId": 14,
+     "description": "Miami Heat"
+    },
+    {
+     "type": "team",
+     "teamId": 15,
+     "description": "Milwaukee Bucks"
+    },
+    {
+     "type": "team",
+     "teamId": 16,
+     "description": "Minnesota Timberwolves"
+    },
+    {
+     "type": "team",
+     "teamId": 3,
+     "description": "New Orleans Pelicans"
+    },
+    {
+     "type": "team",
+     "teamId": 18,
+     "description": "New York Knicks"
+    },
+    {
+     "type": "team",
+     "teamId": 25,
+     "description": "Oklahoma City Thunder"
+    },
+    {
+     "type": "team",
+     "teamId": 19,
+     "description": "Orlando Magic"
+    },
+    {
+     "type": "team",
+     "teamId": 20,
+     "description": "Philadelphia 76ers"
+    },
+    {
+     "type": "team",
+     "teamId": 21,
+     "description": "Phoenix Suns"
+    },
+    {
+     "type": "team",
+     "teamId": 22,
+     "description": "Portland Trail Blazers"
+    },
+    {
+     "type": "team",
+     "teamId": 23,
+     "description": "Sacramento Kings"
+    },
+    {
+     "type": "team",
+     "teamId": 24,
+     "description": "San Antonio Spurs"
+    },
+    {
+     "type": "team",
+     "teamId": 28,
+     "description": "Toronto Raptors"
+    },
+    {
+     "type": "team",
+     "teamId": 26,
+     "description": "Utah Jazz"
+    },
+    {
+     "type": "team",
+     "teamId": 27,
+     "description": "Washington Wizards"
+    }
+   ]
+  }
+ ]
+}

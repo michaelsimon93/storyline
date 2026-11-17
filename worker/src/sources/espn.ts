@@ -7,7 +7,9 @@ import type { RosterPlayer } from "../domain/names.js";
 /** This provider's name in external_ids (ADR-021). */
 export const SOURCE = "espn";
 
-const BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
+export const BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
+/** Per-athlete endpoints (game log, splits) live on a different host. */
+export const WEB_BASE = "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba";
 
 export interface EspnTeam {
   espnId: string;
