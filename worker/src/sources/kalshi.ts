@@ -2,6 +2,7 @@
 // backoff, since Kalshi returns 429 after a handful of rapid requests (ADR-003).
 
 import { fetchJson, throttle, type FetchOptions } from "../lib/http.js";
+import type { MarketSource } from "./types.js";
 
 const BASE = "https://external-api.kalshi.com/trade-api/v2";
 
@@ -63,3 +64,10 @@ export async function getMarkets(tickers: string[], opts: FetchOptions = {}): Pr
   }
   return out;
 }
+
+/** Kalshi as a MarketSource (ADR-024): what ingest and the poller read markets through. */
+export const kalshiSource: MarketSource<KalshiMarket> = {
+  name: SOURCE,
+  listOpen: (series) => listMarkets(series),
+  getByIds: (tickers, opts) => getMarkets(tickers, opts),
+};

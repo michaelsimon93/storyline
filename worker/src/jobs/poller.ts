@@ -15,6 +15,7 @@
 import type { Db } from "../lib/db.js";
 import { dbNow, withRun } from "../lib/db.js";
 import * as kalshi from "../sources/kalshi.js";
+import type { MarketSource } from "../sources/types.js";
 import { marketQuote } from "../domain/kalshiParse.js";
 import { resolveSlateDate } from "./ingest.js";
 
@@ -37,7 +38,9 @@ export function fetchDeadline(intervalSeconds: number) {
   return { deadlineMs: intervalSeconds * 1_000 };
 }
 
-export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
+export async function pollPrices(
+  db: Db, date?: string, source: MarketSource<kalshi.KalshiMarket> = kalshi.kalshiSource,
+): Promise<PollSummary> {
   const slateDate = await resolveSlateDate(db, date);
   return withRun(db, "price_poll", slateDate, async () => {
     // Today's carded markets with their Kalshi tickers (ADR-021). A carded market with no Kalshi
@@ -58,7 +61,7 @@ export async function pollPrices(db: Db, date?: string): Promise<PollSummary> {
     if (!tickers.length) return summary;   // no deck yet today (curation runs at 10am)
 
     const fetchedAt = await dbNow(db);
-    const markets = await kalshi.getMarkets(tickers, fetchDeadline(await pollIntervalSeconds(db)));
+    const markets = await source.getByIds(tickers, fetchDeadline(await pollIntervalSeconds(db)));
     const quotes = markets
       .filter((m) => idByTicker.has(m.ticker))
       .map((m) => ({ market_id: idByTicker.get(m.ticker)!, ticker: m.ticker, ...marketQuote(m) }));

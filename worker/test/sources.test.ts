@@ -55,3 +55,14 @@ test("Kalshi listMarkets returns a market once when pages overlap, keeping the l
   assert.deepEqual(markets.map((x) => x.ticker), ["A", "B", "C"]);
   assert.equal(markets[0]!.status, "closed");
 });
+
+test("kalshiSource is the MarketSource over listMarkets and getMarkets", async () => {
+  const m = installFetch((url) =>
+    url.searchParams.has("tickers")
+      ? json({ markets: [{ ticker: "T1" }, { ticker: "T2" }] })
+      : json({ markets: [{ ticker: "A" }], cursor: "" }));
+  restore = m.restore;
+  assert.equal(kalshi.kalshiSource.name, kalshi.SOURCE);
+  assert.deepEqual((await kalshi.kalshiSource.listOpen("KXNBAPTS")).map((x) => x.ticker), ["A"]);
+  assert.deepEqual((await kalshi.kalshiSource.getByIds(["T1", "T2"])).map((x) => x.ticker), ["T1", "T2"]);
+});
