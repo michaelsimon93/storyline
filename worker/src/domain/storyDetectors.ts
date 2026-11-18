@@ -33,7 +33,7 @@ export const ANGLES = { hotStreak: "hot_streak", backFromInjury: "back_from_inju
 
 export type StoryConfig = Pick<Config,
   | "storyMinMinutes" | "storyBaselineMinGames" | "storyHotStreakMinGames" | "storyHotStreakMarginPct" | "storyMinStatAvgTenths"
-  | "storyReturnMinMissedGames" | "storyBackupMaxMin" | "storyBackupOutMinMinutes" | "storyScoreMax" | "storyScoreReturn">;
+  | "storyReturnMinMissedGames" | "storyBackupMaxMin" | "storyBackupOutMinMinutes" | "storyBackupOutRecentGames" | "storyScoreMax" | "storyScoreReturn">;
 
 /** A signal a story rests on, by what identifies it (subject + key). Resolved to a stored signal's ID when stories are saved. */
 export interface SignalRef { subject: SignalSubject; key: string }
@@ -53,7 +53,11 @@ export interface StoryCandidate {
 
 interface Slot { game: FinishedGame; row: GameLogRow | null }
 
-/** The team's finished games, newest first, each with the player's row if he appeared. Undefined if no row of his is on this team's schedule. */
+/**
+ * The team's finished games, newest first, each with the player's row if he appeared. Undefined if no row of his is on this team's schedule.
+ * Known limit: a game that finished last night and isn't in ESPN's game log yet looks like a DNP. For a streak that fails
+ * closed (no story); for an absence it can add one to the missed count.
+ */
 function timeline(log: GameLogRow[], teamGames: FinishedGame[]): Slot[] | undefined {
   const byEvent = new Map(log.map((r) => [r.eventId, r]));
   const games = [...teamGames].sort((a, b) => (a.date === b.date ? (a.eventId < b.eventId ? 1 : -1) : a.date < b.date ? 1 : -1));
@@ -100,7 +104,8 @@ export function hotStreak(p: { playerId: string; log: GameLogRow[]; teamGames: F
     const runSum = sum(run);
     // runSum/k >= (total/n) * (100+margin)/100, cross-multiplied so the boundary is exact.
     if (runSum * n * 100 < total * k * (100 + cfg.storyHotStreakMarginPct)) continue;
-    const liftPct = Math.floor(((runSum * n) / (total * k) - 1) * 100);
+    // Integers all the way: (1.2 - 1) * 100 is 19.999... in floating point, so a streak exactly at the margin would read +19%.
+    const liftPct = Math.floor((runSum * n * 100 - total * k * 100) / (total * k));
     out.push({
       playerId: p.playerId, angle: ANGLES.hotStreak, stat: stat.key,
       score: Math.min(cfg.storyScoreMax, liftPct),
@@ -150,7 +155,7 @@ const avgMinutes = (slots: Slot[]) => {
 
 /**
  * A bench player (average minutes under `storyBackupMaxMin`) whose teammate(s) averaging `storyBackupOutMinMinutes`+
- * are out tonight. The score is the minutes those teammates leave open. A teammate counts as out only on a status
+ * are out tonight, having played in the team's last `storyBackupOutRecentGames` games (so it's new). The score is the minutes those teammates leave open. A teammate counts as out only on a status
  * ESPN gave in words we know (Out, Doubtful): an unrecognised one is never turned into a claim.
  */
 export function backupStepsIn(
@@ -165,9 +170,10 @@ export function backupStepsIn(
   if (mine.n < cfg.storyBaselineMinGames || mine.avg >= cfg.storyBackupMaxMin) return [];
 
   const outs = teammates.flatMap((t) => {
-    if (!isKnownWontPlay(t.tonight)) return [];
+    if (t.teamId !== p.teamId || !isKnownWontPlay(t.tonight)) return [];   // only a teammate, and only on a status we can name
     const ts = timeline(t.log, t.teamGames);
-    if (!ts) return [];
+    // He must have played in one of the team's last few games: a star out for weeks is already in the backup's own numbers, so it isn't news tonight.
+    if (!ts || !ts.slice(0, cfg.storyBackupOutRecentGames).some(appeared)) return [];
     const m = avgMinutes(ts);
     return m.n >= cfg.storyBaselineMinGames && m.avg >= cfg.storyBackupOutMinMinutes ? [{ t, avg: m.avg }] : [];
   });

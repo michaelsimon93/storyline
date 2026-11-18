@@ -11,7 +11,7 @@ import { hotStreak, backFromInjury, backupStepsIn, sortStories, ANGLES, type Sto
 const CFG: StoryConfig = {
   storyMinMinutes: 10, storyBaselineMinGames: 5, storyHotStreakMinGames: 3, storyHotStreakMarginPct: 20,
   storyMinStatAvgTenths: 10, storyReturnMinMissedGames: 3, storyBackupMaxMin: 24, storyBackupOutMinMinutes: 28,
-  storyScoreMax: 100, storyScoreReturn: 60,
+  storyScoreMax: 100, storyScoreReturn: 60, storyBackupOutRecentGames: 3,
 };
 
 /** The team's finished games, oldest first, ids g1..gN a day apart. */
@@ -87,8 +87,18 @@ test("hot streak: a former team's big games don't inflate or hide the baseline",
 
 test("hot streak: exactly at the margin passes; one point under fails", () => {
   const cfg = { ...CFG, storyBaselineMinGames: 6 };
-  assert.equal(hotStreak({ playerId: P, log: logOf(pts(12, 12, 12, 8, 8, 8)), teamGames: teamGames(12) }, cfg).length, 1);
+  const exact = hotStreak({ playerId: P, log: logOf(pts(12, 12, 12, 8, 8, 8)), teamGames: teamGames(12) }, cfg);
+  assert.equal(exact.length, 1);
+  assert.equal(exact[0]!.score, 20, "exactly +20% scores 20, not 19 (float rounding)");
+  assert.match(exact[0]!.summary, /\(\+20%\)/);
   assert.equal(hotStreak({ playerId: P, log: logOf(pts(12, 12, 12, 9, 8, 8)), teamGames: teamGames(12) }, cfg).length, 0);
+});
+
+test("hot streak: a game exactly at his average stays in the run (at or above, not strictly above)", () => {
+  // 14, 14, 10, then 8, 7, 7: his average is exactly 10, and the third game equals it
+  const s = hotStreak({ playerId: P, log: logOf(pts(14, 14, 10, 8, 7, 7)), teamGames: teamGames(12) }, { ...CFG, storyBaselineMinGames: 6 });
+  assert.equal(s.length, 1);
+  assert.match(s[0]!.summary, /last 3 games/);
 });
 
 test("hot streak: not enough games to know his average means no story", () => {
@@ -217,6 +227,18 @@ test("backup stepping in: two stars out add up, up to the cap", () => {
   assert.equal(s[0]!.score, 70);
   assert.equal(s[0]!.basis.filter((b) => b.key.startsWith("injury:")).length, 2);
   assert.equal(backupStepsIn(bench(), [star(), star({ espnId: "888", name: "Other" })], { ...CFG, storyScoreMax: 50 })[0]!.score, 50);
+});
+
+test("backup stepping in: a teammate listed on another team can't be this player's teammate", () => {
+  assert.deepEqual(backupStepsIn(bench(), [star({ teamId: 99 })], CFG), []);
+});
+
+test("backup stepping in: a star who has been out for weeks is not news tonight", () => {
+  const long = star({ log: logOf(Array.from({ length: 10 }, () => ({ pts: 25, min: 34 })), [0, 1, 2]) });   // missed the last 3 team games
+  assert.deepEqual(backupStepsIn(bench(), [long], CFG), [], "last played 4 team games ago, outside the recent window of 3");
+  const fresh = star({ log: logOf(Array.from({ length: 10 }, () => ({ pts: 25, min: 34 })), [0, 1]) });    // missed 2, so he played 3 games ago
+  assert.equal(backupStepsIn(bench(), [fresh], CFG).length, 1, "out only the last 2 games: still news");
+  assert.equal(backupStepsIn(bench(), [long], { ...CFG, storyBackupOutRecentGames: 4 }).length, 1, "the window is a setting");
 });
 
 test("backup stepping in: a log that doesn't line up with the schedule gives no story", () => {

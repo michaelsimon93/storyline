@@ -30,6 +30,7 @@ const valid = [
   { key: "story_return_min_missed_games", value: 3 },
   { key: "story_backup_max_min", value: 24 },
   { key: "story_backup_out_min_minutes", value: 28 },
+  { key: "story_backup_out_recent_games", value: 3 },
   { key: "story_score_max", value: 100 },
   { key: "story_score_return", value: 60 },
 ];

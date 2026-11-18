@@ -5,13 +5,13 @@
 \pset format unaligned
 reset role;
 
-select t_eq('story cfg: all ten settings are private int rows with explicit bounds',
-  (select count(*)::int from app_config where key like 'story\_%' and value_type = 'int' and min_value is not null and max_value is not null and not is_public), 10);
+select t_eq('story cfg: all eleven settings are private int rows with explicit bounds',
+  (select count(*)::int from app_config where key like 'story\_%' and value_type = 'int' and min_value is not null and max_value is not null and not is_public), 11);
 select t_eq('story cfg: starting values, read through config_int()',
   (select array[config_int('story_min_minutes'), config_int('story_baseline_min_games'), config_int('story_hot_streak_min_games'),
                 config_int('story_hot_streak_margin_pct'), config_int('story_min_stat_avg_tenths'), config_int('story_return_min_missed_games'),
-                config_int('story_backup_max_min'), config_int('story_backup_out_min_minutes'), config_int('story_score_max'), config_int('story_score_return')]),
-  array[10, 5, 3, 20, 10, 3, 24, 28, 100, 60]);
+                config_int('story_backup_max_min'), config_int('story_backup_out_min_minutes'), config_int('story_backup_out_recent_games'), config_int('story_score_max'), config_int('story_score_return')]),
+  array[10, 5, 3, 20, 10, 3, 24, 28, 3, 100, 60]);
 
 -- out of range is rejected
 select t_err('story cfg: a 1-game "streak" is rejected',            $q$update app_config set value = '1'   where key = 'story_hot_streak_min_games'$q$, '%invalid config%');
@@ -21,6 +21,8 @@ select t_err('story cfg: 0 minutes is rejected',                    $q$update ap
 select t_err('story cfg: more than 48 minutes is rejected',         $q$update app_config set value = '49'  where key = 'story_backup_max_min'$q$, '%invalid config%');
 select t_err('story cfg: a baseline of 0 games is rejected',        $q$update app_config set value = '0'   where key = 'story_baseline_min_games'$q$, '%invalid config%');
 select t_err('story cfg: a negative stat floor is rejected',        $q$update app_config set value = '-1'  where key = 'story_min_stat_avg_tenths'$q$, '%invalid config%');
+select t_err('story cfg: a recent-games window of 0 is rejected (no star would ever count)', $q$update app_config set value = '0' where key = 'story_backup_out_recent_games'$q$, '%invalid config%');
+select t_err('story cfg: a recent-games window past 20 is rejected', $q$update app_config set value = '21' where key = 'story_backup_out_recent_games'$q$, '%invalid config%');
 select t_err('story cfg: a score cap of 0 is rejected',             $q$update app_config set value = '0'   where key = 'story_score_max'$q$, '%invalid config%');
 select t_err('story cfg: a fractional value is rejected',           $q$update app_config set value = '2.5' where key = 'story_return_min_missed_games'$q$, '%invalid config%');
 select t_err('story cfg: a text value is rejected',                 $q$update app_config set value = '"three"' where key = 'story_hot_streak_min_games'$q$, '%invalid config%');

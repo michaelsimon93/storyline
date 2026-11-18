@@ -33,6 +33,7 @@ const SPEC = {
   storyReturnMinMissedGames: { key: "story_return_min_missed_games",  type: "int" },
   storyBackupMaxMin:         { key: "story_backup_max_min",           type: "int" },
   storyBackupOutMinMinutes:  { key: "story_backup_out_min_minutes",   type: "int" },
+  storyBackupOutRecentGames: { key: "story_backup_out_recent_games",  type: "int" },
   storyScoreMax:             { key: "story_score_max",                type: "int" },
   storyScoreReturn:          { key: "story_score_return",             type: "int" },
 } as const;
