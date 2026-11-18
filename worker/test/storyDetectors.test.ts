@@ -6,7 +6,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { GameLogRow, FinishedGame } from "../src/domain/espnParse.js";
 import { parseInjuryStatus } from "../src/domain/injuryStatus.js";
-import { hotStreak, backFromInjury, backupStepsIn, sortStories, ANGLES, type StoryConfig, type StoryCandidate } from "../src/domain/storyDetectors.js";
+import { hotStreak, backFromInjury, backupStepsIn, sortStories, ANGLES, type StoryCandidate } from "../src/domain/storyDetectors.js";
+import type { StoryConfig } from "../src/lib/config.js";
 
 const CFG: StoryConfig = {
   storyMinMinutes: 10, storyBaselineMinGames: 5, storyHotStreakMinGames: 3, storyHotStreakMarginPct: 20,

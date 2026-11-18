@@ -17,7 +17,7 @@
 
 import type { GameLogRow, FinishedGame } from "./espnParse.js";
 import { isKnownWontPlay, isWontPlay, type InjuryStatus } from "./injuryStatus.js";
-import type { Config } from "../lib/config.js";
+import type { StoryConfig } from "../lib/config.js";
 import type { SignalSubject } from "../sources/types.js";
 
 export type StatKey = "pts" | "reb" | "ast" | "3pm";
@@ -31,9 +31,7 @@ export const STATS: { key: StatKey; label: string; pick: (r: GameLogRow) => numb
 
 export const ANGLES = { hotStreak: "hot_streak", backFromInjury: "back_from_injury", backupStepsIn: "backup_steps_in" } as const;
 
-export type StoryConfig = Pick<Config,
-  | "storyMinMinutes" | "storyBaselineMinGames" | "storyHotStreakMinGames" | "storyHotStreakMarginPct" | "storyMinStatAvgTenths"
-  | "storyReturnMinMissedGames" | "storyBackupMaxMin" | "storyBackupOutMinMinutes" | "storyBackupOutRecentGames" | "storyScoreMax" | "storyScoreReturn">;
+
 
 /** A signal a story rests on, by what identifies it (subject + key). Resolved to a stored signal's ID when stories are saved. */
 export interface SignalRef { subject: SignalSubject; key: string }
