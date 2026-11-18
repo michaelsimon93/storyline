@@ -2,6 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { fixture } from "./helpers/mockFetch.js";
 import { parseInjuryStatus, isWontPlay, mostSevere, KNOWN_STATUSES, SEEN_IN_REAL_RESPONSES } from "../src/domain/injuryStatus.js";
 
 test("known statuses parse to themselves, case and spacing aside, and keep ESPN's own spelling in raw", () => {
@@ -31,12 +32,23 @@ test("several injuries: the most severe one is the player's status, whatever ord
   assert.equal(mostSevere([]), null);
 });
 
+test("severity order is locked pair by pair: a swap in SEVERITY must fail a test", () => {
+  const worst = (a: string, b: string) => [mostSevere([a, b])?.status, mostSevere([b, a])?.status];
+  assert.deepEqual(worst("Questionable", "Doubtful"), ["Doubtful", "Doubtful"]);
+  assert.deepEqual(worst("Suspension", "Out"), ["Out", "Out"]);
+  assert.deepEqual(worst("Suspension", "Doubtful"), ["Unknown", "Unknown"]);
+  assert.deepEqual(worst("Day-To-Day", "Questionable"), ["Questionable", "Questionable"]);
+  assert.deepEqual(worst("Probable", "Day-To-Day"), ["Day-To-Day", "Day-To-Day"]);
+});
+
 test("blank statuses are not statuses: ESPN gave no designation", () => {
   assert.equal(mostSevere(["", "  "]), null);
   assert.equal(mostSevere(["", "Out"])?.status, "Out");
 });
 
-test("the list of statuses seen in real responses is a subset of the union, and says what is only a guess", () => {
+test("SEEN_IN_REAL_RESPONSES is exactly the statuses in the recorded responses, so a guess can't be listed as seen", () => {
+  const injuries = (fixture("espn-injuries.json") as any).injuries.flatMap((t: any) => t.injuries.map((i: any) => i.status));
+  const roster = (fixture("espn-roster-19.json") as any).athletes.flatMap((a: any) => (a.injuries ?? []).map((i: any) => i.status));
+  assert.deepEqual([...new Set([...injuries, ...roster])].sort(), [...SEEN_IN_REAL_RESPONSES].sort());
   for (const s of SEEN_IN_REAL_RESPONSES) assert.ok((KNOWN_STATUSES as readonly string[]).includes(s));
-  assert.deepEqual([...SEEN_IN_REAL_RESPONSES].sort(), ["Day-To-Day", "Out"]);
 });

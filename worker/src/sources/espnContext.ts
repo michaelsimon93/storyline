@@ -122,6 +122,8 @@ export function createEspnSource(opts: EspnSourceOptions): ContextSource {
       for (const p of slate.players) {
         if (aborted) break;
         // The fresh feed is authoritative when it loaded (absent = healthy, even if ingest said Out this morning).
+        // That includes a player whose feed row the parser skipped (no athlete id): he reads as healthy. Accepted:
+        // the skipped row makes the pull "degraded", which alerts (see contextEspn.ts).
         // Without it, or for a player we can't look up, ingest's status is the best we have.
         const status = feedOk && p.externalId ? (feedStatus.get(p.externalId) ?? null) : p.injuryStatus;
         if (status?.status === "Unknown") stats.unknownStatuses.push(`${p.name}: ${JSON.stringify(status.raw)}`);

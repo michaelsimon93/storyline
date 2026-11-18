@@ -76,7 +76,7 @@ export async function getRoster(teamEspnId: string): Promise<EspnRosterPlayer[]>
   return athletes.map((a) => ({
     espnId: String(must(a.id, "athlete id")),
     fullName: must(a.fullName, "athlete name"),
-    injuryStatus: mostSevere((a.injuries ?? []).map((i: any) => String(i?.status ?? "")))?.raw ?? null, // all injuries, worst wins (STO-90)
+    injuryStatus: mostSevere(((a.injuries ?? []) as { status?: unknown }[]).map((i) => String(i?.status ?? "")))?.raw ?? null, // all injuries, worst wins (STO-90)
     headshotUrl: a.headshot?.href ?? null,
   }));
 }
