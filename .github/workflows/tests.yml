@@ -1,11 +1,41 @@
 name: Tests
 
 on:
+  # Branches are tested by their PR; pushes only run on main (after a merge).
   push:
+    branches: [main]
   pull_request:
 
 jobs:
+  # Works out which test jobs a PR can affect. Must stay a required check:
+  # if it fails, the test jobs are skipped, and skipped counts as passing.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      db: ${{ steps.filter.outputs.db }}
+      worker: ${{ steps.filter.outputs.worker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            db:
+              - 'supabase/**'
+              - 'scripts/**'
+              - '.github/workflows/tests.yml'
+            worker:
+              - 'worker/**'
+              # Worker integration tests apply the migrations and Supabase stubs.
+              - 'supabase/**'
+              - '.github/workflows/tests.yml'
+
   schema:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -34,6 +64,8 @@ jobs:
         run: bash supabase/tests/run.sh
 
   real-supabase:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.db == 'true'
     # Same scenario tests, but against a real local Supabase stack, so differences
     # between our stand-ins and Supabase (auth, default privileges) can't hide bugs.
     runs-on: ubuntu-latest
@@ -55,6 +87,8 @@ jobs:
         run: bash supabase/tests/run.sh
 
   worker:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.worker == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
