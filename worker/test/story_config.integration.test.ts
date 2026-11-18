@@ -19,6 +19,7 @@ test("the story settings in the real database load, typed", { skip }, async () =
   assert.deepEqual([c.storyMinMinutes, c.storyHotStreakMinGames, c.storyHotStreakMarginPct, c.storyScoreMax], [10, 3, 20, 100]);
 });
 
+// Order matters: this test deletes the story rows from this file's own database, so the test above must run first (node:test runs a file's tests in order).
 test("with the story settings missing from the database, startup config still loads and only the story loader fails, naming the keys", { skip }, async () => {
   await db!.query(`delete from app_config where key like 'story\\_%'`);   // this file's database is its own, so nothing to restore
   const boot = await loadConfig(db!);                       // what every job reads at startup

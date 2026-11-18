@@ -31,8 +31,6 @@ export const STATS: { key: StatKey; label: string; pick: (r: GameLogRow) => numb
 
 export const ANGLES = { hotStreak: "hot_streak", backFromInjury: "back_from_injury", backupStepsIn: "backup_steps_in" } as const;
 
-
-
 /** A signal a story rests on, by what identifies it (subject + key). Resolved to a stored signal's ID when stories are saved. */
 export interface SignalRef { subject: SignalSubject; key: string }
 
