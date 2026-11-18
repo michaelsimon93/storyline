@@ -27,6 +27,16 @@ test("ESPN roster parses players and injury status", async () => {
   assert.equal(suggs?.injuryStatus, "Out");
 });
 
+test("ESPN roster: a player with several injuries gets the most severe, not the first listed (STO-90)", async () => {
+  restore = installFetch(() => json({ athletes: [
+    { id: "1", fullName: "Two Injuries", injuries: [{ status: "Day-To-Day" }, { status: "Out" }] },
+    { id: "2", fullName: "Healthy", injuries: [] },
+    { id: "3", fullName: "Blank", injuries: [{ status: "" }] },
+  ] })).restore;
+  const roster = await espn.getRoster("19");
+  assert.deepEqual(roster.map((p) => p.injuryStatus), ["Out", null, null]);
+});
+
 test("ESPN shape change fails loudly instead of writing bad data", async () => {
   restore = installFetch(() => json({ notEvents: [] })).restore;
   await assert.rejects(espn.getGames("2026-11-13"), /missing events/);
