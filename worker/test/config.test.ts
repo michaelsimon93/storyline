@@ -22,6 +22,16 @@ const valid = [
   { key: "espn_degraded_failed_players", value: 5 },
   { key: "espn_fallback_max_age_days", value: 1 },
   { key: "context_espn_schedule_et", value: "30 9 * * *" },
+  { key: "story_min_minutes", value: 10 },
+  { key: "story_baseline_min_games", value: 5 },
+  { key: "story_hot_streak_min_games", value: 3 },
+  { key: "story_hot_streak_margin_pct", value: 20 },
+  { key: "story_min_stat_avg_tenths", value: 10 },
+  { key: "story_return_min_missed_games", value: 3 },
+  { key: "story_backup_max_min", value: 24 },
+  { key: "story_backup_out_min_minutes", value: 28 },
+  { key: "story_score_max", value: 100 },
+  { key: "story_score_return", value: 60 },
 ];
 const without = (k: string) => valid.filter((r) => r.key !== k);
 const withValue = (k: string, v: unknown) => valid.map((r) => (r.key === k ? { key: k, value: v } : r));
@@ -31,6 +41,12 @@ test("parses a complete, valid config into typed fields", () => {
   assert.equal(c.cardsPerDay, 10);
   assert.equal(c.pickStakeCents, 500);
   assert.equal(c.curationTimeEt, "10:00");
+  assert.deepEqual([c.storyHotStreakMinGames, c.storyHotStreakMarginPct, c.storyScoreMax], [3, 20, 100]);
+});
+
+test("a story setting that is missing fails loudly, like every other (no defaults in code)", () => {
+  assert.throws(() => parseConfig(without("story_hot_streak_margin_pct")), (e: unknown) =>
+    e instanceof ConfigError && /missing story_hot_streak_margin_pct/.test(e.message));
 });
 
 test("a missing setting fails loudly, naming the key (no silent defaults)", () => {

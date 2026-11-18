@@ -25,6 +25,16 @@ const SPEC = {
   espnDegradedFailedPlayers:  { key: "espn_degraded_failed_players",  type: "int" },
   espnFallbackMaxAgeDays:  { key: "espn_fallback_max_age_days", type: "int" },
   contextEspnScheduleEt:   { key: "context_espn_schedule_et",   type: "string" },
+  storyMinMinutes:           { key: "story_min_minutes",              type: "int" },
+  storyBaselineMinGames:     { key: "story_baseline_min_games",       type: "int" },
+  storyHotStreakMinGames:    { key: "story_hot_streak_min_games",     type: "int" },
+  storyHotStreakMarginPct:   { key: "story_hot_streak_margin_pct",    type: "int" },
+  storyMinStatAvgTenths:     { key: "story_min_stat_avg_tenths",      type: "int" },
+  storyReturnMinMissedGames: { key: "story_return_min_missed_games",  type: "int" },
+  storyBackupMaxMin:         { key: "story_backup_max_min",           type: "int" },
+  storyBackupOutMinMinutes:  { key: "story_backup_out_min_minutes",   type: "int" },
+  storyScoreMax:             { key: "story_score_max",                type: "int" },
+  storyScoreReturn:          { key: "story_score_return",             type: "int" },
 } as const;
 
 type Spec = typeof SPEC;
