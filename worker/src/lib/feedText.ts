@@ -37,6 +37,7 @@ export function ingestSummaryText(s: IngestSummary): string {
     ...list("Skipped games", s.skippedGames, cap),
     ...list("Skipped markets", s.skipped, cap),
     ...list("Out / doubtful", s.outOrDoubtful, cap),
+    ...list("Unknown injury status (treated as out)", s.unknownInjuryStatus, cap),
   ].join("\n");
   const text = LIST_CAPS.map(render).find((t) => t.length <= MAX_CHARS) ?? render(0);
   return text.length > MAX_CHARS ? `${text.slice(0, MAX_CHARS)}… (truncated)` : text;
