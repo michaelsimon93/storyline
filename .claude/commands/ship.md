@@ -9,7 +9,7 @@ Ship the current branch for: $ARGUMENTS
 - **Branch name first.** If the current branch isn't `<type>/sto-NN-short-name` (`feat`, `fix`, `chore`, `docs`), rename it: `git branch -m <type>/sto-NN-short-name`, push it, and delete the old remote branch if it was pushed. Cloud sessions start on random names like `hopeful-goldberg-3k2pqw`.
 - PR title starts with `STO-NN:` so Linear links the PR even if the rename couldn't happen.
 - Fill in `.github/pull_request_template.md`, especially **Risks & where to look**, which tells Michael what to read closely. The **Why** section carries the 3–5 line reasoning for each non-obvious choice.
-- Pick the review row from CLAUDE.md → "Review depth". Docs-only PRs stop here: CI green, Michael merges.
+- Pick the review row from CLAUDE.md → "Review depth". Docs-only PRs skip review: once CI is green, go straight to the handoff in step 4 and write the checklist and approval comment yourself.
 
 ## 2. Run the reviewers
 Each reviewer runs in a fresh context and is never the agent that wrote the code. Pass each one:
@@ -31,3 +31,5 @@ After the last fix commit, go through every non-blocker finding (`eng-lead`'s nu
 - Not fixed → **its own** Linear issue (one finding = one issue). Title says what to change; labels `follow-up` + one area; description links the PR comment and names `path:line`, the finding and the suggested fix; related to the PR's issue.
 
 Post a PR comment headed `**Follow-ups**` listing every finding → commit or `STO-NN`. Then hand off to Michael with `eng-lead`'s handoff. Michael merges only once the follow-ups comment is posted.
+
+**Your final message to Michael always ends with** the verify checklist and the approval comment in a code block, copied in full, never summarized. The approval comment is plain English (see `eng-lead.md`, handoff item 5).
