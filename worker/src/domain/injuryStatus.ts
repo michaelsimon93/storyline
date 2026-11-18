@@ -45,3 +45,11 @@ export function mostSevere(raws: string[]): InjuryStatus | null {
   }
   return worst;
 }
+
+/**
+ * For claims in a story ("his teammate is out"): only a status ESPN gave in words we know. Unknown is skipped for
+ * form (isWontPlay) but can't headline a story, because we don't know what it says (ADR-014: every claim is grounded).
+ */
+export function isKnownWontPlay(s: InjuryStatus | null | undefined): boolean {
+  return !!s && (s.status === "Out" || s.status === "Doubtful");
+}

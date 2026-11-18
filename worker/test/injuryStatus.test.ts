@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "./helpers/mockFetch.js";
-import { parseInjuryStatus, isWontPlay, mostSevere, KNOWN_STATUSES, SEEN_IN_REAL_RESPONSES } from "../src/domain/injuryStatus.js";
+import { parseInjuryStatus, isWontPlay, isKnownWontPlay, mostSevere, KNOWN_STATUSES, SEEN_IN_REAL_RESPONSES } from "../src/domain/injuryStatus.js";
 
 test("known statuses parse to themselves, case and spacing aside, and keep ESPN's own spelling in raw", () => {
   assert.deepEqual(parseInjuryStatus("Out"), { status: "Out", raw: "Out" });
@@ -21,6 +21,14 @@ test("won't play: Out, Doubtful and Unknown. Questionable, Probable and Day-To-D
   assert.deepEqual(["Out", "Doubtful", "Suspension"].map(w), [true, true, true]);
   assert.deepEqual(["Questionable", "Probable", "Day-To-Day"].map(w), [false, false, false]);
   assert.equal(isWontPlay(null), false, "no injury entry means healthy");
+});
+
+test("a story may only say a player is out when ESPN said so in words we know: Out or Doubtful, never Unknown", () => {
+  const k = (s: string) => isKnownWontPlay(parseInjuryStatus(s));
+  assert.deepEqual(["Out", "Doubtful"].map(k), [true, true]);
+  assert.deepEqual(["Suspension", "Questionable", "Day-To-Day", "Probable"].map(k), [false, false, false, false]);
+  assert.equal(isKnownWontPlay(null), false);
+  assert.equal(isWontPlay(parseInjuryStatus("Suspension")), true, "Unknown is still skipped for form; it just can't headline a story");
 });
 
 test("several injuries: the most severe one is the player's status, whatever order ESPN lists them", () => {
