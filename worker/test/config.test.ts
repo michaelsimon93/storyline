@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ConfigError, parseConfig } from "../src/lib/config.js";
+import { ConfigError, parseConfig, parseStoryConfig } from "../src/lib/config.js";
 
 const valid = [
   { key: "cards_per_day", value: 10 },
@@ -22,17 +22,6 @@ const valid = [
   { key: "espn_degraded_failed_players", value: 5 },
   { key: "espn_fallback_max_age_days", value: 1 },
   { key: "context_espn_schedule_et", value: "30 9 * * *" },
-  { key: "story_min_minutes", value: 10 },
-  { key: "story_baseline_min_games", value: 5 },
-  { key: "story_hot_streak_min_games", value: 3 },
-  { key: "story_hot_streak_margin_pct", value: 20 },
-  { key: "story_min_stat_avg_tenths", value: 10 },
-  { key: "story_return_min_missed_games", value: 3 },
-  { key: "story_backup_max_min", value: 24 },
-  { key: "story_backup_out_min_minutes", value: 28 },
-  { key: "story_backup_out_recent_games", value: 3 },
-  { key: "story_score_max", value: 100 },
-  { key: "story_score_return", value: 60 },
 ];
 const without = (k: string) => valid.filter((r) => r.key !== k);
 const withValue = (k: string, v: unknown) => valid.map((r) => (r.key === k ? { key: k, value: v } : r));
@@ -42,12 +31,38 @@ test("parses a complete, valid config into typed fields", () => {
   assert.equal(c.cardsPerDay, 10);
   assert.equal(c.pickStakeCents, 500);
   assert.equal(c.curationTimeEt, "10:00");
-  assert.deepEqual([c.storyHotStreakMinGames, c.storyHotStreakMarginPct, c.storyScoreMax], [3, 20, 100]);
 });
 
-test("a story setting that is missing fails loudly, like every other (no defaults in code)", () => {
-  assert.throws(() => parseConfig(without("story_hot_streak_margin_pct")), (e: unknown) =>
-    e instanceof ConfigError && /missing story_hot_streak_margin_pct/.test(e.message));
+// ---------------------------------------------------------------- story settings: their own loader (STO-106)
+
+const story = [
+  { key: "story_min_minutes", value: 10 }, { key: "story_baseline_min_games", value: 5 },
+  { key: "story_hot_streak_min_games", value: 3 }, { key: "story_hot_streak_margin_pct", value: 20 },
+  { key: "story_min_stat_avg_tenths", value: 10 }, { key: "story_return_min_missed_games", value: 3 },
+  { key: "story_backup_max_min", value: 24 }, { key: "story_backup_out_min_minutes", value: 28 },
+  { key: "story_backup_out_recent_games", value: 3 }, { key: "story_score_max", value: 100 }, { key: "story_score_return", value: 60 },
+];
+
+test("STO-106: the worker's startup config needs no story settings (a missing one must not stop every job)", () => {
+  assert.doesNotThrow(() => parseConfig(valid), "boot config with no story_* rows at all");
+  assert.equal("storyScoreMax" in parseConfig([...valid, ...story]), false, "story settings are not part of the startup config");
+});
+
+test("story settings parse into their own typed config", () => {
+  const c = parseStoryConfig(story);
+  assert.deepEqual([c.storyHotStreakMinGames, c.storyHotStreakMarginPct, c.storyScoreMax, c.storyBackupOutRecentGames], [3, 20, 100, 3]);
+});
+
+test("a missing story setting still fails loudly, naming every missing key (no defaults in code)", () => {
+  const rows = story.filter((r) => r.key !== "story_hot_streak_margin_pct" && r.key !== "story_score_max");
+  assert.throws(() => parseStoryConfig(rows), (e: unknown) =>
+    e instanceof ConfigError && /missing story_hot_streak_margin_pct/.test(e.message) && /missing story_score_max/.test(e.message));
+  assert.throws(() => parseStoryConfig([]), (e: unknown) => e instanceof ConfigError && /missing story_min_minutes/.test(e.message));
+});
+
+test("a mistyped story setting fails loudly", () => {
+  assert.throws(() => parseStoryConfig(story.map((r) => (r.key === "story_min_minutes" ? { key: r.key, value: "ten" } : r))),
+    (e: unknown) => e instanceof ConfigError && /story_min_minutes should be int/.test(e.message));
 });
 
 test("a missing setting fails loudly, naming the key (no silent defaults)", () => {

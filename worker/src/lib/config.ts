@@ -25,6 +25,13 @@ const SPEC = {
   espnDegradedFailedPlayers:  { key: "espn_degraded_failed_players",  type: "int" },
   espnFallbackMaxAgeDays:  { key: "espn_fallback_max_age_days", type: "int" },
   contextEspnScheduleEt:   { key: "context_espn_schedule_et",   type: "string" },
+} as const;
+
+// The story detectors' settings (STO-76). Deliberately NOT in SPEC: SPEC is read at startup by every job, so one missing
+// key there stops the whole worker (it did, on Nov 18: the worker deployed before the migration). These load through
+// loadStoryConfig, called only by the story step, so a missing one stops only that step, and loudly. New jobs' settings
+// belong in their own loader like this one, not in SPEC (STO-106).
+const STORY_SPEC = {
   storyMinMinutes:           { key: "story_min_minutes",              type: "int" },
   storyBaselineMinGames:     { key: "story_baseline_min_games",       type: "int" },
   storyHotStreakMinGames:    { key: "story_hot_streak_min_games",     type: "int" },
@@ -38,20 +45,21 @@ const SPEC = {
   storyScoreReturn:          { key: "story_score_return",             type: "int" },
 } as const;
 
-type Spec = typeof SPEC;
-export type Config = {
-  [K in keyof Spec]: Spec[K]["type"] extends "int" ? number : string;
-};
+type SpecShape = Record<string, { key: string; type: "int" | "string" }>;
+type Typed<S extends SpecShape> = { [K in keyof S]: S[K]["type"] extends "int" ? number : string };
+
+export type Config = Typed<typeof SPEC>;
+export type StoryConfig = Typed<typeof STORY_SPEC>;
 
 export class ConfigError extends Error {}
 
-/** Pure: turn app_config rows into a typed Config, collecting every problem at once. */
-export function parseConfig(rows: { key: string; value: unknown }[]): Config {
+/** Pure: turn app_config rows into a typed config for one spec, collecting every problem at once. */
+function parseSpec<S extends SpecShape>(spec: S, rows: { key: string; value: unknown }[]): Typed<S> {
   const byKey = new Map(rows.map((r) => [r.key, r.value]));
   const problems: string[] = [];
   const out: Record<string, unknown> = {};
 
-  for (const [name, { key, type }] of Object.entries(SPEC)) {
+  for (const [name, { key, type }] of Object.entries(spec)) {
     if (!byKey.has(key)) { problems.push(`missing ${key}`); continue; }
     const v = byKey.get(key);
     const ok = type === "int" ? Number.isInteger(v) : typeof v === "string";
@@ -63,12 +71,23 @@ export function parseConfig(rows: { key: string; value: unknown }[]): Config {
   // database on write, so they are not re-implemented here (single source, ADR-018).
 
   if (problems.length) throw new ConfigError(`Invalid app_config: ${problems.join("; ")}`);
-  return out as Config;
+  return out as Typed<S>;
 }
+
+/** The startup config every job reads. */
+export const parseConfig = (rows: { key: string; value: unknown }[]): Config => parseSpec(SPEC, rows);
+/** The story detectors' settings, read only by the story step. */
+export const parseStoryConfig = (rows: { key: string; value: unknown }[]): StoryConfig => parseSpec(STORY_SPEC, rows);
 
 export async function loadConfig(db: Db): Promise<Config> {
   const { rows } = await db.query<{ key: string; value: unknown }>(`select key, value from app_config`);
   return parseConfig(rows);
+}
+
+export async function loadStoryConfig(db: Db): Promise<StoryConfig> {
+  const keys = Object.values(STORY_SPEC).map((s) => s.key);
+  const { rows } = await db.query<{ key: string; value: unknown }>(`select key, value from app_config where key = any($1::text[])`, [keys]);
+  return parseStoryConfig(rows);
 }
 
 /** Server-side flag check for a specific user (the app uses my_flags() instead). */
