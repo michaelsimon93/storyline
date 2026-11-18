@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { ingest, resolveSlateDate } from "../src/jobs/ingest.js";
 import type { Db } from "../src/lib/db.js";
 import { freshDb } from "./helpers/testDb.js";
-import { installFetch, slateRoutes } from "./helpers/mockFetch.js";
+import { installFetch, slateRoutes, fixture, json } from "./helpers/mockFetch.js";
 import { kalshiSource, type KalshiMarket } from "../src/sources/kalshi.js";
 import type { MarketSource } from "../src/sources/types.js";
 import { idOf } from "./helpers/markets.js";
@@ -179,4 +179,21 @@ test("a failing market source stops the run and records it failed (ADR-024 rule 
   const { rows: [r] } = await db!.query(`select status, error from pipeline_runs where job = 'ingest' order by id desc limit 1`);
   assert.equal(r.status, "failed");
   assert.match(r.error, /kalshi is down/);
+});
+
+test("an injury status we have no name for is listed apart, so the new status gets noticed (STO-81)", { skip }, async () => {
+  restore();
+  restore = installFetch((url) => {
+    if (/\/teams\/19\/roster$/.test(url.pathname)) {
+      const d = structuredClone(fixture("espn-roster-19.json")) as any;
+      d.athletes.find((a: any) => a.fullName === "Jalen Suggs").injuries = [{ status: "Day-To-Day" }, { status: "Suspension" }];
+      return json(d);
+    }
+    return slateRoutes(url);
+  }).restore;
+  const s = await ingest(db!, "2026-11-13");
+  assert.deepEqual(s.unknownInjuryStatus.map((x) => x.replace(/\s*\(.*?\)/, "")), ['Jalen Suggs: "Suspension"']);
+  assert.ok(!s.outOrDoubtful.some((x) => x.startsWith("Jalen Suggs")), "listed once, under unknown");
+  const { rows: [p] } = await db!.query(`select injury_status from players where full_name = 'Jalen Suggs'`);
+  assert.equal(p.injury_status, "Suspension", "the raw value is stored, and it was the most severe of his two injuries, not the first");
 });

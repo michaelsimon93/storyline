@@ -13,7 +13,7 @@ import { runEspnContext, type ContextRunResult } from "../src/jobs/contextEspn.j
 import { loadSlate } from "../src/sources/slate.js";
 import { lastGoodSignals, storeSignals } from "../src/sources/signals.js";
 import { freshDb } from "./helpers/testDb.js";
-import { installFetch, json } from "./helpers/mockFetch.js";
+import { installFetch, json, fixture } from "./helpers/mockFetch.js";
 import { espnRoutes } from "./helpers/espnRoutes.js";
 
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
@@ -52,7 +52,7 @@ before(async () => {
       ('${BENCH}','nba','Bench Player',${TOR},null);
     insert into external_ids (source, kind, league, external_id, player_id) values
       ('espn','player','nba','2993874','${VET}'), ('espn','player','nba','4433188','${ROOKIE}'),
-      ('espn','player','nba','1111','${OUT}'), ('espn','player','nba','5555','${BENCH}');
+      ('espn','player','nba','6450','${OUT}'), ('espn','player','nba','5555','${BENCH}');
     insert into markets (league, game_id, kind, title, player_id, stat, strike, status)
       select 'nba', '${GAME}', 'player_stat', 'pts', p, 'points', 20, 'open' from unnest(array['${VET}','${ROOKIE}','${OUT}','${NOMATCH}']::uuid[]) p;
     update app_config set value = '0' where key = 'espn_pause_ms';   -- no pacing in tests
@@ -186,7 +186,6 @@ test("a pull is degraded when MORE than the threshold of players failed", { skip
 });
 
 test("a bad row inside a good response degrades the pull even with no failed player", { skip }, async () => {
-  const { fixture } = await import("./helpers/mockFetch.js");
   const bad = structuredClone(fixture("espn-injuries.json")) as any;
   bad.injuries.find((t: any) => t.id === "28").injuries[0].athlete.links = [];
   restore = installFetch(espnRoutes({ injuries: () => json(bad) })).restore;
@@ -256,7 +255,7 @@ test("the slate is tonight's games and the players with a market in them, with E
   assert.deepEqual(s.teams.map((t) => [t.id, t.externalId]), [[NY, "18"], [TOR, "28"]]);
   const byId = Object.fromEntries(s.players.map((p) => [p.id, p]));
   assert.deepEqual(Object.keys(byId).sort(), [VET, ROOKIE, OUT, NOMATCH].sort(), "the bench player has no market tonight");
-  assert.deepEqual([byId[VET]!.externalId, byId[ROOKIE]!.injuryStatus, byId[OUT]!.injuryStatus, byId[NOMATCH]!.externalId], ["2993874", "Day-To-Day", "Out", null]);
+  assert.deepEqual([byId[VET]!.externalId, byId[ROOKIE]!.injuryStatus?.raw, byId[OUT]!.injuryStatus?.status, byId[NOMATCH]!.externalId], ["2993874", "Day-To-Day", "Out", null]);
   assert.deepEqual((await loadSlate(db!, "2026-11-18", "nba", "espn")).games, [], "another day has no games");
 });
 
@@ -293,4 +292,36 @@ test("the fallback window: stats reach back, injuries and news are today only, o
   assert.deepEqual(await got(1), ["tonight", "tonight news", "yesterday stat"]);
   assert.deepEqual(await got(0), ["tonight", "tonight news"], "0 = today only");
   assert.deepEqual(await got(14), ["three days old", "tonight", "tonight news", "two days old", "yesterday stat"], "even at 14 days, yesterday's injury and news never come back");
+});
+
+// ---------------------------------------------------------------- injury statuses (STO-81, STO-90)
+
+/** Today's recorded feed with one extra entry on Toronto's list. */
+const feedPlus = (id: string, name: string, status: string) => () => {
+  const feed = structuredClone(fixture("espn-injuries.json")) as any;
+  feed.injuries.find((t: any) => t.id === "28").injuries.push({ id: `inj-${id}`, status, date: "2026-11-17T10:00Z", shortComment: "", type: {},
+    athlete: { displayName: name, links: [{ rel: ["playercard"], href: `https://www.espn.com/nba/player/_/id/${id}/x` }] } });
+  return json(feed);
+};
+
+test("a status we don't recognise: the player is skipped, the run is ok, and one alert names the raw value", { skip }, async () => {
+  restore = installFetch(espnRoutes({ injuries: feedPlus("2993874", "Vet Player", "Suspension") })).restore;
+  const r = await run({ now: at("10") });
+  assert.equal(r.status, "ok", "an unknown status doesn't fail or degrade the run");
+  if (r.status !== "ok") return;
+  assert.equal(r.stats.players.skippedWontPlay, 2, "the Out player and the unknown-status player");
+  assert.equal(r.stats.players.failed, 0);
+  assert.equal(alerts.length, 1);
+  assert.match(alerts[0]!, /injury status we don't recognise/);
+  assert.match(alerts[0]!, /Vet Player: "Suspension"/);
+  assert.equal((await q(`select count(*)::int n from signals where player_id = $1`, [VET]))[0].n, 0, "no form was written for him");
+});
+
+test("STO-90: ingest stored Out this morning, today's feed doesn't list him, so he gets his signals", { skip }, async () => {
+  await db!.query(`update players set injury_status = 'Out' where id = $1`, [VET]);
+  restore = installFetch(espnRoutes()).restore;
+  const r = await run({ now: at("10") });
+  await db!.query(`update players set injury_status = null where id = $1`, [VET]);
+  assert.equal(r.status, "ok");
+  assert.ok((await q(`select count(*)::int n from signals where player_id = $1`, [VET]))[0].n > 0);
 });

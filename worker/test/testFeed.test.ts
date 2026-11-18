@@ -110,7 +110,7 @@ function summary(over: Partial<IngestSummary> = {}): IngestSummary {
     slateDate: "2026-11-13", games: 1,
     markets: { KXNBAPTS: 37, KXNBAREB: 46, KXNBAGAME: 2 },
     players: { total: 40, exact: 38, fuzzy: 1, unmatched: ["Bob Jones (ORL)"], ambiguous: [], reissued: [] },
-    outOrDoubtful: ["Jalen Suggs (ORL): Out"], skipped: [], skippedGames: [], snapshots: 85,
+    outOrDoubtful: ["Jalen Suggs (ORL): Out"], unknownInjuryStatus: [], skipped: [], skippedGames: [], snapshots: 85,
     ...over,
   };
 }

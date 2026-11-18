@@ -10,6 +10,7 @@ import * as kalshi from "../sources/kalshi.js";
 import type { MarketSource } from "../sources/types.js";
 import { abbrFromEspn, kalshiFromEspn } from "../domain/nbaTeams.js";
 import { matchPlayer, normalizeName } from "../domain/names.js";
+import { isWontPlay, parseInjuryStatus } from "../domain/injuryStatus.js";
 import {
   GAME_WINNER_SERIES, PLAYER_PROP_SERIES, gameKey, kalshiDateCode, parseMarket, splitTicker,
   type ParsedMarket,
@@ -28,6 +29,8 @@ export interface IngestSummary {
     reissued: string[];
   };
   outOrDoubtful: string[];
+  /** Injury statuses we have no name for, treated as out. Listed so the new status gets noticed (STO-81). */
+  unknownInjuryStatus: string[];
   /** Malformed Kalshi markets left out of this run, as "ticker: reason". */
   skipped: string[];
   /** Games left out of this run (ESPN listed one matchup under two events), as readable notes. */
@@ -57,7 +60,7 @@ export async function ingest(
     const summary: IngestSummary = {
       slateDate, games: games.length, markets: {},
       players: { total: 0, exact: 0, fuzzy: 0, unmatched: [], ambiguous: [], reissued: [] },
-      outOrDoubtful: [], skipped: [], skippedGames: [], snapshots: 0,
+      outOrDoubtful: [], unknownInjuryStatus: [], skipped: [], skippedGames: [], snapshots: 0,
     };
     if (games.length === 0) return summary;
 
@@ -299,9 +302,9 @@ export async function ingest(
         claimedBy.set(p.espnId, { kalshiId, name });
         summary.players[c.match.kind as "exact" | "fuzzy"]++;
         Object.assign(row, { espn_id: p.espnId, injury: p.injuryStatus, headshot: p.headshotUrl });
-        if (p.injuryStatus === "Out" || p.injuryStatus === "Doubtful") {
-          summary.outOrDoubtful.push(`${name} (${team}): ${p.injuryStatus}`);
-        }
+        const status = p.injuryStatus === null ? null : parseInjuryStatus(p.injuryStatus);
+        if (status?.status === "Unknown") summary.unknownInjuryStatus.push(`${name} (${team}): ${JSON.stringify(status.raw)}`);
+        else if (isWontPlay(status)) summary.outOrDoubtful.push(`${name} (${team}): ${p.injuryStatus}`);
       } else if (blocked) {
         summary.players.ambiguous.push(`${name} (${team}): ${blocked}`);
       } else if (c.match.kind === "ambiguous") {
