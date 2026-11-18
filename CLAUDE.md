@@ -44,11 +44,11 @@ CI runs Postgres 17 and is the source of truth.
 ## Workflow
 - Never commit to `main`. Branch → PR → CI green → Michael merges. No agent merges.
 - Work is tracked in Linear (team `STO`, project **Storyline**; milestones v1, v1.1, v2+). Spec and ADRs say *what and why*; Linear says *what's next*. Link spec sections, don't copy them.
-- **Every PR has an issue** (check before creating one). Branch `feat/sto-12-short-name`; `Fixes STO-12` as the PR description's first line.
+- **Every PR has an issue** (check before creating one). Branch `<type>/sto-12-short-name` (`feat`, `fix`, `chore`, `docs`); PR title starts `STO-12:`; `Fixes STO-12` as the PR description's first line. Cloud sessions start on a random branch name: rename it when you start work, not at `/ship`.
 - **Product calls go to Michael as `needs-decision`**: label the issue, state the question and options, and don't build past it.
 - Labels: one area (`db`, `worker`, `curation`, `web`, `infra`) per issue. No cycles, no estimates.
 - **One PR = one concern**, ~10 minutes to review (<400 changed lines excluding tests). Refactors go in their own PR first. Every commit passes tests on its own. Stack only true dependencies (2–3 max, merge commits, not squash).
-- **When the work is done and tests pass locally, run `/ship` without asking.** It opens the PR and runs the reviews. Rename the branch to the convention first if needed. Ask Michael only for product calls, things you can't get yourself (like data from a blocked network), and merges.
+- **When the work is done and tests pass locally, run `/ship` without asking.** It opens the PR and runs the reviews. Ask Michael only for product calls, things you can't get yourself (like data from a blocked network), and merges.
 
 ### Review depth (ADR-022)
 | PR type | Reviewers |

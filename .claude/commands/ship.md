@@ -6,6 +6,8 @@ argument-hint: <Linear issue, e.g. STO-12>
 Ship the current branch for: $ARGUMENTS
 
 ## 1. Open the PR
+- **Branch name first.** If the current branch isn't `<type>/sto-NN-short-name` (`feat`, `fix`, `chore`, `docs`), rename it: `git branch -m <type>/sto-NN-short-name`, push it, and delete the old remote branch if it was pushed. Cloud sessions start on random names like `hopeful-goldberg-3k2pqw`.
+- PR title starts with `STO-NN:` so Linear links the PR even if the rename couldn't happen.
 - Fill in `.github/pull_request_template.md`, especially **Risks & where to look**, which tells Michael what to read closely. The **Why** section carries the 3–5 line reasoning for each non-obvious choice.
 - Pick the review row from CLAUDE.md → "Review depth". Docs-only PRs skip review: once CI is green, go straight to the handoff in step 4 and write the checklist and approval comment yourself.
 
