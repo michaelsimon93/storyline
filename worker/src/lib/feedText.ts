@@ -1,6 +1,7 @@
 // Test-feed messages (STO-40), built from what a job already returns. Pure, so it's unit-tested.
 
 import type { IngestSummary } from "../jobs/ingest.js";
+import type { StorySummary } from "../jobs/stories.js";
 
 // Discord rejects messages over 2000 chars. Lists shrink until the message fits, so every
 // count survives; a hard cut is the last resort.
@@ -41,4 +42,37 @@ export function ingestSummaryText(s: IngestSummary): string {
   ].join("\n");
   const text = LIST_CAPS.map(render).find((t) => t.length <= MAX_CHARS) ?? render(0);
   return text.length > MAX_CHARS ? `${text.slice(0, MAX_CHARS)}… (truncated)` : text;
+}
+
+/**
+ * The story step's #testing messages (STO-76, STO-103): the counts that show where stories went, the split per angle (so the
+ * quota can be checked by eye), then every shortlisted story with its angle next to its score. One message can't hold 50 lines
+ * under Discord's limit, so the list continues in more messages; each is posted whole.
+ */
+export function storySummaryMessages(s: StorySummary): string[] {
+  const head = `📖 **Stories · slate ${s.slateDate}**`;
+  const angles = Object.keys({ ...s.foundByAngle, ...s.byAngle }).sort();
+  const split = angles.map((a) => {
+    const b = s.byAngle[a] ?? { matched: 0, quota: 0, fill: 0 };
+    return `${a}: ${b.quota + b.fill} on the list (${b.quota} quota + ${b.fill} fill) of ${b.matched} matched, ${s.foundByAngle[a] ?? 0} found`;
+  });
+  const first = [
+    head,
+    `Found ${s.found} · not playing tonight ${s.notPlaying} · no stored signals ${s.noSignals} · no market ${s.noMarket} · matched ${s.matched} · **shortlisted ${s.shortlisted}**`,
+    ...(split.length ? ["**Split by angle**", ...split.map((x) => `• ${x}`)] : []),
+    ...list("No market", s.noMarketSamples, 4).slice(0, 6),
+    ...(s.inputs.playersWithoutInputs ? [`${s.inputs.playersWithoutInputs} players had no game log or schedule from ESPN, so no story about them`] : []),
+    ...(s.found === 0 ? ["No stories found today."] : []),
+  ].join("\n");
+
+  const lines = s.shortlist.map((k) => `${k.position}. ${k.angle} · ${k.score} · ${k.player} ${k.stat.toUpperCase()} (${k.slotKind})`);
+  const msgs = [first.length > MAX_CHARS ? `${first.slice(0, MAX_CHARS)}… (truncated)` : first];
+  let cur: string[] = [];
+  const flush = () => { if (cur.length) msgs.push([`**Shortlist, angle · score** (${msgs.length})`, ...cur].join("\n")); cur = []; };
+  for (const l of lines) {
+    if ([...cur, l].join("\n").length > MAX_CHARS - 80) flush();
+    cur.push(l.length > MAX_ITEM_CHARS ? `${l.slice(0, MAX_ITEM_CHARS)}…` : l);
+  }
+  flush();
+  return msgs;
 }

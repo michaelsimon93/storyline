@@ -5,7 +5,8 @@ import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { testFeed } from "../src/lib/testFeed.js";
 import { webhookAlert } from "../src/lib/alert.js";
-import { ingestSummaryText } from "../src/lib/feedText.js";
+import { ingestSummaryText, storySummaryMessages } from "../src/lib/feedText.js";
+import type { StorySummary } from "../src/jobs/stories.js";
 import type { IngestSummary } from "../src/jobs/ingest.js";
 import { installFetch, json } from "./helpers/mockFetch.js";
 
@@ -149,4 +150,37 @@ test("long lists are capped and the message stays under Discord's 2000-char limi
   }
   assert.match(text, /…and \d+ more/);
   assert.doesNotMatch(text, /truncated/, "shrinking the lists was enough; nothing was cut mid-message");
+});
+
+// ---------------------------------------------------------------- the story summary (STO-76, STO-103)
+
+
+const storySummary = (n: number): StorySummary => ({
+  slateDate: "2026-11-20", runId: 1, found: 90, foundByAngle: { hot_streak: 40, back_from_injury: 20, backup_steps_in: 30 },
+  notPlaying: 6, noSignals: 2, noMarket: 31, noMarketSamples: ["Some Player PTS (hot_streak)"], matched: 51, shortlisted: n,
+  byAngle: { hot_streak: { matched: 20, quota: 16, fill: 0 }, back_from_injury: { matched: 11, quota: 11, fill: 3 }, backup_steps_in: { matched: 20, quota: 16, fill: 4 } },
+  shortlist: Array.from({ length: n }, (_, i) => ({ position: i + 1, angle: ["hot_streak", "back_from_injury", "backup_steps_in"][i % 3]!, stat: "pts" as const, score: 90 - i, player: `Player Number ${i + 1}`, slotKind: i % 7 ? "quota" as const : "fill" as const, summary: "x" })),
+  inputs: { calls: 80, failedCalls: 0, skippedRows: 0, playersWithoutInputs: 3, unknownStatuses: [] },
+});
+
+test("story summary: the counts and the split per angle come first, so the quota can be checked in Discord", () => {
+  const [first] = storySummaryMessages(storySummary(50));
+  assert.match(first!, /Found 90 · not playing tonight 6 · no stored signals 2 · no market 31 · matched 51 · \*\*shortlisted 50\*\*/);
+  assert.match(first!, /hot_streak: 16 on the list \(16 quota \+ 0 fill\) of 20 matched, 40 found/);
+  assert.match(first!, /back_from_injury: 14 on the list \(11 quota \+ 3 fill\) of 11 matched, 20 found/);
+});
+
+test("story summary: every shortlisted story shows its angle next to its score, none cut, each message under Discord's limit", () => {
+  const msgs = storySummaryMessages(storySummary(50));
+  assert.ok(msgs.length > 1, "50 lines don't fit one message");
+  assert.ok(msgs.every((m) => m.length <= 1900), msgs.map((m) => m.length).join(","));
+  const text = msgs.join("\n");
+  for (let i = 1; i <= 50; i++) assert.match(text, new RegExp(`^${i}\\. (hot_streak|back_from_injury|backup_steps_in) · ${91 - i} · Player Number ${i} PTS \\((quota|fill)\\)$`, "m"));
+});
+
+test("story summary: an empty day says so and posts one message", () => {
+  const s = { ...storySummary(0), found: 0, foundByAngle: {}, byAngle: {}, matched: 0, noMarket: 0, notPlaying: 0, noSignals: 0, noMarketSamples: [], inputs: { calls: 1, failedCalls: 0, skippedRows: 0, playersWithoutInputs: 0, unknownStatuses: [] } };
+  const msgs = storySummaryMessages(s);
+  assert.equal(msgs.length, 1);
+  assert.match(msgs[0]!, /No stories found today\./);
 });
