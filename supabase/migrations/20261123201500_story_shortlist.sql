@@ -40,10 +40,12 @@ create table story_shortlist (
 );
 -- The parts a foreign key can't say: the team is one of the game's two, and the day and league are the game's (STO-109).
 -- The job never writes a row that fails these; the table refuses one anyway, because the ranker (STO-11) trusts it.
+-- Checked when a row is written. A game whose teams are corrected afterwards (ingest does this) isn't re-checked: STO-113.
 create function story_shortlist_matches_game() returns trigger language plpgsql as $$
 declare g games%rowtype;
 begin
   select * into g from games where id = new.game_id;
+  if not found then raise exception 'story_shortlist: game % does not exist', new.game_id; end if;
   if new.team_id not in (g.home_team_id, g.away_team_id) then
     raise exception 'story_shortlist: team % is not playing in game %', new.team_id, new.game_id;
   end if;
