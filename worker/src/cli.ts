@@ -8,7 +8,7 @@ import { loadConfig } from "./lib/config.js";
 import { webhookAlert } from "./lib/alert.js";
 import { testFeed } from "./lib/testFeed.js";
 import { alertText } from "./lib/alertText.js";
-import { ingestJob, scheduledJobs } from "./jobs/index.js";
+import { ingestJob, scheduledJobs, onDemandJobs } from "./jobs/index.js";
 import { runJob, startScheduler, type RunOutcome } from "./scheduler.js";
 
 const [command, arg] = process.argv.slice(2);
@@ -48,9 +48,9 @@ async function main() {
     }
     case "job": {
       const config = await loadConfig(db);
-      const entry = scheduledJobs(config, feed, alert).find((s) => s.job.name === arg);
-      if (!entry) throw new Error(`Unknown job: ${arg}`);
-      report(await runJob(db, entry.job, alert));
+      const job = [...scheduledJobs(config, feed, alert).map((s) => s.job), ...onDemandJobs(feed, alert)].find((j) => j.name === arg);
+      if (!job) throw new Error(`Unknown job: ${arg}`);
+      report(await runJob(db, job, alert));
       break;
     }
     case "ingest": {
