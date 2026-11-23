@@ -32,6 +32,14 @@ export type CurateResult =
   | { ok: true; selection: Selection; attempts: Attempt[] }
   | { ok: false; attempts: Attempt[] };
 
+/** What the retry is told: the first few problems in full-ish, then a count, so one hostile answer can't balloon the next prompt. */
+const MAX_FEEDBACK_ITEMS = 10, MAX_FEEDBACK_CHARS = 300;
+function boundedFeedback(violations: Violation[]): string[] {
+  const lines = violations.slice(0, MAX_FEEDBACK_ITEMS).map((x) => x.message.length > MAX_FEEDBACK_CHARS ? `${x.message.slice(0, MAX_FEEDBACK_CHARS)}…` : x.message);
+  if (violations.length > MAX_FEEDBACK_ITEMS) lines.push(`…and ${violations.length - MAX_FEEDBACK_ITEMS} more problems`);
+  return lines;
+}
+
 export async function curateWithRules(
   curator: Curator<CurationRequest, unknown>,
   input: CurationInput,
@@ -45,6 +53,17 @@ export async function curateWithRules(
   // What the model sees: ladders cut to the band, stories with no in-band strike left dropped. The answer is
   // still checked against the full input, so a strike it was never shown is caught, not trusted.
   const shown = narrowToBand(input, rules);
+  if (shown.stories.length === 0) {
+    // Nothing can be picked (every ladder is out of band, or the band is misconfigured). Don't pay for a call that can only
+    // answer "nothing", and don't call an empty deck a success.
+    try {
+      await alert(`Curation failed for ${input.slateDate}: none of the ${input.stories.length} shortlisted stories has a strike inside the price band ` +
+        `(${rules.bandMin}-${rules.bandMax}%), so Claude was not called and nothing was published. Check the price band and the market prices.`);
+    } catch (err) {
+      console.error(`curation: could not send the failure alert: ${err instanceof Error ? err.message : err}`);
+    }
+    return { ok: false, attempts: [] };
+  }
   const attempts: Attempt[] = [];
   let feedback: string[] = [];
   for (let i = 1; i <= rules.maxAttempts; i++) {
@@ -64,7 +83,7 @@ export async function curateWithRules(
       return { ok: true, selection: checked.selection, attempts };
     }
     attempts.push({ attempt: i, request, output, violations: checked.violations, accepted: false });
-    feedback = checked.violations.map((x) => x.message);
+    feedback = boundedFeedback(checked.violations);
   }
 
   // The alert helper truncates long messages, so keep each attempt to one short line.

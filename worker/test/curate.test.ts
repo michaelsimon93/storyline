@@ -114,3 +114,10 @@ test("maxAttempts of 1 means one call and no retry", async () => {
 test("an invalid cap is a configuration error, not a silent no-op", async () => {
   await assert.rejects(curateWithRules(scripted([GOOD]), INPUT, { ...RULES, maxAttempts: 0 }, async () => {}), /maxAttempts/);
 });
+
+test("storable: NUL and lone surrogates are replaced in every string and key, and nothing else changes", async () => {
+  const { storable } = await import("../src/sources/curationStore.js");
+  const out = storable({ "k\u0000ey": ["a\u0000b", { x: "ok \u{1F600} ünï", y: "lone \uD83D here", z: "low \uDE00 here" }], n: 3, b: true, nil: null }) as Record<string, unknown>;
+  assert.deepEqual(out, { "k�ey": ["a�b", { x: "ok \u{1F600} ünï", y: "lone � here", z: "low � here" }], n: 3, b: true, nil: null });
+  assert.doesNotThrow(() => JSON.parse(JSON.stringify(out)));
+});

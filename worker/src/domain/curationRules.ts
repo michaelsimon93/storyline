@@ -79,6 +79,10 @@ export interface Violation { kind: ViolationKind; message: string }
 
 export type CheckResult = { ok: true; selection: Selection } | { ok: false; violations: Violation[] };
 
+/** At most `max` ids, then a count of the rest: a hostile or confused answer can't balloon a message. */
+const listIds = (ids: string[], max: number) =>
+  ids.length <= max ? ids.join(", ") : `${ids.slice(0, max).join(", ")} and ${ids.length - max} more`;
+
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** The shape only: is this a ranking of strings and picks of three strings? */
@@ -126,14 +130,20 @@ export function checkSelection(input: CurationInput, output: unknown, rules: Cur
   const invented = [...ranked].filter((id) => !shownIds.has(id));
   if (ranked.size !== sel.ranking.length || missing.length || invented.length) {
     add("ranking", `ranking must list each of the ${shown.length} stories exactly once` +
-      (missing.length ? `; missing ${missing.join(", ")}` : "") +
-      (invented.length ? `; not on the shortlist: ${invented.join(", ")}` : "") +
+      (missing.length ? `; missing ${listIds(missing, 10)}` : "") +
+      (invented.length ? `; not on the shortlist: ${listIds(invented, 5)}` : "") +
       (ranked.size !== sel.ranking.length ? "; repeats a story" : ""));
   }
 
-  // How many: N, or every distinct player if the shortlist has fewer than N (one card per player).
-  const want = Math.min(rules.n, new Set(shown.map((s) => s.playerId)).size);
-  if (sel.picks.length !== want) add("pick_count", `expected ${want} picks, got ${sel.picks.length}`);
+  // How many: N, unless the slate can't fill it. One card per player and the per-game and per-stat caps each bound the deck,
+  // so on a small slate (a one-game night, or a shortlist that is mostly one stat) the right answer is a shorter deck, not a failure.
+  // This is a bound, not an exact search: a slate can still be unfillable in odd cases, and then the retries end in the detailed alert.
+  const nPlayers = new Set(shown.map((s) => s.playerId)).size, nGames = new Set(shown.map((s) => s.gameId)).size, nStats = new Set(shown.map((s) => s.stat)).size;
+  const want = Math.min(rules.n, nPlayers, rules.maxPerGame * nGames, rules.maxPerStat * nStats);
+  if (sel.picks.length !== want) {
+    add("pick_count", `expected ${want} picks, got ${sel.picks.length}` +
+      (want < rules.n ? ` (asked for ${rules.n}, but ${nPlayers} players, ${nGames} games and the per-game and per-stat caps allow only ${want})` : ""));
+  }
 
   const players = new Set<string>();
   const perGame = new Map<string, number>();
@@ -154,12 +164,15 @@ export function checkSelection(input: CurationInput, output: unknown, rules: Cur
       add("out_of_band", `pick ${p.marketId} for story ${p.storyId} is out of band: yes price ${rung.yesPriceCents}c, band ${rules.bandMin}-${rules.bandMax}c`);
     }
 
-    if (p.reason.trim() === "") add("reason", `pick ${p.storyId} has no reason`);
-    else if (/[\r\n]/.test(p.reason.trim())) add("reason", `pick ${p.storyId}: the reason must be one line`);
+    const reason = p.reason.trim();
+    if (reason === "") add("reason", `pick ${p.storyId} has no reason`);
+    else if (/[\p{Cc}\u2028\u2029]/u.test(reason)) add("reason", `pick ${p.storyId}: the reason must be one line of plain text (no line breaks or control characters)`);
   }
 
   for (const [g, n] of perGame) if (n > rules.maxPerGame) add("game_cap", `${n} picks from game ${g}; at most ${rules.maxPerGame}`);
   for (const [s, n] of perStat) if (n > rules.maxPerStat) add("stat_cap", `${n} picks on stat ${s}; at most ${rules.maxPerStat}`);
 
-  return v.length ? { ok: false, violations: v } : { ok: true, selection: sel };
+  // What's kept is the trimmed reason: the one that was checked.
+  const clean: Selection = { ranking: sel.ranking, picks: sel.picks.map((p) => ({ ...p, reason: p.reason.trim() })) };
+  return v.length ? { ok: false, violations: v } : { ok: true, selection: clean };
 }

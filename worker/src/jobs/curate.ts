@@ -34,7 +34,7 @@ export interface CurateRunOptions {
 }
 
 /** What a finished run hands to the #testing post. */
-export interface CurationPosted { shown: CurationInput; selection: Selection; attemptsUsed: number }
+export interface CurationPosted { shown: CurationInput; selection: Selection; attemptsUsed: number; asked: number }
 
 export type CurateRunResult =
   | { status: "ok"; slateDate: string; runId: number; picks: number; attempts: number; posted: CurationPosted }
@@ -44,7 +44,7 @@ export type CurateRunResult =
 
 /** Thrown inside the run so withRun records it as failed. Caught below: the alert has already gone out. */
 class CurationFailed extends Error {
-  constructor(readonly attempts: number) { super(`every one of ${attempts} curation attempts failed or broke the rules`); }
+  constructor(readonly attempts: number) { super(attempts === 0 ? "no story had a strike inside the price band, so Claude was not called" : `every one of ${attempts} curation attempts failed or broke the rules`); }
 }
 class NoShortlist extends Error { constructor(day: string) { super(`no story shortlist for ${day}`); } }
 
@@ -85,7 +85,7 @@ export async function runCuration(db: Db, opts: CurateRunOptions): Promise<Curat
       await storeAttempts(db, runId, r.attempts);   // kept whether or not it passed: rejected answers are what tuning needs
       if (!r.ok) throw new CurationFailed(r.attempts.length);
 
-      posted = { shown: narrowToBand(input, rules), selection: r.selection, attemptsUsed: r.attempts.length };
+      posted = { shown: narrowToBand(input, rules), selection: r.selection, attemptsUsed: r.attempts.length, asked: rules.n };
       return {
         league: LEAGUE, stories: input.stories.length, shown: posted.shown.stories.length, attempts: r.attempts.length,
         picks: r.selection.picks.map((p) => ({ storyId: p.storyId, marketId: p.marketId, reason: p.reason })),

@@ -8,6 +8,19 @@
 import type { Db } from "../lib/db.js";
 import type { Attempt } from "./curate.js";
 
+/**
+ * Postgres jsonb can't hold U+0000 or a lone surrogate, and a model's answer can contain either. One such character would make
+ * the whole batch fail and lose every attempt of the run, the accepted one included. So both are replaced (with U+FFFD) in
+ * every string and key before storing: what's kept is what the model said, minus the characters the database can't hold.
+ */
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+export function storable(v: unknown): unknown {
+  if (typeof v === "string") return v.replaceAll("\u0000", "\uFFFD").replace(LONE_SURROGATE, "\uFFFD");
+  if (Array.isArray(v)) return v.map(storable);
+  if (v !== null && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [storable(k) as string, storable(x)]));
+  return v;
+}
+
 export async function storeAttempts(db: Db, runId: number, attempts: Attempt[]): Promise<void> {
   if (attempts.length === 0) return;
   const rows = attempts.map((a) => ({
@@ -18,5 +31,5 @@ export async function storeAttempts(db: Db, runId: number, attempts: Attempt[]):
      select $1, a.attempt, a.request, a.output, a.violations, a.error, a.accepted
      from jsonb_to_recordset($2::jsonb) as a(attempt int, request jsonb, output jsonb, violations jsonb, error text, accepted boolean)
      on conflict (run_id, attempt) do nothing`,
-    [runId, JSON.stringify(rows)]);
+    [runId, JSON.stringify(storable(rows))]);
 }

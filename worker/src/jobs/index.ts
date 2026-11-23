@@ -80,7 +80,7 @@ export function curateJob(alert: Alert, feed: TestFeed, date?: string, curator?:
       if (r.status !== "ok") return r;   // the alert has gone out; the run is recorded
       // The run is already recorded ok: nothing about the test feed may fail it (STO-40).
       try {
-        await postCuration(feed, r.posted.shown, r.posted.selection, r.posted.attemptsUsed);
+        await postCuration(feed, r.posted.shown, r.posted.selection, r.posted.attemptsUsed, r.posted.asked);
       } catch (err) {
         console.error(`test feed: could not post curation: ${err instanceof Error ? err.message : err}`);
       }

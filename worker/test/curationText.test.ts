@@ -51,3 +51,10 @@ test("curation settings: every missing or mistyped key is named at once", () => 
   assert.throws(() => parseCurationConfig([{ key: "curation_model", value: 5 }]), (e: Error) =>
     /curation_model should be string/.test(e.message) && /missing curation_max_attempts/.test(e.message) && /missing price_band_min/.test(e.message));
 });
+
+test("a deck shorter than asked says so, with the reason; a full deck doesn't", () => {
+  const short = curationPostChunks(shown(4), sel(2), 1, 10)[0]!;
+  assert.match(short, /\*\*Short deck: asked for 10\*\*, the game and stat caps and the players available allow 2/);
+  assert.doesNotMatch(curationPostChunks(shown(4), sel(2), 1, 2)[0]!, /Short deck/);
+  assert.doesNotMatch(curationPostChunks(shown(4), sel(2), 1)[0]!, /Short deck/);
+});

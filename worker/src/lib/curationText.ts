@@ -14,9 +14,10 @@ const tally = (xs: string[]) => {
 };
 
 /** `shown` is the stories the curator saw (after narrowing). Lines are kept whole; a long reason is truncated, not the pick. */
-export function curationPostChunks(shown: CurationInput, sel: Selection, attemptsUsed: number): string[] {
+export function curationPostChunks(shown: CurationInput, sel: Selection, attemptsUsed: number, asked?: number): string[] {
   const byId = new Map(shown.stories.map((s) => [s.storyId, s]));
-  const lines = [`**Curation ${shown.slateDate}**: ${sel.picks.length} cards from ${shown.stories.length} stories (attempt ${attemptsUsed})`];
+  const lines = [`**Curation ${shown.slateDate}**: ${sel.picks.length} cards from ${shown.stories.length} stories (attempt ${attemptsUsed})` +
+    (asked !== undefined && asked !== sel.picks.length ? `. **Short deck: asked for ${asked}**, the game and stat caps and the players available allow ${sel.picks.length}` : "")];
   sel.picks.forEach((p, i) => {
     const s = byId.get(p.storyId);
     const rung = s?.ladder.find((l) => l.marketId === p.marketId);
@@ -37,6 +38,6 @@ export function curationPostChunks(shown: CurationInput, sel: Selection, attempt
 }
 
 /** Post the chunks in order. The feed never throws, so a failed post can't fail curation. */
-export async function postCuration(feed: TestFeed, shown: CurationInput, sel: Selection, attemptsUsed: number): Promise<void> {
-  for (const c of curationPostChunks(shown, sel, attemptsUsed)) await feed.post(c);
+export async function postCuration(feed: TestFeed, shown: CurationInput, sel: Selection, attemptsUsed: number, asked?: number): Promise<void> {
+  for (const c of curationPostChunks(shown, sel, attemptsUsed, asked)) await feed.post(c);
 }
