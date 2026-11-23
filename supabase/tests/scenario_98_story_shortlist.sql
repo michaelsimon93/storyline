@@ -18,8 +18,8 @@ insert into signals (id, source, kind, slate_date, player_id, key, summary, evid
 
 create function sl(pos int, pid text default 'a9800000-0000-0000-0000-0000000000b1', ang text default 'hot_streak', st text default 'pts', kind text default 'quota')
 returns text language sql as $$
-  select format($q$insert into story_shortlist (run_id, slate_date, position, player_id, game_id, angle, stat, score, summary, market_id, slot_kind)
-    values (980001, storyline_today() + 71, %s, %L, 'a9800000-0000-0000-0000-0000000000e1', %L, %L, 50, 'x', 'a9800000-0000-0000-0000-0000000000f1', %L)$q$, pos, pid, ang, st, kind) $$;
+  select format($q$insert into story_shortlist (run_id, slate_date, league, team_id, position, player_id, game_id, angle, stat, score, summary, market_id, slot_kind)
+    values (980001, storyline_today() + 71, 'nba', 29, %s, %L, 'a9800000-0000-0000-0000-0000000000e1', %L, %L, 50, 'x', 'a9800000-0000-0000-0000-0000000000f1', %L)$q$, pos, pid, ang, st, kind) $$;
 create function sl_ok(q text) returns text language plpgsql as $$ begin execute q; return 'ok'; exception when others then return sqlerrm; end $$;
 
 select t_eq('shortlist: a story can be stored', sl_ok(sl(1)), 'ok');
@@ -30,6 +30,11 @@ select t_eq('shortlist: a new angle needs no migration (text, not an enum)', sl_
 select t_err('shortlist: position 0 is rejected',        sl(0, 'a9800000-0000-0000-0000-0000000000b2'), '%check%');
 select t_err('shortlist: an empty angle is rejected',    sl(4, 'a9800000-0000-0000-0000-0000000000b2', ''), '%check%');
 select t_err('shortlist: an unknown slot kind is rejected', sl(4, 'a9800000-0000-0000-0000-0000000000b2', kind => 'bonus'), '%check%');
+select t_err('shortlist: a team that does not exist is rejected',
+  replace(sl(4, 'a9800000-0000-0000-0000-0000000000b2'), $$'nba', 29,$$, $$'nba', 32000,$$), '%foreign key%');
+select t_err('shortlist: a league that does not exist is rejected',
+  replace(sl(4, 'a9800000-0000-0000-0000-0000000000b2'), $$'nba', 29,$$, $$'xyz', 29,$$), '%invalid input value%');
+select t_eq('shortlist: league and team are stored', (select league::text || ':' || team_id from story_shortlist where position = 1), 'nba:29');
 select t_err('shortlist: a market that does not exist is rejected',
   replace(sl(4, 'a9800000-0000-0000-0000-0000000000b2'), 'a9800000-0000-0000-0000-0000000000f1', 'a9800000-0000-0000-0000-0000000000f2'), '%foreign key%');
 select t_err('shortlist: a signal that does not exist is rejected',

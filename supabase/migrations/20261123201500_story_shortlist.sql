@@ -17,9 +17,11 @@ create table story_shortlist (
   id            bigint generated always as identity primary key,
   run_id        bigint not null references pipeline_runs(id),
   slate_date    date not null,
+  league        league not null,                                   -- copied from the game, so analytics and filters need no join
   position      integer not null check (position >= 1),
   player_id     uuid not null references players(id),
   game_id       uuid not null references games(id),
+  team_id       smallint not null references teams(id),            -- the player's team for this story, kept even if he is traded later
   angle         text not null check (angle <> ''),
   stat          text not null check (stat <> ''),                  -- the detector's key: pts, reb, ast, 3pm
   score         integer not null check (score >= 0),               -- the angle's own scale

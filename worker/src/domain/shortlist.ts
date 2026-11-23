@@ -19,7 +19,11 @@ export interface ShortlistEntry {
    * this is not a ranking: ranking across angles is the Claude ranker's job (STO-11).
    */
   position: number;
+  /** 'nba' today. Copied from the game, so filters and analytics need no join. */
+  league: string;
   playerId: string;
+  /** teams.id of the player's team for this story: one of the game's two teams, and kept even if he is traded later. */
+  teamId: number;
   gameId: string;
   /** Text, not a union: new angles (revenge game, trending) arrive without a type change. Today: hot_streak, back_from_injury, backup_steps_in. */
   angle: string;
