@@ -46,7 +46,7 @@ test("it applies to every angle, not just hot streak", () => {
 // ---------------------------------------------------------------- matching to a market
 
 const mk = (id: string, strike: number, bid: number | null, ask: number | null, over: Partial<MarketRow> = {}): MarketRow =>
-  ({ id, playerId: "p1", gameId: "g1", teamId: 1, stat: "points", strike, yesBidCents: bid, yesAskCents: ask, ...over });
+  ({ id, playerId: "p1", gameId: "g1", stat: "points", strike, yesBidCents: bid, yesAskCents: ask, ...over });
 const RULES = { bandMin: 25, bandMax: 75, maxSpreadCents: 5 };
 
 test("a story matches a market on its player and stat, in the band, within the spread", () => {

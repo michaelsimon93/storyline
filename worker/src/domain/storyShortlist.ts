@@ -32,8 +32,6 @@ export function dropNotPlaying<T extends { playerId: string }>(
 
 export interface MarketRow {
   id: string; playerId: string; gameId: string;
-  /** The player's team, from the slate, so the shortlist can say whose story it is. */
-  teamId: number;
   /** markets.stat: 'points', 'rebounds', ... */
   stat: string; strike: number;
   yesBidCents: number | null; yesAskCents: number | null;
