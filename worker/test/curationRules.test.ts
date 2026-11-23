@@ -5,13 +5,13 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkSelection, type CurationInput, type CurationRules, type CurationStory } from "../src/domain/curationRules.js";
+import { checkSelection, narrowToBand, type CurationInput, type CurationRules, type CurationStory } from "../src/domain/curationRules.js";
 
 const RULES: CurationRules = { n: 3, bandMin: 25, bandMax: 75, maxPerGame: 2, maxPerStat: 2, maxAttempts: 3 };
 
 /** A story with a three-rung ladder: 20+ at 80c (out of band), 25+ at 55c, 30+ at 30c, 35+ at 10c (out of band). */
 const story = (id: string, o: Partial<CurationStory> = {}): CurationStory => ({
-  storyId: id, playerId: `p-${id}`, gameId: "g1", stat: "pts", angle: "hot_streak", summary: `story ${id}`,
+  storyId: id, playerId: `p-${id}`, playerName: `Player ${id}`, gameId: "g1", stat: "pts", angle: "hot_streak", summary: `story ${id}`,
   signals: [{ id: 1, source: "espn", kind: "stat", trust: "verified", summary: "fact" }],
   ladder: [
     { marketId: `${id}-20`, strike: 20, yesPriceCents: 80 },
@@ -90,7 +90,7 @@ test("the chosen strike must be on that story's own ladder", () => {
 test("the chosen strike must be inside the price band, edges included", () => {
   assert.ok(kinds({ ...good(), picks: [pick("a", "20"), pick("b"), pick("c")] }).includes("out_of_band"));   // 80c
   assert.ok(kinds({ ...good(), picks: [pick("a", "35"), pick("b"), pick("c")] }).includes("out_of_band"));   // 10c
-  const edge = (cents: number): CurationInput => ({ slateDate: "x", stories: [story("a", { ladder: [{ marketId: "a-e", strike: 1, yesPriceCents: cents }] }), ...INPUT.stories.slice(1, 3)] });
+  const edge = (cents: number): CurationInput => ({ slateDate: "x", stories: [story("a", { ladder: [{ marketId: "a-e", strike: 1, yesPriceCents: cents }, { marketId: "a-ok", strike: 2, yesPriceCents: 50 }] }), ...INPUT.stories.slice(1, 3)] });
   const out = { ranking: ["a", "b", "c"], picks: [{ storyId: "a", marketId: "a-e", reason: "r" }, pick("b"), pick("c")] };
   assert.deepEqual(kinds(out, edge(25)), []);
   assert.deepEqual(kinds(out, edge(75)), []);
@@ -118,4 +118,38 @@ test("every problem is reported at once, so the retry can fix them all", () => {
   const out = { ranking: ids.slice(1), picks: [pick("a", "20", ""), pick("a"), pick("zzz")] };
   const k = new Set<string>(kinds(out));
   for (const want of ["ranking", "out_of_band", "reason", "player_repeat", "unknown_story"]) assert.ok(k.has(want), `missing ${want}`);
+});
+
+// ---------------------------------------------------------------- narrowing the ladder to the band (decision 2)
+
+test("narrowToBand cuts each ladder to the band (edges included) and keeps everything else", () => {
+  const out = narrowToBand(INPUT, RULES);
+  assert.deepEqual(out.stories[0]!.ladder.map((l) => l.marketId), ["a-25", "a-30"]);   // 80c and 10c are gone
+  assert.equal(out.stories[0]!.summary, "story a");
+  assert.equal(out.slateDate, INPUT.slateDate);
+  const edges = narrowToBand({ slateDate: "x", stories: [story("a", { ladder: [24, 25, 75, 76].map((c) => ({ marketId: `m${c}`, strike: c, yesPriceCents: c })) })] }, RULES);
+  assert.deepEqual(edges.stories[0]!.ladder.map((l) => l.marketId), ["m25", "m75"]);
+});
+
+test("narrowToBand drops a story with no strike left in the band, and doesn't change its input", () => {
+  const dead = story("z", { ladder: [{ marketId: "z-1", strike: 5, yesPriceCents: 95 }] });
+  const input: CurationInput = { slateDate: "x", stories: [dead, story("a")] };
+  const before = JSON.stringify(input);
+  assert.deepEqual(narrowToBand(input, RULES).stories.map((s) => s.storyId), ["a"]);
+  assert.equal(JSON.stringify(input), before);
+});
+
+test("a story with no in-band strike isn't required in the ranking, and ranking it is a violation", () => {
+  const dead = story("z", { gameId: "g9", ladder: [{ marketId: "z-1", strike: 5, yesPriceCents: 95 }] });
+  const input: CurationInput = { slateDate: "x", stories: [...INPUT.stories, dead] };
+  assert.deepEqual(kinds(good(), input), []);                                    // ranking without z is right
+  assert.deepEqual(kinds({ ...good(), ranking: [...ids, "z"] }, input), ["ranking"]);   // it was never shown
+  assert.ok(kinds({ ...good(), picks: [pick("a"), pick("b"), { storyId: "z", marketId: "z-1", reason: "r" }] }, input).includes("out_of_band"));
+});
+
+test("the pick count only counts players the curator could actually pick", () => {
+  // two stories shown, a third has no in-band strike: N=3 but only 2 are pickable
+  const dead = story("z", { ladder: [{ marketId: "z-1", strike: 5, yesPriceCents: 95 }] });
+  const input: CurationInput = { slateDate: "x", stories: [story("a", { gameId: "g1" }), story("b", { gameId: "g2" }), dead] };
+  assert.deepEqual(kinds({ ranking: ["a", "b"], picks: [pick("a"), pick("b")] }, input), []);
 });

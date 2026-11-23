@@ -37,6 +37,8 @@ export interface LadderStrike {
 export interface CurationStory {
   storyId: string;
   playerId: string;
+  /** For people reading the #testing post; the rules never read it. */
+  playerName: string;
   gameId: string;
   /** The stat the story is about ("pts", "reb"…): what "spread across stat types" counts. */
   stat: string;
@@ -44,7 +46,7 @@ export interface CurationStory {
   angle: string;
   summary: string;
   signals: CurationSignal[];
-  /** Every strike we know for this player and stat. Whether the curator sees all of it or only the in-band part is a separate decision (STO-11, decision 2); the rules check the band either way. */
+  /** Every open, tight-spread strike we know for this player and stat. The curator is shown only the in-band part (`narrowToBand`); the rules still check the band on whatever it answers. */
   ladder: LadderStrike[];
 }
 
@@ -91,6 +93,20 @@ function parseShape(out: unknown): Selection | undefined {
   return { ranking: out.ranking as string[], picks };
 }
 
+const inBand = (l: LadderStrike, r: CurationRules) => l.yesPriceCents >= r.bandMin && l.yesPriceCents <= r.bandMax;
+
+/**
+ * What the curator is shown (STO-11 decision 2): each ladder cut to the price band, and a story with no in-band
+ * strike left dropped, since it can't be a card. The band is a hard rule, so code applies it instead of asking the
+ * model to, which makes out-of-band picks impossible rather than merely retried.
+ */
+export function narrowToBand(input: CurationInput, rules: CurationRules): CurationInput {
+  const stories = input.stories
+    .map((s) => ({ ...s, ladder: s.ladder.filter((l) => inBand(l, rules)) }))
+    .filter((s) => s.ladder.length > 0);
+  return { ...input, stories };
+}
+
 /** Check a curator's answer against the rules. Reports every problem at once, so one retry can fix them all. */
 export function checkSelection(input: CurationInput, output: unknown, rules: CurationRules): CheckResult {
   const sel = parseShape(output);
@@ -102,19 +118,21 @@ export function checkSelection(input: CurationInput, output: unknown, rules: Cur
   const add = (kind: ViolationKind, message: string) => v.push({ kind, message });
   const byId = new Map(input.stories.map((s) => [s.storyId, s]));
 
-  // The ranked shortlist: every story exactly once.
+  // The ranked shortlist: every story the curator was shown (those with a strike in the band), exactly once.
+  const shown = input.stories.filter((s) => s.ladder.some((l) => inBand(l, rules)));
+  const shownIds = new Set(shown.map((s) => s.storyId));
   const ranked = new Set(sel.ranking);
-  const missing = input.stories.filter((s) => !ranked.has(s.storyId)).map((s) => s.storyId);
-  const invented = [...ranked].filter((id) => !byId.has(id));
+  const missing = shown.filter((s) => !ranked.has(s.storyId)).map((s) => s.storyId);
+  const invented = [...ranked].filter((id) => !shownIds.has(id));
   if (ranked.size !== sel.ranking.length || missing.length || invented.length) {
-    add("ranking", `ranking must list each of the ${input.stories.length} stories exactly once` +
+    add("ranking", `ranking must list each of the ${shown.length} stories exactly once` +
       (missing.length ? `; missing ${missing.join(", ")}` : "") +
       (invented.length ? `; not on the shortlist: ${invented.join(", ")}` : "") +
       (ranked.size !== sel.ranking.length ? "; repeats a story" : ""));
   }
 
   // How many: N, or every distinct player if the shortlist has fewer than N (one card per player).
-  const want = Math.min(rules.n, new Set(input.stories.map((s) => s.playerId)).size);
+  const want = Math.min(rules.n, new Set(shown.map((s) => s.playerId)).size);
   if (sel.picks.length !== want) add("pick_count", `expected ${want} picks, got ${sel.picks.length}`);
 
   const players = new Set<string>();
@@ -132,7 +150,7 @@ export function checkSelection(input: CurationInput, output: unknown, rules: Cur
 
     const rung = story.ladder.find((l) => l.marketId === p.marketId);
     if (!rung) add("unknown_strike", `pick ${p.marketId} is not on the ladder for story ${p.storyId}`);
-    else if (rung.yesPriceCents < rules.bandMin || rung.yesPriceCents > rules.bandMax) {
+    else if (!inBand(rung, rules)) {
       add("out_of_band", `pick ${p.marketId} for story ${p.storyId} is out of band: yes price ${rung.yesPriceCents}c, band ${rules.bandMin}-${rules.bandMax}c`);
     }
 

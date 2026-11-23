@@ -9,7 +9,7 @@ import type { Curator } from "../src/sources/types.js";
 
 const RULES: CurationRules = { n: 2, bandMin: 25, bandMax: 75, maxPerGame: 2, maxPerStat: 2, maxAttempts: 3 };
 const story = (id: string, gameId: string, stat: string): CurationStory => ({
-  storyId: id, playerId: `p-${id}`, gameId, stat, angle: "hot_streak", summary: id, signals: [],
+  storyId: id, playerId: `p-${id}`, playerName: `Player ${id}`, gameId, stat, angle: "hot_streak", summary: id, signals: [],
   ladder: [{ marketId: `${id}-hi`, strike: 30, yesPriceCents: 90 }, { marketId: `${id}-mid`, strike: 25, yesPriceCents: 50 }],
 });
 const INPUT: CurationInput = { slateDate: "2026-11-23", stories: [story("a", "g1", "pts"), story("b", "g2", "reb"), story("c", "g3", "ast")] };
@@ -38,6 +38,28 @@ test("a good first answer is returned with no retry and no alert", async () => {
   assert.equal(c.calls.length, 1);
   assert.equal(r.attempts.length, 1);
   assert.deepEqual(a.sent, []);
+});
+
+test("the curator is shown only in-band strikes, and a story with none is left out", async () => {
+  const dead: CurationStory = { ...story("z", "g9", "pts"), ladder: [{ marketId: "z-hi", strike: 40, yesPriceCents: 95 }] };
+  const c = scripted([GOOD]);
+  await curateWithRules(c, { ...INPUT, stories: [...INPUT.stories, dead] }, RULES, async () => {});
+  const shown = c.calls[0]!.input.stories;
+  assert.deepEqual(shown.map((s) => s.storyId), ["a", "b", "c"]);
+  for (const s of shown) assert.deepEqual(s.ladder.map((l) => l.marketId), [`${s.storyId}-mid`]);   // the 90c rung is hidden
+});
+
+test("a strike the curator was never shown is still rejected, not trusted", async () => {
+  const c = scripted([BAD_BAND, BAD_BAND, BAD_BAND]);
+  const r = await curateWithRules(c, INPUT, RULES, async () => {});
+  assert.equal(r.ok, false);
+  assert.ok(r.attempts[0]!.violations.some((v) => v.kind === "out_of_band"));
+});
+
+test("the accepted attempt is marked, and only that one", async () => {
+  const c = scripted([BAD_BAND, GOOD]);
+  const r = await curateWithRules(c, INPUT, RULES, async () => {});
+  assert.deepEqual(r.attempts.map((a) => a.accepted), [false, true]);
 });
 
 test("a rule-breaking answer is rejected and the retry is told exactly what was wrong", async () => {
