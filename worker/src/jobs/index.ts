@@ -3,12 +3,13 @@
 
 import type { Config } from "../lib/config.js";
 import type { TestFeed } from "../lib/testFeed.js";
-import { ingestSummaryText } from "../lib/feedText.js";
+import { ingestSummaryText, storySummaryMessages } from "../lib/feedText.js";
 import type { Job, Scheduled } from "../scheduler.js";
 import { ingest } from "./ingest.js";
 import { pollPrices } from "./poller.js";
 import { runEspnContext, JOB as CONTEXT_ESPN_JOB, type ContextRunResult } from "./contextEspn.js";
 import type { Alert } from "../lib/alert.js";
+import { runStories, JOB as STORY_JOB } from "./stories.js";
 
 /** Ingest, then post its summary to the test feed. No date = today's slate (storyline_today()). */
 export function ingestJob(feed: TestFeed, date?: string): Job {
@@ -38,6 +39,33 @@ export function contextEspnJob(alert: Alert, date?: string): Job {
       return { ...r, signals: r.signals.length, oldestObservedAt: dates[0] ?? null, newestObservedAt: dates[dates.length - 1] ?? null };
     },
   };
+}
+
+/**
+ * The story step (STO-76): find the day's stories, match each to a market, store the shortlist, post it to #testing.
+ * Not scheduled yet: run it with `npm run job -- story`. Its schedule needs its own settings loader (STO-106's pattern)
+ * so a missing cron row can't stop the worker; that is a follow-up.
+ */
+export function storyJob(alert: Alert, feed: TestFeed, date?: string): Job {
+  return {
+    name: STORY_JOB,
+    run: async (db) => {
+      const r = await runStories(db, { alert, date });
+      if (r.status !== "ok") return r;   // the alert has gone out; the run is recorded as failed
+      // The run is already recorded ok: nothing about the test feed may fail it (STO-40).
+      try {
+        for (const m of storySummaryMessages(r.summary)) await feed.post(m);
+      } catch (err) {
+        console.error(`test feed: could not post story summary: ${err instanceof Error ? err.message : err}`);
+      }
+      return r;
+    },
+  };
+}
+
+/** Jobs that run only when asked (`npm run job -- <name>`), not on a schedule. */
+export function onDemandJobs(feed: TestFeed, alert: Alert): Job[] {
+  return [storyJob(alert, feed)];
 }
 
 export function scheduledJobs(config: Config, feed: TestFeed, alert: Alert): Scheduled[] {

@@ -188,7 +188,7 @@ export function backupStepsIn(
 // ---------------------------------------------------------------- ordering
 
 /** Highest score first, with a fixed tie-break, so the same day always gives the same order. Returns a new array. */
-export function sortStories(stories: StoryCandidate[]): StoryCandidate[] {
+export function sortStories<T extends StoryCandidate>(stories: T[]): T[] {
   const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
   return [...stories].sort((a, b) => b.score - a.score || cmp(a.angle, b.angle) || cmp(a.playerId, b.playerId) || cmp(a.stat, b.stat));
 }

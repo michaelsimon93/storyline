@@ -13,6 +13,7 @@ const CFG: StoryConfig = {
   storyMinMinutes: 10, storyBaselineMinGames: 5, storyHotStreakMinGames: 3, storyHotStreakMarginPct: 20,
   storyMinStatAvgTenths: 10, storyReturnMinMissedGames: 3, storyBackupMaxMin: 24, storyBackupOutMinMinutes: 28,
   storyScoreMax: 100, storyScoreReturn: 60, storyBackupOutRecentGames: 3,
+  shortlistSize: 50, shortlistSplitHotStreak: 1, shortlistSplitBackFromInjury: 1, shortlistSplitBackupStepsIn: 1,
 };
 
 /** The team's finished games, oldest first, ids g1..gN a day apart. */

@@ -41,6 +41,8 @@ const story = [
   { key: "story_min_stat_avg_tenths", value: 10 }, { key: "story_return_min_missed_games", value: 3 },
   { key: "story_backup_max_min", value: 24 }, { key: "story_backup_out_min_minutes", value: 28 },
   { key: "story_backup_out_recent_games", value: 3 }, { key: "story_score_max", value: 100 }, { key: "story_score_return", value: 60 },
+  { key: "shortlist_size", value: 50 }, { key: "shortlist_split_hot_streak", value: 1 },
+  { key: "shortlist_split_back_from_injury", value: 1 }, { key: "shortlist_split_backup_steps_in", value: 1 },
 ];
 
 test("STO-106: the worker's startup config needs no story settings (a missing one must not stop every job)", () => {
@@ -58,6 +60,12 @@ test("a missing story setting still fails loudly, naming every missing key (no d
   assert.throws(() => parseStoryConfig(rows), (e: unknown) =>
     e instanceof ConfigError && /missing story_hot_streak_margin_pct/.test(e.message) && /missing story_score_max/.test(e.message));
   assert.throws(() => parseStoryConfig([]), (e: unknown) => e instanceof ConfigError && /missing story_min_minutes/.test(e.message));
+});
+
+test("ConfigError lists each bad key, so an alert can name them without parsing the message (STO-107)", () => {
+  const rows = story.filter((r) => r.key !== "shortlist_size" && r.key !== "story_score_max");
+  assert.throws(() => parseStoryConfig(rows), (e: unknown) =>
+    e instanceof ConfigError && JSON.stringify(e.problems) === JSON.stringify(["missing story_score_max", "missing shortlist_size"]));
 });
 
 test("a mistyped story setting fails loudly", () => {

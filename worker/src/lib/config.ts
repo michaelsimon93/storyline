@@ -43,6 +43,11 @@ const STORY_SPEC = {
   storyBackupOutRecentGames: { key: "story_backup_out_recent_games",  type: "int" },
   storyScoreMax:             { key: "story_score_max",                type: "int" },
   storyScoreReturn:          { key: "story_score_return",             type: "int" },
+  // The shortlist (STO-76/STO-103): its size, and each angle's weight in the split. A new angle adds a row in its own migration.
+  shortlistSize:                  { key: "shortlist_size",                    type: "int" },
+  shortlistSplitHotStreak:        { key: "shortlist_split_hot_streak",        type: "int" },
+  shortlistSplitBackFromInjury:   { key: "shortlist_split_back_from_injury",  type: "int" },
+  shortlistSplitBackupStepsIn:    { key: "shortlist_split_backup_steps_in",   type: "int" },
 } as const;
 
 // Curation's settings (STO-11), loaded by the curation step only, like the story settings above (STO-106): a missing key
@@ -67,7 +72,10 @@ export type Config = Typed<typeof SPEC>;
 export type StoryConfig = Typed<typeof STORY_SPEC>;
 export type CurationConfig = Typed<typeof CURATION_SPEC>;
 
-export class ConfigError extends Error {}
+export class ConfigError extends Error {
+  /** One entry per bad setting, e.g. `missing story_score_max`, so an alert can name each key without parsing the message. */
+  constructor(message: string, readonly problems: string[] = []) { super(message); this.name = "ConfigError"; }
+}
 
 /** Pure: turn app_config rows into a typed config for one spec, collecting every problem at once. */
 function parseSpec<S extends SpecShape>(spec: S, rows: { key: string; value: unknown }[]): Typed<S> {
@@ -86,7 +94,7 @@ function parseSpec<S extends SpecShape>(spec: S, rows: { key: string; value: unk
   // Range and cross-setting rules (e.g. price band min < max) are enforced by the
   // database on write, so they are not re-implemented here (single source, ADR-018).
 
-  if (problems.length) throw new ConfigError(`Invalid app_config: ${problems.join("; ")}`);
+  if (problems.length) throw new ConfigError(`Invalid app_config: ${problems.join("; ")}`, problems);
   return out as Typed<S>;
 }
 
