@@ -4,24 +4,18 @@
 // ranker may pick another strike on the same player and stat. So both are loaded here. Reading the shortlist itself
 // (the story_shortlist table) is the job's concern, not this file's.
 //
-// ASSUMPTION to confirm against the matching code: a strike's "yes price" is `yes_ask_cents` (what buying Yes costs),
+// Confirmed with the story step's author (Nov 23): a strike's "yes price" is `yes_ask_cents` (what buying Yes costs),
 // and a ladder rung counts only if its market is open, has both a bid and an ask, and its spread is within
-// `max_spread_cents`, the same filters matching applies. If matching prices the band differently, change LADDER_SQL.
+// `max_spread_cents`, the same filters matching applies. The ladder on the market table is unfiltered, so the band is applied here
+// (by narrowToBand) and not in SQL.
 
 import type { Db } from "../lib/db.js";
 import type { StatKey } from "../domain/storyDetectors.js";
+import type { ShortlistEntry } from "../domain/shortlist.js";
 import type { CurationInput, CurationSignal, CurationStory, LadderStrike } from "../domain/curationRules.js";
 
-/** The fields of a shortlist entry that curation reads. A `ShortlistEntry` has all of them. */
-export interface CurationEntry {
-  id: number;
-  playerId: string;
-  gameId: string;
-  angle: string;
-  stat: StatKey;
-  summary: string;
-  signalIds: number[];
-}
+/** The fields of a shortlist entry (STO-76) that curation reads. Anything else on the entry, scores included, is deliberately not passed on. */
+export type CurationEntry = Pick<ShortlistEntry, "id" | "playerId" | "gameId" | "angle" | "stat" | "summary" | "signalIds">;
 
 /** Detector stat keys → markets.stat (kalshiParse.PLAYER_PROP_SERIES). `Record<StatKey, …>`: a new stat won't compile until mapped. */
 export const MARKET_STAT: Record<StatKey, string> = { pts: "points", reb: "rebounds", ast: "assists", "3pm": "threes" };
