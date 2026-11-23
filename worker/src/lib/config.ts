@@ -45,11 +45,27 @@ const STORY_SPEC = {
   storyScoreReturn:          { key: "story_score_return",             type: "int" },
 } as const;
 
+// Curation's settings (STO-11), loaded by the curation step only, like the story settings above (STO-106): a missing key
+// stops that step loudly, not the whole worker. The three shared keys are read here too so one query serves the step.
+const CURATION_SPEC = {
+  cardsPerDay:          { key: "cards_per_day",          type: "int" },
+  priceBandMin:         { key: "price_band_min",         type: "int" },
+  priceBandMax:         { key: "price_band_max",         type: "int" },
+  maxSpreadCents:       { key: "max_spread_cents",       type: "int" },
+  curationModel:        { key: "curation_model",         type: "string" },
+  curationEffort:       { key: "curation_effort",        type: "string" },
+  curationMaxTokens:    { key: "curation_max_tokens",    type: "int" },
+  curationMaxAttempts:  { key: "curation_max_attempts",  type: "int" },
+  curationMaxPerGame:   { key: "curation_max_per_game",  type: "int" },
+  curationMaxPerStat:   { key: "curation_max_per_stat",  type: "int" },
+} as const;
+
 type SpecShape = Record<string, { key: string; type: "int" | "string" }>;
 type Typed<S extends SpecShape> = { [K in keyof S]: S[K]["type"] extends "int" ? number : string };
 
 export type Config = Typed<typeof SPEC>;
 export type StoryConfig = Typed<typeof STORY_SPEC>;
+export type CurationConfig = Typed<typeof CURATION_SPEC>;
 
 export class ConfigError extends Error {}
 
@@ -79,6 +95,9 @@ export const parseConfig = (rows: { key: string; value: unknown }[]): Config => 
 /** The story detectors' settings, read only by the story step. */
 export const parseStoryConfig = (rows: { key: string; value: unknown }[]): StoryConfig => parseSpec(STORY_SPEC, rows);
 
+/** Curation's settings, read only by the curation step. */
+export const parseCurationConfig = (rows: { key: string; value: unknown }[]): CurationConfig => parseSpec(CURATION_SPEC, rows);
+
 export async function loadConfig(db: Db): Promise<Config> {
   const { rows } = await db.query<{ key: string; value: unknown }>(`select key, value from app_config`);
   return parseConfig(rows);
@@ -103,4 +122,10 @@ export async function flagEnabled(db: Db, key: string, userId: string | null): P
 export async function flagOn(db: Db, key: string): Promise<boolean> {
   const { rows } = await db.query<{ enabled: boolean }>(`select enabled from feature_flags where key = $1`, [key]);
   return rows[0]?.enabled ?? false;
+}
+
+export async function loadCurationConfig(db: Db): Promise<CurationConfig> {
+  const keys = Object.values(CURATION_SPEC).map((s) => s.key);
+  const { rows } = await db.query<{ key: string; value: unknown }>(`select key, value from app_config where key = any($1::text[])`, [keys]);
+  return parseCurationConfig(rows);
 }
