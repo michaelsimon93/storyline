@@ -18,7 +18,7 @@ import type { Slate } from "../sources/types.js";
 import { LEAGUE, resolveSlateDate } from "./ingest.js";
 import { ANGLES, hotStreak, backFromInjury, backupStepsIn, type OutTeammate, type SignalRef, type StatKey, type StoryCandidate } from "../domain/storyDetectors.js";
 import { dropNotPlaying, pickMarket, buildShortlist, type MarketRow, type Matched, type ShortlistPick } from "../domain/storyShortlist.js";
-import type { InjuryStatus } from "../domain/injuryStatus.js";
+import { isWontPlay, type InjuryStatus } from "../domain/injuryStatus.js";
 import type { SlotKind } from "../domain/shortlist.js";
 
 export const JOB = "story";
@@ -115,7 +115,7 @@ export function buildSummary(a: {
   for (const p of slate.players) {
     const log = p.externalId ? inputs.logs.get(p.externalId) : undefined;
     const teamGames = inputs.teamGames.get(p.teamId);
-    if (!p.externalId || !log || !teamGames) { if (!inputs.feedOk || !isOut(tonightStatus(p, inputs))) withoutInputs++; continue; }
+    if (!p.externalId || !log || !teamGames) { if (!inputs.feedOk || !isWontPlay(tonightStatus(p, inputs))) withoutInputs++; continue; }
     const tonight = tonightStatus(p, inputs);
     const hurtRef: SignalRef = { subject: { kind: "team", id: p.teamId }, key: `injury:${p.externalId}` };
     const listedHurt = stored.has(refKey(hurtRef)) ? [hurtRef] : [];
@@ -152,7 +152,8 @@ export function buildSummary(a: {
     matched.push({ ...s, teamId: team.get(s.playerId)!, gameId: m.gameId, marketId: m.id });
   }
 
-  // 5. The shortlist: a quota per angle (STO-103).
+  // 5. The shortlist: a quota per angle (STO-103). A new angle needs its entry here AND a shortlist_split_<angle> row (migration),
+  //    or it gets no quota (it can still win a fill slot).
   const weights = { [ANGLES.hotStreak]: cfg.shortlistSplitHotStreak, [ANGLES.backFromInjury]: cfg.shortlistSplitBackFromInjury, [ANGLES.backupStepsIn]: cfg.shortlistSplitBackupStepsIn };
   const picks = buildShortlist(matched, cfg.shortlistSize, weights);
   const byAngle: StorySummary["byAngle"] = {};
@@ -171,7 +172,6 @@ export function buildSummary(a: {
   };
 }
 
-const isOut = (s: InjuryStatus | null) => !!s && (s.status === "Out" || s.status === "Doubtful" || s.status === "Unknown");
 const count = (xs: string[]) => xs.reduce<Record<string, number>>((m, x) => ((m[x] = (m[x] ?? 0) + 1), m), {});
 
 /** Teammates listed Out or Doubtful today, with a stored injury signal from today (a claim about tonight needs tonight's fact). */
