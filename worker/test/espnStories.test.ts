@@ -83,3 +83,25 @@ test("bad settings are rejected, not turned into odd behaviour", async () => {
   await assert.rejects(collectStoryInputs(slate([]), { ...OPTS, maxConsecutiveFailures: 0 }), /maxConsecutiveFailures/);
   await assert.rejects(collectStoryInputs(slate([]), { ...OPTS, pauseMs: -1 }), /pauseMs/);
 });
+
+// STO-102 (found by qa): a feed that loads but has rows the parser couldn't read must not turn an Out player healthy.
+test("a degraded injuries feed: the more severe of the feed's and ingest's status wins, so an unreadable Out row can't make him healthy", () => {
+  const degraded = (statusByAthlete = new Map()) => ({ feedOk: true, feedDegraded: true, statusByAthlete });
+  const clean = { feedOk: true, feedDegraded: false, statusByAthlete: new Map() };
+  const out = sp(P.HOTOUT, "Out");
+  assert.equal(tonightStatus(out, degraded())?.status, "Out", "absent from a degraded feed: ingest's Out stands");
+  assert.equal(tonightStatus(out, clean), null, "absent from a clean feed: healthy, the feed is fresher");
+  assert.equal(tonightStatus(sp(P.HOT), degraded()), null, "healthy in both: healthy");
+  assert.equal(tonightStatus(sp(P.HOT, "Day-To-Day"), degraded(new Map([[P.HOT.espn, parseInjuryStatus("Out")]])))?.status, "Out", "the feed's Out beats ingest's Day-To-Day");
+  assert.equal(tonightStatus(sp(P.HOT, "Out"), degraded(new Map([[P.HOT.espn, parseInjuryStatus("Day-To-Day")]])))?.status, "Out", "and ingest's Out beats the feed's Day-To-Day");
+});
+
+test("the feed counts as degraded when the parser skipped a row, and as clean when it didn't", async () => {
+  restore = installFetch(storyRoutes()).restore;
+  assert.equal((await collectStoryInputs(slate([sp(P.HOT)]), OPTS)).feedDegraded, false);
+  restore();
+  const bad = injuries([{ team: NY, athleteId: P.HOT.espn, name: P.HOT.name, status: "Out" }]) as any;
+  bad.injuries[0].injuries[0].athlete.links = [];
+  restore = installFetch(storyRoutes({ injuries: () => json(bad) })).restore;
+  assert.equal((await collectStoryInputs(slate([sp(P.HOT)]), OPTS)).feedDegraded, true);
+});

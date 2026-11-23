@@ -16,6 +16,8 @@ import type { Slate } from "./types.js";
 export interface StoryInputs {
   /** False if the injuries feed didn't load: then nobody's status from it is known, and ingest's stands in. */
   feedOk: boolean;
+  /** True if the feed loaded but the parser skipped some of its rows: a player missing from it may be one of those rows, so "absent" no longer means healthy. */
+  feedDegraded: boolean;
   /** ESPN athlete id → most severe status across all their injuries today. Absent = healthy (only if feedOk). */
   statusByAthlete: Map<string, InjuryStatus>;
   /** Our team id → today's injury entries, for finding teammates who are out. */
@@ -36,9 +38,19 @@ export interface StoryInputOptions {
   fetchOpts?: FetchOptions;
 }
 
-/** A slate player's status tonight: the fresh feed when it loaded (absent = healthy), else what ingest stored. */
-export function tonightStatus(p: { externalId: string | null; injuryStatus: InjuryStatus | null }, inputs: Pick<StoryInputs, "feedOk" | "statusByAthlete">): InjuryStatus | null {
-  return inputs.feedOk && p.externalId ? (inputs.statusByAthlete.get(p.externalId) ?? null) : p.injuryStatus;
+/**
+ * A slate player's status tonight. A clean feed is the freshest word, so absent = healthy, even if ingest said Out this
+ * morning. If the feed didn't load, ingest's status stands in. If it loaded but had rows we couldn't read (STO-102: an Out
+ * player's row may be one of them), we can't tell absent from unreadable, so the more severe of the two statuses wins.
+ */
+export function tonightStatus(
+  p: { externalId: string | null; injuryStatus: InjuryStatus | null },
+  inputs: Pick<StoryInputs, "feedOk" | "feedDegraded" | "statusByAthlete">,
+): InjuryStatus | null {
+  if (!inputs.feedOk || !p.externalId) return p.injuryStatus;
+  const fromFeed = inputs.statusByAthlete.get(p.externalId) ?? null;
+  if (!inputs.feedDegraded) return fromFeed;
+  return mostSevere([fromFeed?.raw, p.injuryStatus?.raw].filter((x): x is string => !!x));
 }
 
 export async function collectStoryInputs(slate: Slate, opts: StoryInputOptions): Promise<StoryInputs> {
@@ -46,7 +58,7 @@ export async function collectStoryInputs(slate: Slate, opts: StoryInputOptions):
   if (!Number.isInteger(opts.maxConsecutiveFailures) || opts.maxConsecutiveFailures < 1) throw new Error(`maxConsecutiveFailures must be a positive integer, got ${opts.maxConsecutiveFailures}`);
   const wait = throttle(opts.pauseMs);
   const out: StoryInputs = {
-    feedOk: false, statusByAthlete: new Map(), injuriesByTeam: new Map(), teamGames: new Map(), logs: new Map(),
+    feedOk: false, feedDegraded: false, statusByAthlete: new Map(), injuriesByTeam: new Map(), teamGames: new Map(), logs: new Map(),
     calls: 0, failures: [], skippedRows: [], unknownStatuses: [],
   };
   let inARow = 0, aborted = false;
@@ -74,6 +86,7 @@ export async function collectStoryInputs(slate: Slate, opts: StoryInputOptions):
   const feed = await get("injuries", `${BASE}/injuries`, parseInjuries);
   if (feed) {
     out.feedOk = true;
+    out.feedDegraded = out.skippedRows.some((r) => r.startsWith("injuries:"));
     const byAthlete = new Map<string, string[]>();
     for (const [espnTeam, entries] of feed) {
       const ours = teamByEspn.get(espnTeam);
