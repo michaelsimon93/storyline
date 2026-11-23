@@ -42,7 +42,7 @@ before(async () => {
   await db.query(`
     insert into teams (id, league, name, abbr) values (${NY}, 'nba', 'Knicks', 'NYK'), (${TOR}, 'nba', 'Raptors', 'TOR');
     insert into external_ids (source, kind, league, external_id, team_id) values ('espn','team','nba','${NY}',${NY}), ('espn','team','nba','${TOR}',${TOR});
-    insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at) values ('${GAME}','nba','${DAY}',${TOR},${NY},'${DAY}T23:30:00Z');
+    insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at) values ('${GAME}','nba','${DAY}',${TOR},${NY}, now() + interval '6 hours');
     insert into external_ids (source, kind, league, external_id, game_id) values ('espn','game','nba','401910099','${GAME}');`);
   for (const p of Object.values(P)) {
     await db.query(`insert into players (id, league, full_name, team_id, injury_status) values ($1,'nba',$2,$3,$4)`, [p.id, p.name, p.team, p.name === P.HOTOUT.name ? "Out" : null]);
@@ -183,6 +183,37 @@ test("without today's stored signals (the context pull hasn't run) stories are d
   const r = await run();
   assert.ok(r.status === "ok");
   assert.ok(r.summary.found > 0 && r.summary.noSignals > 0 && r.summary.shortlisted === 0);
+});
+
+// ---------------------------------------------------------------- STO-110, STO-111
+
+test("STO-110: a game that has already tipped off is never matched, even if its status still says scheduled", { skip }, async () => {
+  await db!.query(`update games set tip_off_at = now() - interval '1 minute' where id = '${GAME}'`);
+  try {
+    const r = await run();
+    assert.ok(r.status === "ok");
+    assert.ok(r.summary.found > 0 && r.summary.matched === 0 && r.summary.shortlisted === 0, "stories are found but none gets a market");
+    assert.equal((await list()).length, 0);
+  } finally {
+    await db!.query(`update games set tip_off_at = now() + interval '6 hours' where id = '${GAME}'`);
+  }
+});
+
+test("STO-111: a missing startup setting (not a story_ one) is also a failed story run with the same alert, not just a scheduler alert", { skip }, async () => {
+  const saved = (await q(`select * from app_config where key = 'max_spread_cents'`))[0];
+  await db!.query(`delete from app_config where key = 'max_spread_cents'`);
+  const net = installFetch(() => undefined); restore = net.restore;
+  try {
+    const r = await run();
+    assert.equal(r.status, "config_error");
+    assert.ok(r.status === "config_error" && r.problems.some((x) => /max_spread_cents/.test(x)));
+    assert.match(alerts[0]!, /missing max_spread_cents/);
+    assert.deepEqual(net.calls, [], "it stopped before calling ESPN");
+    assert.deepEqual((await q(`select status from pipeline_runs where job = 'story'`)).map((x) => x.status), ["failed"], "on the record as a failed story run");
+  } finally {
+    await db!.query(`insert into app_config (key, value, value_type, min_value, max_value, is_public, description) values ($1,$2,$3,$4,$5,$6,$7)`,
+      [saved.key, JSON.stringify(saved.value), saved.value_type, saved.min_value, saved.max_value, saved.is_public, saved.description]);
+  }
 });
 
 // ---------------------------------------------------------------- STO-107 (last: it deletes settings from this file's own database)

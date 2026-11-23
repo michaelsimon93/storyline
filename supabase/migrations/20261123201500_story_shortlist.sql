@@ -13,6 +13,10 @@
 --   It lets us check the split from the table alone.
 -- * Each story's signals are stored with it (ADR-014), so feedback on a blurb traces to what the model saw.
 
+-- Lets story_shortlist prove, with a foreign key, that its market belongs to the story's player and game. (id is already the
+-- primary key, so this can never reject a real row; it only gives the foreign key something to point at.)
+alter table markets add constraint markets_id_player_game_key unique (id, player_id, game_id);
+
 create table story_shortlist (
   id            bigint generated always as identity primary key,
   run_id        bigint not null references pipeline_runs(id),
@@ -26,12 +30,35 @@ create table story_shortlist (
   stat          text not null check (stat <> ''),                  -- the detector's key: pts, reb, ast, 3pm
   score         integer not null check (score >= 0),               -- the angle's own scale
   summary       text not null check (summary <> ''),
-  market_id     uuid not null references markets(id),               -- the matched, in-band market; STO-11 may pick another strike on the same ladder
+  market_id     uuid not null,                                     -- the matched, in-band market; STO-11 may pick another strike on the same ladder
   slot_kind     text not null check (slot_kind in ('quota', 'fill')),
   created_at    timestamptz not null default now(),
+  -- the market is this player's, in this game (STO-109)
+  constraint story_shortlist_market_matches foreign key (market_id, player_id, game_id) references markets (id, player_id, game_id),
   constraint story_shortlist_one_story unique (slate_date, player_id, angle, stat),
   constraint story_shortlist_one_position unique (slate_date, position)
 );
+-- The parts a foreign key can't say: the team is one of the game's two, and the day and league are the game's (STO-109).
+-- The job never writes a row that fails these; the table refuses one anyway, because the ranker (STO-11) trusts it.
+create function story_shortlist_matches_game() returns trigger language plpgsql as $$
+declare g games%rowtype;
+begin
+  select * into g from games where id = new.game_id;
+  if new.team_id not in (g.home_team_id, g.away_team_id) then
+    raise exception 'story_shortlist: team % is not playing in game %', new.team_id, new.game_id;
+  end if;
+  if new.slate_date <> g.slate_date then
+    raise exception 'story_shortlist: slate_date % is not the game''s (%)', new.slate_date, g.slate_date;
+  end if;
+  if new.league <> g.league then
+    raise exception 'story_shortlist: league % is not the game''s (%)', new.league, g.league;
+  end if;
+  return new;
+end $$;
+revoke all on function story_shortlist_matches_game() from public, anon, authenticated;
+create trigger story_shortlist_matches_game before insert or update on story_shortlist
+  for each row execute function story_shortlist_matches_game();
+
 create index story_shortlist_by_run on story_shortlist (run_id);
 
 create table story_shortlist_signals (

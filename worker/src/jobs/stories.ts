@@ -61,10 +61,12 @@ const refKey = (r: SignalRef) => `${r.subject.kind}:${r.subject.id}|${r.key}`;
 
 export async function runStories(db: Db, opts: StoryRunOptions): Promise<StoryRunResult> {
   const slateDate = await resolveSlateDate(db, opts.date);
-  const config = await loadConfig(db);   // the startup settings every job reads: price band, spread, ESPN pacing
   try {
     const summary = await withRun(db, JOB, slateDate, async (runId) => {
-      const cfg = await loadStoryConfig(db);   // inside the run on purpose (STO-107)
+      // Both inside the run on purpose (STO-107, STO-111): a missing setting of either kind is a failed story run on the
+      // record, with the same alert naming each key.
+      const config = await loadConfig(db);   // the startup settings every job reads: price band, spread, ESPN pacing
+      const cfg = await loadStoryConfig(db);
       const slate = await loadSlate(db, slateDate, LEAGUE, SOURCE);
       const inputs = await collectStoryInputs(slate, {
         pauseMs: config.espnPauseMs, maxConsecutiveFailures: config.espnMaxConsecutiveFailures, fetchOpts: opts.fetchOpts,
@@ -148,7 +150,9 @@ export function buildSummary(a: {
   const matched: Matched[] = [], noMarket: string[] = [];
   for (const s of withSignals) {
     const m = pickMarket(s, byPlayer.get(s.playerId) ?? [], a.rules);
-    if (!m) { noMarket.push(`${name.get(s.playerId)} ${s.stat.toUpperCase()} (${s.angle})`); continue; }
+    const game = m && slate.games.find((g) => g.id === m.gameId);
+    // A player whose team isn't in the market's game is odd data (a trade ingest hasn't caught up with): skip the story, don't fail the run (STO-109).
+    if (!m || !game || ![game.homeTeamId, game.awayTeamId].includes(team.get(s.playerId)!)) { noMarket.push(`${name.get(s.playerId)} ${s.stat.toUpperCase()} (${s.angle})`); continue; }
     matched.push({ ...s, teamId: team.get(s.playerId)!, gameId: m.gameId, marketId: m.id });
   }
 
@@ -206,12 +210,12 @@ async function loadStoredSignals(db: Db, slate: Slate, slateDate: string, lookba
   return out;
 }
 
-/** Open player markets of tonight's games that haven't started. The band and spread are applied when matching. */
+/** Open player markets of tonight's games that haven't tipped off (status says scheduled AND the tip-off time is ahead: status can lag). The band and spread are applied when matching. */
 async function loadOpenMarkets(db: Db, slateDate: string): Promise<MarketRow[]> {
   const { rows } = await db.query<{ id: string; player_id: string; game_id: string; stat: string; strike: number; bid: number | null; ask: number | null }>(
     `select m.id, m.player_id, m.game_id, m.stat, m.strike::float8 as strike, m.yes_bid_cents as bid, m.yes_ask_cents as ask
        from markets m join games g on g.id = m.game_id
-      where g.league = $1 and g.slate_date = $2::date and g.status = 'scheduled'
+      where g.league = $1 and g.slate_date = $2::date and g.status = 'scheduled' and g.tip_off_at > now()
         and m.kind = 'player_stat' and m.status = 'open' and m.result is null
         and m.player_id is not null and m.stat is not null and m.strike is not null`,
     [LEAGUE, slateDate]);

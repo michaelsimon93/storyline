@@ -12,6 +12,8 @@ insert into players (id, league, full_name, team_id) values
   ('a9800000-0000-0000-0000-0000000000b2', 'nba', 'Shortlist Two', 30);
 insert into markets (id, league, game_id, kind, title, player_id, stat, strike, status) values
   ('a9800000-0000-0000-0000-0000000000f1', 'nba', 'a9800000-0000-0000-0000-0000000000e1', 'player_stat', 'Shortlist One: 20+', 'a9800000-0000-0000-0000-0000000000b1', 'points', 20, 'open');
+insert into markets (id, league, game_id, kind, title, player_id, stat, strike, status) values
+  ('a9800000-0000-0000-0000-0000000000f3', 'nba', 'a9800000-0000-0000-0000-0000000000e1', 'player_stat', 'Shortlist Two: 20+', 'a9800000-0000-0000-0000-0000000000b2', 'points', 20, 'open');
 insert into pipeline_runs (id, job, slate_date, status) values (980001, 'story', storyline_today() + 71, 'ok');
 insert into signals (id, source, kind, slate_date, player_id, key, summary, evidence, observed_at, trust, run_id) overriding system value values
   (98001, 'espn', 'stat', storyline_today() + 71, 'a9800000-0000-0000-0000-0000000000b1', 'form:pts', 's', '{"quote":"q"}', now(), 'verified', 980001);
@@ -19,7 +21,7 @@ insert into signals (id, source, kind, slate_date, player_id, key, summary, evid
 create function sl(pos int, pid text default 'a9800000-0000-0000-0000-0000000000b1', ang text default 'hot_streak', st text default 'pts', kind text default 'quota')
 returns text language sql as $$
   select format($q$insert into story_shortlist (run_id, slate_date, league, team_id, position, player_id, game_id, angle, stat, score, summary, market_id, slot_kind)
-    values (980001, storyline_today() + 71, 'nba', 29, %s, %L, 'a9800000-0000-0000-0000-0000000000e1', %L, %L, 50, 'x', 'a9800000-0000-0000-0000-0000000000f1', %L)$q$, pos, pid, ang, st, kind) $$;
+    values (980001, storyline_today() + 71, 'nba', 29, %s, %L, 'a9800000-0000-0000-0000-0000000000e1', %L, %L, 50, 'x', case when %L = 'a9800000-0000-0000-0000-0000000000b2' then 'a9800000-0000-0000-0000-0000000000f3'::uuid else 'a9800000-0000-0000-0000-0000000000f1'::uuid end, %L)$q$, pos, pid, ang, st, pid, kind) $$;
 create function sl_ok(q text) returns text language plpgsql as $$ begin execute q; return 'ok'; exception when others then return sqlerrm; end $$;
 
 select t_eq('shortlist: a story can be stored', sl_ok(sl(1)), 'ok');
@@ -31,12 +33,24 @@ select t_err('shortlist: position 0 is rejected',        sl(0, 'a9800000-0000-00
 select t_err('shortlist: an empty angle is rejected',    sl(4, 'a9800000-0000-0000-0000-0000000000b2', ''), '%check%');
 select t_err('shortlist: an unknown slot kind is rejected', sl(4, 'a9800000-0000-0000-0000-0000000000b2', kind => 'bonus'), '%check%');
 select t_err('shortlist: a team that does not exist is rejected',
-  replace(sl(4, 'a9800000-0000-0000-0000-0000000000b2'), $$'nba', 29,$$, $$'nba', 32000,$$), '%foreign key%');
+  replace(sl(4, 'a9800000-0000-0000-0000-0000000000b2'), $$'nba', 29,$$, $$'nba', 32000,$$), '%is not playing in game%');
 select t_err('shortlist: a league that does not exist is rejected',
   replace(sl(4, 'a9800000-0000-0000-0000-0000000000b2'), $$'nba', 29,$$, $$'xyz', 29,$$), '%invalid input value%');
 select t_eq('shortlist: league and team are stored', (select league::text || ':' || team_id from story_shortlist where position = 1), 'nba:29');
 select t_err('shortlist: a market that does not exist is rejected',
-  replace(sl(4, 'a9800000-0000-0000-0000-0000000000b2'), 'a9800000-0000-0000-0000-0000000000f1', 'a9800000-0000-0000-0000-0000000000f2'), '%foreign key%');
+  replace(sl(4, 'a9800000-0000-0000-0000-0000000000b1', 'x'), 'a9800000-0000-0000-0000-0000000000f1', 'a9800000-0000-0000-0000-0000000000f2'), '%foreign key%');
+-- STO-109: the row must agree with its game and its player
+select t_err('shortlist: another player''s market is rejected',
+  replace(sl(5, 'a9800000-0000-0000-0000-0000000000b2'), 'a9800000-0000-0000-0000-0000000000f3', 'a9800000-0000-0000-0000-0000000000f1'), '%story_shortlist_market_matches%');
+select t_err('shortlist: a team that is not playing in the game is rejected',
+  replace(sl(5, 'a9800000-0000-0000-0000-0000000000b2'), $$'nba', 29,$$, $$'nba', 1,$$), '%is not playing in game%');
+select t_err('shortlist: a slate day that is not the game''s is rejected',
+  replace(sl(5, 'a9800000-0000-0000-0000-0000000000b2'), 'storyline_today() + 71', 'storyline_today() + 72'), '%is not the game''s%');
+select t_err('shortlist: moving a stored story to the wrong team is rejected',
+  $q$update story_shortlist set team_id = 1 where position = 2$q$, '%is not playing in game%');
+select t_eq('shortlist: the opposing team of the game is allowed', sl_ok(replace(sl(5, 'a9800000-0000-0000-0000-0000000000b2'), $$'nba', 29,$$, $$'nba', 30,$$)), 'ok');
+select t_eq('shortlist: the app roles cannot call the consistency trigger function',
+  (select not (has_function_privilege('anon', 'story_shortlist_matches_game()', 'execute') or has_function_privilege('authenticated', 'story_shortlist_matches_game()', 'execute'))), true);
 select t_err('shortlist: a signal that does not exist is rejected',
   $q$insert into story_shortlist_signals (shortlist_id, signal_id) select id, 424242 from story_shortlist limit 1$q$, '%foreign key%');
 

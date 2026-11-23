@@ -36,7 +36,7 @@ before(async () => {
   await db.query(`
     insert into teams (id, league, name, abbr) values (${NY}, 'nba', 'Knicks', 'NYK'), (${TOR}, 'nba', 'Raptors', 'TOR'), (5, 'nba', 'Other', 'OTH');
     insert into external_ids (source, kind, league, external_id, team_id) values ('espn','team','nba','${NY}',${NY}), ('espn','team','nba','${TOR}',${TOR});
-    insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at) values ('${GAME}','nba','${DAY}',${TOR},${NY},'${DAY}T23:30:00Z');
+    insert into games (id, league, slate_date, home_team_id, away_team_id, tip_off_at) values ('${GAME}','nba','${DAY}',${TOR},${NY}, now() + interval '6 hours');
     insert into external_ids (source, kind, league, external_id, game_id) values ('espn','game','nba','401910099','${GAME}');`);
   for (const p of Object.values(P)) {
     await db.query(`insert into players (id, league, full_name, team_id, injury_status) values ($1,'nba',$2,$3,$4)`, [p.id, p.name, p.team, p.name === P.HOTOUT.name ? "Out" : null]);

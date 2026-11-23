@@ -28,8 +28,9 @@ select t_err('sl qa: an empty stat is rejected',    qa_sl(1, 'a9900000-0000-0000
 select t_err('sl qa: a run that does not exist is rejected',
   replace(qa_sl(1, 'a9900000-0000-0000-0000-0000000000b1', 'a9900000-0000-0000-0000-0000000000f1'), '990001', '990999'), '%foreign key%');
 
--- Not enforced by the table (qa finding F2, low): a market, team or date that doesn't match its story. The job is the only
--- guard today; STO-109 tracks making the table reject it, and will add the check back.
+-- attack (integrity, qa finding F2, fixed in STO-109): a row whose market is another player's market.
+select t_err('sl qa: a story whose market belongs to another player is rejected',
+  qa_sl(1, 'a9900000-0000-0000-0000-0000000000b1', 'a9900000-0000-0000-0000-0000000000f2'), '%story_shortlist_market_matches%');
 delete from story_shortlist where run_id = 990001;
 
 -- coverage: RLS on, no policies, no grants of any kind to app roles (tables and the identity sequence)
