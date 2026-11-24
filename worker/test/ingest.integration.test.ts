@@ -714,7 +714,7 @@ for (const [what, source, kind, externalId, table, insertRow] of [
   ["player", "kalshi", "player", "60bb439a-df6a-4fea-8312-4caa6a2c0fbe", "players",   // Anthony Black
    `insert into players (id, league, full_name) select player_id, 'nba', 'Anthony Black' from x`],
 ] as const) {
-  test(`STO-39: an ingest racing another run creating the same ${what} writes no second ${what}`, { skip }, async () => {
+  test(`ingest: an ingest racing another run creating the same ${what} writes no second ${what}`, { skip }, async () => {
     const d = await db(`race_${what}`);
     useFetch();
     const other = await d.connect();

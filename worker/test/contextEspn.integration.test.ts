@@ -317,7 +317,7 @@ test("a status we don't recognise: the player is skipped, the run is ok, and one
   assert.equal((await q(`select count(*)::int n from signals where player_id = $1`, [VET]))[0].n, 0, "no form was written for him");
 });
 
-test("STO-90: ingest stored Out this morning, today's feed doesn't list him, so he gets his signals", { skip }, async () => {
+test("espn context: ingest stored Out this morning, today's feed doesn't list him, so he gets his signals", { skip }, async () => {
   await db!.query(`update players set injury_status = 'Out' where id = $1`, [VET]);
   restore = installFetch(espnRoutes()).restore;
   const r = await run({ now: at("10") });

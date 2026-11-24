@@ -84,20 +84,20 @@ const stats = async (s: Slate, over: Parameters<typeof espnRoutes>[0]) => {
 };
 const one = (p: SlatePlayer): Slate => ({ ...slate, players: [p] });
 
-test("STO-90: ingest said Out, but today's feed no longer lists him, so he is asked for", async () => {
+test("espn context: ingest said Out, but today's feed no longer lists him, so he is asked for", async () => {
   const { out, calls } = await stats(one(player({ id: "p-back", externalId: "2993874", injuryStatus: "Out" })), {});
   assert.equal(out.players.skippedWontPlay, 0);
   assert.ok(calls.some((u) => u.includes("/athletes/2993874/")), "the stale ingest status must not decide");
 });
 
-test("STO-90: ingest saw only his first injury (Day-To-Day); the feed also has him Out, so he is skipped", async () => {
+test("espn context: ingest saw only his first injury (Day-To-Day); the feed also has him Out, so he is skipped", async () => {
   const feed = feedWith([["2993874", "Vet", "Day-To-Day"], ["2993874", "Vet", "Out"]]);
   const { out, calls } = await stats(one(player({ id: "p-vet", externalId: "2993874", injuryStatus: "Day-To-Day" })), { injuries: feed });
   assert.equal(out.players.skippedWontPlay, 1);
   assert.ok(!calls.some((u) => u.includes("/athletes/")));
 });
 
-test("STO-90: the order ESPN lists a player's injuries in does not matter", async () => {
+test("espn context: the order ESPN lists a player's injuries in does not matter", async () => {
   for (const order of [["Out", "Day-To-Day"], ["Day-To-Day", "Out"]]) {
     const { out } = await stats(one(player({ id: "p", externalId: "2993874" })), { injuries: feedWith(order.map((st) => ["2993874", "Vet", st] as [string, string, string])) });
     assert.equal(out.players.skippedWontPlay, 1, order.join(" then "));
@@ -118,7 +118,7 @@ test("if the injuries feed itself fails, ingest's status is the fallback, so an 
   assert.ok(out.failures.some((f) => f.startsWith("injuries")), "the failed feed is still reported");
 });
 
-test("STO-81: a status we have never seen is treated as won't-play, reported with its raw value, and doesn't fail the row", async () => {
+test("espn context: a status we have never seen is treated as won't-play, reported with its raw value, and doesn't fail the row", async () => {
   const { out, calls } = await stats(one(player({ id: "p", externalId: "2993874" })), { injuries: feedWith([["2993874", "Vet", "Suspension"]]) });
   assert.equal(out.players.skippedWontPlay, 1);
   assert.equal(out.players.failed, 0);
