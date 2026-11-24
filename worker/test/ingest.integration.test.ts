@@ -239,7 +239,7 @@ const orphans = async (d: Db) => (await d.query(`
 // Coverage: STO-39's migration is not yet deployed, so it will run against production rows. Seed the
 // old shape (incl. a STO-32 replay, a Kalshi-only player, an ESPN-only player, the NBA/NFL ESPN-id
 // clash), migrate, and prove every ID moved with the right league and that ingest then finds them.
-test("qa39: the migration moves every existing provider ID, and ingest afterwards creates no duplicates", { skip }, async () => {
+test("ingest: the migration moves every existing provider ID, and ingest afterwards creates no duplicates", { skip }, async () => {
   const name = "ext39_migrate";
   const admin = new pg.Client({ connectionString: process.env.TEST_DATABASE_URL });
   await admin.connect();
@@ -316,7 +316,7 @@ test("qa39: the migration moves every existing provider ID, and ingest afterward
 // Coverage (passes): whatever happens, no team, player or game is duplicated or orphaned, and a later
 // run changes nothing. This is the property the author's STO-39 race tests claim.
 const raceFailures: string[] = [];
-test("qa39: two ingests racing on an empty database never duplicate or orphan a row", { skip }, async () => {
+test("ingest: two ingests racing on an empty database never duplicate or orphan a row", { skip }, async () => {
   for (let i = 0; i < 8; i++) {
     const d = await db(`race_${i}`);
     const d2 = connect(urlFor(`ext39_race_${i}`));
@@ -339,7 +339,7 @@ test("qa39: two ingests racing on an empty database never duplicate or orphan a 
 // Kalshi-abbreviation attach (arbiter one_per_team, raises on external_ids_lookup) or the STO-38
 // market attach (arbiter lookup, raises on one_per_market). Base 5a066ff fails the same way on
 // other keys; production ingest runs under the scheduler's advisory lock, so impact is low.
-test("qa39: two ingests racing on an empty database both succeed", {
+test("ingest: two ingests racing on an empty database both succeed", {
   skip, todo: "racing ingests can fail on a non-arbiter unique index (see qa report)",
 }, () => {
   assert.deepEqual(raceFailures, [], "both racing runs succeed in every round");
@@ -356,7 +356,7 @@ const orlWithoutBlack: Route = (url) => {
 
 // Coverage: author's risk (1) "check coalesce semantics". The old upsert kept the stored ESPN
 // athlete when tonight's match failed (coalesce). An unmatched night must not drop it.
-test("qa39: a player unmatched tonight keeps the ESPN athlete he already has", { skip }, async () => {
+test("ingest: a player unmatched tonight keeps the ESPN athlete he already has", { skip }, async () => {
   const d = await db("keep_athlete");
   useFetch();
   await ingest(d, SLATE);
@@ -371,7 +371,7 @@ test("qa39: a player unmatched tonight keeps the ESPN athlete he already has", {
 
 // Coverage: a lost Kalshi ID row (manual cleanup, bad script) re-attaches to the stored player via
 // his ESPN athlete instead of creating a second Anthony Black.
-test("qa39: a player whose Kalshi ID row is lost is found again by his ESPN athlete", { skip }, async () => {
+test("ingest: a player whose Kalshi ID row is lost is found again by his ESPN athlete", { skip }, async () => {
   const d = await db("lost_player_id");
   useFetch();
   await ingest(d, SLATE);
@@ -386,7 +386,7 @@ test("qa39: a player whose Kalshi ID row is lost is found again by his ESPN athl
 
 // Coverage: a game whose ID rows are gone (or a run that died between the game upsert and the ID
 // attach: ingest isn't one transaction) is found again by its matchup and re-attached.
-test("qa39: a game whose provider IDs are lost is re-attached by matchup, not duplicated", { skip }, async () => {
+test("ingest: a game whose provider IDs are lost is re-attached by matchup, not duplicated", { skip }, async () => {
   const d = await db("lost_game_ids");
   useFetch();
   await ingest(d, SLATE);
@@ -399,7 +399,7 @@ test("qa39: a game whose provider IDs are lost is re-attached by matchup, not du
 });
 
 // Coverage: a team's Kalshi abbreviation row lost is re-attached on the next run.
-test("qa39: a team whose Kalshi abbreviation row is lost gets it back", { skip }, async () => {
+test("ingest: a team whose Kalshi abbreviation row is lost gets it back", { skip }, async () => {
   const d = await db("lost_team_kalshi");
   useFetch();
   await ingest(d, SLATE);
@@ -415,7 +415,7 @@ test("qa39: a team whose Kalshi abbreviation row is lost gets it back", { skip }
 // team is found only by its ESPN ID, so ingest mints a second "Orlando Magic", then fails on the
 // Kalshi abbreviation the first one still holds. The adv38 rule for markets was "re-attach, don't
 // duplicate, don't fail".
-test("qa39: a team whose ESPN ID row is lost is not duplicated and the run doesn't fail", { skip }, async () => {
+test("ingest: a team whose ESPN ID row is lost is not duplicated and the run doesn't fail", { skip }, async () => {
   const d = await db("lost_team_espn");
   useFetch();
   await ingest(d, SLATE);
@@ -429,7 +429,7 @@ test("qa39: a team whose ESPN ID row is lost is not duplicated and the run doesn
 
 // Coverage: ESPN reuses IDs across leagues. An NFL team holding ESPN id 15 / Kalshi "MIL" must not
 // be picked up by NBA ingest.
-test("qa39: NBA ingest ignores another league's team with the same provider IDs", { skip }, async () => {
+test("ingest: NBA ingest ignores another league's team with the same provider IDs", { skip }, async () => {
   const d = await db("league_clash");
   await d.query(`with t as (insert into teams (league, name, abbr) values ('nfl', 'NFL fifteen', 'MIL') returning id)
                  insert into external_ids (source, kind, league, external_id, team_id)
@@ -445,7 +445,7 @@ test("qa39: NBA ingest ignores another league's team with the same provider IDs"
 // eng-lead should-fix 1: the test above seeds the NFL team first, so without a league filter the
 // NBA rows (read later) still win the lookup by luck. Here the NFL team is added after the NBA
 // ones, so it is read last: an unscoped lookup would point tonight's game at it.
-test("qa39: another league's team added later doesn't take over NBA games on re-ingest", { skip }, async () => {
+test("ingest: another league's team added later doesn't take over NBA games on re-ingest", { skip }, async () => {
   const d = await db("league_clash_later");
   useFetch();
   await ingest(d, SLATE);
@@ -556,7 +556,7 @@ const homeAwayFlipped: Route = (url) => {
 // (league, espn_event_id, slate_date)). Games are now keyed by matchup, so the same ESPN event
 // re-listed with home/away swapped on the same slate becomes a SECOND game carrying the same event
 // ID, and the first is neither updated nor marked postponed (only earlier slates are).
-test("qa39: one ESPN event never becomes two games on one slate (home/away corrected)", { skip }, async () => {
+test("ingest: one ESPN event never becomes two games on one slate (home/away corrected)", { skip }, async () => {
   const d = await db("home_away_flip");
   useFetch();
   await ingest(d, SLATE);
@@ -624,7 +624,7 @@ async function waitForLockWait(d: Db, timeoutMs = 10_000): Promise<boolean> {
 // ------------------------------------------------------------------ idempotency (coverage)
 
 // Attack: re-running ingest (3x) must not mint new market ids or new external_ids rows.
-test("adv38: three ingest runs keep exactly one market and one Kalshi id per ticker", { skip }, async () => {
+test("ingest: three ingest runs keep exactly one market and one Kalshi id per ticker", { skip }, async () => {
   const d = await db("rerun");
   useFetch();
   await ingest(d, SLATE);
@@ -640,7 +640,7 @@ test("adv38: three ingest runs keep exactly one market and one Kalshi id per tic
 });
 
 // Attack: a duplicated ticker in Kalshi's payload on a RE-run (markets already known).
-test("adv38: a ticker listed twice by Kalshi on a re-run doesn't fail or duplicate", { skip }, async () => {
+test("ingest: a ticker listed twice by Kalshi on a re-run doesn't fail or duplicate", { skip }, async () => {
   const d = await db("dupe_rerun");
   useFetch();
   await ingest(d, SLATE);
@@ -655,7 +655,7 @@ test("adv38: a ticker listed twice by Kalshi on a re-run doesn't fail or duplica
 // Attack: a duplicated ticker in Kalshi's payload on the FIRST ingest of a slate (markets new).
 // The materialized `fresh` CTE mints two ids for one ticker, the external_ids insert hits its
 // primary key, and the single statement rolls back EVERY new market: no deck can be built.
-test("adv38: a ticker listed twice by Kalshi on the first ingest still creates the slate", { skip }, async () => {
+test("ingest: a ticker listed twice by Kalshi on the first ingest still creates the slate", { skip }, async () => {
   const d = await db("dupe_first");
   useFetch(duplicatedWinnerPage);
   await ingest(d, SLATE);   // FAILS: duplicate key value violates unique constraint "external_ids_pkey"
@@ -668,7 +668,7 @@ test("adv38: a ticker listed twice by Kalshi on the first ingest still creates t
 // dropped mid-run, which scheduler.ts says can let another copy run alongside). The old
 // `on conflict (ticker) do update` absorbed this; the new insert has no conflict handling, so the
 // second run fails outright and none of its new markets are written.
-test("adv38: an ingest racing another ingest that is creating the same market doesn't fail", { skip }, async () => {
+test("ingest: an ingest racing another ingest that is creating the same market doesn't fail", { skip }, async () => {
   const d = await db("race");
   useFetch();
   await ingest(d, SLATE);
@@ -751,7 +751,7 @@ for (const [what, source, kind, externalId, table, insertRow] of [
 // "re-map" script). The ticker was the primary key before, so one-market-per-Kalshi-ticker held
 // by construction. Now ingest silently mints a SECOND market for the same Kalshi market, and the
 // original (the one cards and picks point at) is orphaned: never priced again.
-test("adv38: losing a market's Kalshi id doesn't make ingest create a duplicate market", { skip }, async () => {
+test("ingest: losing a market's Kalshi id doesn't make ingest create a duplicate market", { skip }, async () => {
   const d = await db("orphan_ingest");
   useFetch();
   await ingest(d, SLATE);
@@ -770,7 +770,7 @@ test("adv38: losing a market's Kalshi id doesn't make ingest create a duplicate 
 // so the market silently drops out of `carded`, is never requested, and the run reports ok
 // while the card goes stale (picks then fail with prices_stale). The poller already treats
 // "carded market Kalshi didn't return" as a loud failure; this is the same outcome, silently.
-test("adv38: the poller fails loudly when a carded market has no Kalshi id", { skip }, async () => {
+test("ingest: the poller fails loudly when a carded market has no Kalshi id", { skip }, async () => {
   const d = await db("orphan_poll");
   useFetch();
   await ingest(d, SLATE);

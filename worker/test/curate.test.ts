@@ -127,7 +127,7 @@ describe("hostile and boundary inputs", () => {
 const { PROD, story, slate, bestPossible, always } = H;
 
 // attacks: the same infeasibility end to end: a perfect curator still burns every attempt and publishes nothing.
-test("qa: a curator that always gives the best possible answer on a 1-game slate is not rejected", async () => {
+test("curate: a curator that always gives the best possible answer on a 1-game slate is not rejected", async () => {
   const input = slate(1, 8);                        // a playoff night: one game, eight players
   const c = always(bestPossible(input, PROD));
   const sent: string[] = [];
@@ -136,7 +136,7 @@ test("qa: a curator that always gives the best possible answer on a 1-game slate
 });
 
 // attacks: zero eligible stories (every ladder out of band, or a misconfigured band). It must not be reported as a good deck.
-test("qa: no story with an in-band strike: the curator isn't called and an empty deck isn't 'ok'", async () => {
+test("curate: no story with an in-band strike: the curator isn't called and an empty deck isn't 'ok'", async () => {
   const input: CurationInput = { slateDate: "2026-11-23", stories: [story("a", "g1", "pts", { ladder: [{ marketId: "a-m", strike: 40, yesPriceCents: 90 }] })] };
   const c = always({ ranking: [], picks: [] });
   const sent: string[] = [];
@@ -147,7 +147,7 @@ test("qa: no story with an in-band strike: the curator isn't called and an empty
 });
 
 // attacks: hostile huge output. 20k invented story ids are echoed verbatim into the retry prompt (and token bill).
-test("qa: a huge invented ranking doesn't balloon the retry feedback", async () => {
+test("curate: a huge invented ranking doesn't balloon the retry feedback", async () => {
   const input = slate(4, 4);
   const huge = { ranking: Array.from({ length: 20000 }, (_, i) => `fake-story-${i}`), picks: [] };
   const seen: CurationRequest[] = [];
@@ -160,7 +160,7 @@ test("qa: a huge invented ranking doesn't balloon the retry feedback", async () 
 // ---------------------------------------------------------------- coverage (expected to PASS)
 
 // coverage: maxAttempts edge values that config bounds already forbid are still refused by code.
-test("qa coverage: maxAttempts 0, -1, 1.5, NaN, Infinity throw before any call", async () => {
+test("curate: maxAttempts 0, -1, 1.5, NaN, Infinity throw before any call", async () => {
   for (const m of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
     const c = always({});
     await assert.rejects(curateWithRules(c, slate(4, 4), { ...PROD, maxAttempts: m }, async () => {}));

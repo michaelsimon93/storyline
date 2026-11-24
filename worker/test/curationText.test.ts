@@ -64,7 +64,7 @@ describe("hostile and boundary inputs", () => {
 const { story } = H;
 
 // coverage: markdown and mentions in player names / reasons can't break the post's structure or its size limit.
-test("qa coverage: a 10k-char reason and markdown in names keep every chunk under Discord's limit", () => {
+test("curation text: a 10k-char reason and markdown in names keep every chunk under Discord's limit", () => {
   const input: CurationInput = { slateDate: "x", stories: Array.from({ length: 30 }, (_, i) => story(`s${i}`, `g${i}`, "pts", { playerName: `@everyone **${"x".repeat(60)}` })) };
   const sel = { ranking: [], picks: input.stories.map((s) => ({ storyId: s.storyId, marketId: `${s.storyId}-m`, reason: "y".repeat(10000) })) };
   const chunks = curationPostChunks(input, sel, 1);
