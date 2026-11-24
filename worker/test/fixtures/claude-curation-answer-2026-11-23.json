@@ -1,0 +1,58 @@
+{
+    "picks": [
+        {
+            "reason": "Grimes has doubled his scoring lately, including a 47-point explosion, and 20 asks whether the heater holds near his recent level.",
+            "storyId": "1",
+            "marketId": "3c8d2da9-17b1-424b-8d18-a56db4500e33"
+        },
+        {
+            "reason": "Mykhailiuk is averaging 4.2 threes over five games, headlined by a 10-triple night, so 3 makes tests whether the shooting is real.",
+            "storyId": "2",
+            "marketId": "ece153b5-5cba-47ef-9a7c-dee60d0fadfb"
+        },
+        {
+            "reason": "Hield is hitting 4.0 threes a game over his last five, and Norman Powell is out, so 4 matches his current pace.",
+            "storyId": "3",
+            "marketId": "4561640d-9917-4176-8377-43c356e12fd9"
+        },
+        {
+            "reason": "Castle is averaging 8.0 assists over five games, including a 12-dime night, and 8 sits right on that playmaking pace.",
+            "storyId": "30",
+            "marketId": "2ceb59b0-634c-420e-bc8e-c3e6ae922200"
+        },
+        {
+            "reason": "Lopez has scored 21 or more in four of his last five games, so 15 checks whether the veteran keeps scoring above his season mark.",
+            "storyId": "28",
+            "marketId": "1e0174f3-8e7e-4bf7-a357-7225c90d2ead"
+        },
+        {
+            "reason": "Tre Jones is averaging 5.4 assists with Powell out, and 6, which he hit three times in five games, tests whether the bigger role sticks.",
+            "storyId": "26",
+            "marketId": "04803ce6-2929-4775-94e2-258c50d3943b"
+        },
+        {
+            "reason": "With RJ Barrett sidelined, Shead's 5.0-assist run gets more room, and 6 asks him to take the next step as table-setter.",
+            "storyId": "19",
+            "marketId": "9198b2b2-f2a8-4f0d-934c-10d9a85745f9"
+        },
+        {
+            "reason": "LaMelo is rebounding at 7.0 per game over five games against 4.4 on the season, and 6 tracks that new level.",
+            "storyId": "11",
+            "marketId": "e937216b-8d04-4c9e-9d52-4eeba055a914"
+        },
+        {
+            "reason": "McCain has scored 18 or more in four of his last five, and 15 asks whether that steady scoring keeps going.",
+            "storyId": "35",
+            "marketId": "e5172f18-e1d3-40e7-80c9-9e715b889127"
+        },
+        {
+            "reason": "Keegan Murray has jumped to 8.7 rebounds over three games, including a 12-board night, and 6 tests whether the extra work on the glass lasts.",
+            "storyId": "7",
+            "marketId": "208aea19-9614-44a7-9657-b591e2022b18"
+        }
+    ],
+    "ranking": [
+        "1", "2", "3", "30", "28", "26", "19", "11", "35", "7", "23", "25", "15", "32", "36", "31", "34", "24", "14", "4",
+        "17", "21", "18", "20", "22", "9", "10", "5", "12", "8", "6", "27", "13", "16", "33", "37", "29"
+    ]
+}
