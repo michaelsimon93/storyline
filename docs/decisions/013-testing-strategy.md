@@ -22,3 +22,25 @@ The rules live in `CLAUDE.md` so every Claude Code session follows them.
 ## Consequences
 - Slower per feature, much cheaper over time, especially once real users hold balances.
 - Fixtures must be refreshed when ESPN or Kalshi change shape. That's a feature: a failing fixture test is how we'll notice.
+
+## Amendment (2026-11-23): test depth matches risk
+As of STO-123 the worker had about 4,000 lines of code, 6,500 lines of TypeScript tests and 1,800 lines of SQL scenarios. Every change got the full treatment. Story and curation heuristics, which we tune often and review after publishing, were tested as heavily as money. Each QA pass also added a new `*_qa` file next to the module's own tests, so some rules were asserted twice. The tests were green and fast (unit suite about 9 s), but they made diffs bigger and reviews longer, and cost tokens, without adding the same amount of safety.
+
+The goal stays the same: catch the **silent** failures. A test earns its place if it would catch a bug that ships without anyone noticing. A bug that crashes, fails `tsc`, or shows up in the post-publish review of curation doesn't need a test of its own.
+
+**Tiers.** Test depth follows the tier of the code being changed:
+
+| Tier | Code | Tests |
+|---|---|---|
+| 1. Money and integrity | picks, settlement, claims, ledger, locks, RLS and grants, job idempotency | Full treatment: real Postgres, re-run tests, "can't do it" tests, concurrency tests, `qa` review |
+| 2. External data | Kalshi and ESPN parsers and clients, Claude reply parsing | Recorded-fixture tests, including odd real responses, retries and errors |
+| 3. Taste logic | story detectors, shortlist, curation rules and prompts | **Invariants** (never more than the size you asked for, never a game off the slate, every story has a valid market) plus one golden fixture per story angle. Don't pin exact scores or weights. |
+| 4. Glue | config loading, alert and feed text, CLI wiring | `tsc`, plus a unit test only when there is a real branch to get wrong |
+
+**Two rules that apply to every tier:**
+- **Test each rule in one place.** Pure logic gets unit tests. Integration tests prove the wiring, the database and safe re-runs. They don't re-check rules a unit test already covers.
+- **Name test files for the code, not the ticket or the reviewer.** QA cases go into the module's existing test file (or SQL scenario). No `*_qa`, `*_adversary` or `sto123_*` files.
+
+**What doesn't change:** no mocking the database, a failing test before the fix for money, results and matching, and concurrency claims need a concurrency test.
+
+**Consequences.** Smaller diffs and faster reviews on tier 3 and 4 changes. Tier 3 tests are less precise: a scoring change that is valid but worse won't fail a test. That's deliberate, because curation quality is judged by reviewing the published stories, not by tests. Existing QA files are folded into their modules under STO-125. Tier 3 tests are rewritten as invariants the next time that logic is tuned, not in a separate pass.

@@ -12,19 +12,20 @@ Michael is Head of Product and directs the build. Teaching matters as much as sh
 - Be concise by default. Go deeper when he asks why.
 
 ## Testing is part of done
-A change isn't finished until it has tests and CI is green. No exceptions for "small" changes.
+A change isn't finished until it has the tests its tier needs and CI is green. **A test earns its place if it would catch a bug that ships silently.** Depth follows risk (ADR-013):
 
-| What you're changing | Required tests | Where |
-|---|---|---|
-| Pure logic (parsing, mapping, matching, math, money) | Unit tests: normal cases **and** edge cases that would silently corrupt data | `worker/test/*.test.ts` |
-| External API clients | **Recorded fixtures** with a mocked `fetch`, including error/retry paths. Never hit the network. | `worker/test/` + `worker/test/fixtures/` |
-| Worker jobs (ingest, poller, curation, settlement) | Integration test: fixtures in, real Postgres, assert rows. Prove it's **safe to re-run**. | `worker/test/*.integration.test.ts` |
-| Schema, RLS, SQL functions | `supabase/tests/scenario_*.sql` printing `PASS`/`FAIL`. Security rules get a "can't do it" test. | `supabase/tests/` |
-| Web app | Component tests for card states; one end-to-end path: open → swipe → pick | `web/` |
+| Tier | Code | Required tests | Where |
+|---|---|---|---|
+| 1. Money and integrity | picks, settlement, claims, ledger, locks, RLS and grants, job idempotency | Real Postgres. Prove it's **safe to re-run**. Security rules get a "can't do it" test. Concurrency claims get a concurrency test, shown to fail when the protection is removed. | `worker/test/*.integration.test.ts`, `supabase/tests/scenario_*.sql` |
+| 2. External data | Kalshi, ESPN and Claude clients and parsers | **Recorded fixtures** with a mocked `fetch`, including odd real responses and error/retry paths. Never hit the network. | `worker/test/` + `worker/test/fixtures/` |
+| 3. Taste logic | story detectors, shortlist, curation rules and prompts | **Invariants** (size limits, only games on the slate, every story has a valid market) plus one golden fixture per story angle. Don't pin exact scores or weights. | `worker/test/*.test.ts` |
+| 4. Glue | config loading, alert and feed text, CLI | `tsc`. Add a unit test only for a real branch. | `worker/test/*.test.ts` |
+| Web app | | Component tests for card states; one end-to-end path: open → swipe → pick | `web/` |
 
+- **Test each rule in one place.** Pure logic gets unit tests. Integration tests prove the wiring, the database and safe re-runs. They don't re-check rules a unit test already covers.
+- **Name test files for the code, not the ticket or reviewer.** Add cases to the module's existing test file or scenario. No `*_qa`, `*_adversary` or `sto123_*` files.
 - **Write the failing case first** for money, results, or matching. **Bugs get a regression test** before the fix.
 - **Don't mock the database.** Use real Postgres; `supabase/tests/supabase_stubs.sql` stands in for Supabase's auth layer.
-- **Concurrency claims need a concurrency test**, shown to fail when the protection is removed.
 - Keep fixtures small: trimmed real responses, not synthetic guesses.
 
 ## Running tests
