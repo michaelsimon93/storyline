@@ -1,5 +1,4 @@
-// Regression: the DEPLOYED manifest in supabase/migrations was being executed as SQL,
-// and the failed setup left a connection open, hanging the test run.
+// The test DB applies only .sql files from supabase/migrations, in order.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { migrationFiles } from "./helpers/testDb.js";

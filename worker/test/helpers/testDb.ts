@@ -27,8 +27,15 @@ export async function freshDb(name: string): Promise<Db | null> {
   await setup.connect();
   try {
     await setup.query(readFileSync(join(SUPABASE, "tests", "supabase_stubs.sql"), "utf8"));
+    // Record each migration the way `supabase db push` does, so the worker's startup schema
+    // check (lib/schema.ts) sees a database like production's.
+    await setup.query(`create schema supabase_migrations;
+      create table supabase_migrations.schema_migrations (version text primary key, name text)`);
     for (const f of migrationFiles()) {
       await setup.query(readFileSync(join(SUPABASE, "migrations", f), "utf8"));
+      const [version, ...rest] = f.replace(/\.sql$/, "").split("_");
+      await setup.query(`insert into supabase_migrations.schema_migrations (version, name) values ($1, $2)`,
+        [version, rest.join("_")]);
     }
   } finally {
     // Always close: a failed setup must fail the test, not hang the process.
@@ -38,7 +45,7 @@ export async function freshDb(name: string): Promise<Db | null> {
   return connect(url);
 }
 
-/** Only *.sql files, in order. The migrations folder also holds the DEPLOYED manifest. */
+/** Only *.sql files, in order. */
 export function migrationFiles(): string[] {
   return readdirSync(join(SUPABASE, "migrations")).filter((f) => f.endsWith(".sql")).sort();
 }
