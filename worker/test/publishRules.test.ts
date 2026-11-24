@@ -6,7 +6,7 @@ import type { CardBlurb, CitedSignal } from "../src/domain/blurbRules.js";
 
 const rules = { bandMin: 25, bandMax: 75, maxChars: 200 };
 const story = { gameId: "g1", playerId: "p1" };
-const market: LiveMarket = { status: "open", yesAskCents: 50, gameId: "g1", playerId: "p1" };
+const market: LiveMarket = { status: "open", yesAskCents: 50, gameId: "g1", playerId: "p1", strike: 25 };
 const sig = (o: Partial<CitedSignal> = {}): CitedSignal => ({ id: 1, source: "espn", kind: "stat", trust: "verified", summary: "s", observedAt: "2026-11-24T12:00:00Z", slateDate: "2026-11-24", via: "own", ...o });
 const blurb = (text: string, signals: CitedSignal[] = [sig()]): CardBlurb => ({
   storyId: "1", blurb: text, facts: { level: "full", market: { player: "P", team: "T", opponent: "O", home: true, stat: "points", strike: 25, yesPriceCents: 50 }, signals },
@@ -57,4 +57,21 @@ test("#testing post: a short set is flagged 'Short: 3 of 5', a full one is not; 
   assert.match(short, /> Per @ShamsCharania, P1 is back\./);
   assert.match(short, /source: <https:\/\/x\.com\/ShamsCharania\/status\/1>/);
   assert.doesNotMatch(publishPostChunks({ ...base, asked: 2, published: [card(1), card(2)] }).join("\n"), /Short/);
+});
+
+// Attacks: trust is checked as a deny-list, so a stored signal with a trust level publish doesn't know (missing, mis-cased) goes live.
+test("trust (ADR-024): a signal whose trust is anything but verified or attributed never publishes", () => {
+  assert.equal(why(blurb("Hot.", [sig({ trust: "Unreviewed" as CitedSignal["trust"] })])), "blurb_invalid");
+  assert.equal(why(blurb("Hot.", [sig({ trust: undefined as unknown as CitedSignal["trust"] })])), "blurb_invalid");
+});
+
+// Attacks: the account is read as the URL's first path segment, so an x.com/i/status link makes any blurb containing "i" pass as "naming the source".
+test("trust (ADR-024): an approved post whose link has no account in it can't be named, so it can't publish", () => {
+  const post = sig({ id: 7, source: "x", kind: "story", trust: "attributed", url: "https://x.com/i/status/1" });
+  assert.equal(why(blurb("He is back tonight.", [post])), "blurb_invalid");
+});
+
+// Attacks: "every claim cites a fact" — a full-level blurb whose stored facts cite nothing is publishable today.
+test("every claim cites (ADR-014): a full-level blurb with no cited signals is kept off", () => {
+  assert.equal(why(blurb("He has scored 40 in three straight.", [])), "blurb_invalid");
 });

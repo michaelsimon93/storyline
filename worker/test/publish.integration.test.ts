@@ -15,12 +15,12 @@ let db: Db | null = null;
 const q = async <T = Record<string, unknown>>(sql: string, p: unknown[] = []) => (await db!.query(sql, p)).rows as T[];
 
 const markets: string[] = [], stories: string[] = [];
-const facts = (signals: unknown[] = []) => ({ level: "full", market: { player: "x", team: "t", opponent: "o", home: true, stat: "points", strike: 25, yesPriceCents: 50 }, signals });
+const facts = (signals: unknown[] = [], strike = 25) => ({ level: "full", market: { player: "x", team: "t", opponent: "o", home: true, stat: "points", strike, yesPriceCents: 50 }, signals });   // markets 0,1,2 have strikes 25,26,27
 const verified = { id: 1, source: "espn", kind: "stat", trust: "verified", summary: "s", observedAt: "2026-11-24T12:00:00Z", slateDate: DAY, via: "own" };
 
 async function storePicks(picks: { i: number; blurb?: string; signals?: unknown[] }[], day = DAY) {
   return Number((await q<{ id: string }>(`insert into pipeline_runs (job, slate_date, status, outputs) values ('curate', $1, 'ok', $2) returning id`,
-    [day, JSON.stringify({ picks: picks.map((p) => ({ storyId: stories[p.i], marketId: markets[p.i], reason: "r", blurb: p.blurb ?? `Player ${p.i} is on a roll.`, blurbFacts: facts(p.signals ?? [verified]) })) })]))[0]!.id);
+    [day, JSON.stringify({ picks: picks.map((p) => ({ storyId: stories[p.i], marketId: markets[p.i], reason: "r", blurb: p.blurb ?? `Player ${p.i} is on a roll.`, blurbFacts: facts(p.signals ?? [verified], 25 + p.i) })) })]))[0]!.id);
 }
 const alerts = () => { const sent: string[] = []; return { sent, alert: async (m: string) => { sent.push(m); } }; };
 const cardCount = async () => Number((await q<{ n: string }>(`select count(*) n from cards`))[0]!.n);
@@ -142,4 +142,106 @@ test("the line locks: a published card can't be moved to another market or playe
   await assert.rejects(q(`update cards set player_id = $1, team_id = 2`, [P[1]]), /card_line_locked/);
   await q(`update cards set is_out = true, sort_key = 9`);
   assert.equal((await q<{ is_out: boolean }>(`select is_out from cards`))[0]!.is_out, true);
+});
+
+// Stores a curation run whose picks are raw objects, so a test can hand publish malformed or hostile stored output.
+async function storeRawPicks(picks: unknown[], day = DAY) {
+  await q(`insert into pipeline_runs (job, slate_date, status, outputs) values ('curate', $1, 'ok', $2)`, [day, JSON.stringify({ picks })]);
+}
+const pick = (i: number, o: Record<string, unknown> = {}) =>
+  ({ storyId: stories[i], marketId: markets[i], reason: "r", blurb: `Player ${i} is on a roll.`, blurbFacts: facts([verified], 25 + i), ...o });
+
+// Attacks: "publishes up to N cards" — a curation run with more picks than cards_per_day (setting lowered after curate, or a bad run).
+test("never publishes more than cards_per_day cards, even if the curation run picked more", { skip }, async () => {
+  await storePicks([{ i: 0 }, { i: 1 }, { i: 2 }]);
+  await q(`update app_config set value = '2' where key = 'cards_per_day'`);
+  const r = await runPublish(db!, { alert: async () => {}, date: DAY });
+  assert.equal(r.status, "ok");
+  assert.ok(await cardCount() <= 2, `published ${await cardCount()} cards with cards_per_day = 2`);
+});
+
+// Attacks: "no two cards share a player" — two stories for one player (different angles) both picked; nothing else tests player_repeat.
+test("two picks for the same player: one card, the other left out as player_repeat, and the rest still publish", { skip }, async () => {
+  const run = (await q<{ id: number }>(`select id from pipeline_runs where job = 'story' limit 1`))[0]!.id;
+  let m2 = (await q<{ id: string }>(`select id from markets where player_id = $1 and strike = 30`, [P[0]]))[0]?.id;
+  if (!m2) {
+    m2 = (await q<{ id: string }>(`insert into markets (league, game_id, kind, title, player_id, stat, strike, yes_bid_cents, yes_ask_cents, status)
+      values ('nba',$1,'player_stat','t',$2,'points',30,48,50,'open') returning id`, [G1, P[0]]))[0]!.id;
+  }
+  let s2 = (await q<{ id: string }>(`select id from story_shortlist where player_id = $1 and angle = 'back_from_injury'`, [P[0]]))[0]?.id;
+  if (!s2) {
+    s2 = (await q<{ id: string }>(`insert into story_shortlist (run_id, slate_date, league, position, player_id, game_id, team_id, angle, stat, score, summary, market_id, slot_kind)
+      values ($1,$2,'nba',4,$3,$4,1,'back_from_injury','pts',5,'s',$5,'quota') returning id`, [run, DAY, P[0], G1, m2]))[0]!.id;
+  }
+  await storeRawPicks([pick(0), { ...pick(0), storyId: s2, marketId: m2, blurbFacts: facts([verified], 30) }, pick(1)]);
+  const r = await runPublish(db!, { alert: async () => {}, date: DAY });
+  assert.equal(r.status, "ok");
+  if (r.status !== "ok") return;
+  assert.deepEqual(r.skipped.map((s) => s.reason), ["player_repeat"]);
+  assert.equal((await q<{ n: string }>(`select count(*) n from cards where player_id = $1`, [P[0]]))[0]!.n, "1");
+  assert.equal(await cardCount(), 2);
+});
+
+// Attacks: hostile stored output — one pick whose marketId isn't a uuid must not take the whole deck down with it.
+test("a stored pick with a malformed market id is left out; the other picks still publish", { skip }, async () => {
+  await storeRawPicks([pick(0, { marketId: "not-a-uuid" }), pick(1), pick(2)]);
+  const r = await runPublish(db!, { alert: async () => {}, date: DAY }).catch((e: Error) => ({ status: `threw: ${e.message}` }));
+  assert.equal(r.status, "ok");
+  assert.equal(await cardCount(), 2);
+});
+
+// Attacks: hostile stored output — blurbFacts without a signals array (old run shape, or a bug) must not crash the publish.
+test("a stored pick whose blurbFacts has no signals list is left out, not a crash", { skip }, async () => {
+  await storeRawPicks([pick(0, { blurbFacts: { level: "full" } }), pick(1)]);
+  const r = await runPublish(db!, { alert: async () => {}, date: DAY }).catch((e: Error) => ({ status: `threw: ${e.message}` }));
+  assert.equal(r.status, "ok");
+  assert.equal(await cardCount(), 1);
+});
+
+// Attacks: a malformed pick (no blurb) is dropped by isPick before the checks, so it's never named in skipped or the #testing post.
+test("a stored pick with no blurb is named in what was left out, not silently dropped", { skip }, async () => {
+  const { blurb: _b, ...noBlurb } = pick(0);
+  await storeRawPicks([noBlurb, pick(1), pick(2)]);
+  const r = await runPublish(db!, { alert: async () => {}, date: DAY });
+  assert.equal(r.status, "ok");
+  if (r.status !== "ok") return;
+  assert.equal(await cardCount(), 2);
+  assert.deepEqual(r.skipped.map((s) => s.storyId), [stories[0]]);
+});
+
+// Attacks: partial failure — a player traded since the shortlist was built makes the card insert raise team_mismatch mid-transaction.
+test("a player traded after curation is left out; the rest of the deck still publishes", { skip }, async () => {
+  await storePicks([{ i: 0 }, { i: 1 }, { i: 2 }]);
+  await q(`update players set team_id = 3 where id = $1`, [P[1]]);
+  try {
+    const r = await runPublish(db!, { alert: async () => {}, date: DAY }).catch((e: Error) => ({ status: `threw: ${e.message}` }));
+    assert.equal(r.status, "ok");
+    assert.equal(await cardCount(), 2);
+  } finally {
+    await q(`update players set team_id = 2 where id = $1`, [P[1]]);
+  }
+});
+
+// Attacks: the game_started SQL wiring (tip-off passed, or ESPN says in progress) — the rule is unit-tested, the query isn't.
+test("a pick whose game has started (by clock or by ESPN status) is left out", { skip }, async () => {
+  await storePicks([{ i: 0 }, { i: 2 }]);
+  await q(`update games set status = 'in_progress' where id = $1`, [G1]);
+  try {
+    const r = await runPublish(db!, { alert: async () => {}, date: DAY });
+    assert.equal(r.status, "ok");
+    if (r.status !== "ok") return;
+    assert.deepEqual(r.skipped.map((s) => s.reason), ["game_started"]);
+    assert.equal(await cardCount(), 1);
+  } finally {
+    await q(`update games set status = 'scheduled' where id = $1`, [G1]);
+  }
+});
+
+// Attacks: blurb_facts.market (the line the blurb and its audit trail describe) disagrees with the market that gets locked.
+test("a stored pick whose blurbFacts describe a different line than its market is left out", { skip }, async () => {
+  // markets[2] is a 27+ points line; the stored facts say 25+.
+  await storeRawPicks([pick(2, { blurb: "Banchero needs 25 tonight.", blurbFacts: { ...facts([verified]), level: "market_only", signals: [] } }), pick(0)]);
+  const r = await runPublish(db!, { alert: async () => {}, date: DAY });
+  assert.equal(r.status, "ok");
+  assert.equal((await q<{ n: string }>(`select count(*) n from cards where player_id = $1`, [P[2]]))[0]!.n, "0");
 });
