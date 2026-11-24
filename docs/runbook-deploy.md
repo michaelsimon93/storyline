@@ -42,41 +42,25 @@ Don't set `TZ`. Schedules are in ET in code (`America/New_York`) and the slate d
 
 > Railway's config-as-code (`railway.json`) is deprecated and stops being read on 2026-12-01, so none is used here. Its replacement (`.railway/railway.ts`) is still in beta. The settings above are few enough to set by hand.
 
-## 2. Apply migrations
+## 2. Migrations: merged = deployed
 
-Run these from the repo root with the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started). `link` asks for the database password. Every command after `link` needs `--remote`: newer CLIs (3.x) default to a local Docker database and fail with `ECONNREFUSED 127.0.0.1:54322` without it.
+Migrations apply automatically. On every push to `main`, after the tests pass, the `migrate` job in `.github/workflows/tests.yml` runs `supabase db push` against production (STO-130). Nobody runs it by hand.
 
-```bash
-supabase link --project-ref <project-ref>
-```
+**One-time setup (Michael):**
+1. GitHub → repo **Settings → Secrets and variables → Actions → New repository secret**: name `SUPABASE_DB_URL`, value the **session pooler** string from §1 with the password filled in, ending in **`?sslmode=require`**. Not the worker's `uselibpqcompat` version: that parameter is for node-postgres, and the Supabase CLI doesn't use it. URL-encode the password if it has special characters (`@`, `:`, `/`, `#`).
+2. Railway → worker service **Settings → Wait for CI**: on. Railway then holds each deploy until the whole workflow, `migrate` included, succeeds. If any job fails, the deploy is skipped and the old worker keeps running.
 
-```bash
-supabase db push --remote --dry-run
-```
+**What protects the order:**
+- `migrate` only runs after the `schema`, `real-supabase` and `worker` jobs pass on `main`.
+- Wait for CI holds the worker deploy until `migrate` finishes.
+- Railway's docs say not to rely on Wait for CI alone, so the worker checks for itself at startup: if the database doesn't have `REQUIRED_MIGRATION` (`worker/src/lib/schema.ts`), it alerts Discord, waits up to 15 minutes for it, then stops with "worker failed to start".
+- CI fails any PR that edits, deletes or renames a migration already on `main`, or adds one dated before the newest one on `main` (`scripts/check-migrations-frozen.sh`).
 
-The dry run should list every file in `supabase/migrations/` (six on the first deploy). It also prints `Skipping migration DEPLOYED…`; that's expected, since `DEPLOYED` is our manifest, not a migration. Then:
-
-```bash
-supabase db push --remote
-```
+**If `migrate` fails:** the Actions run shows the SQL error, and the worker deploy is skipped. Fix it with a **new** migration in a PR; never edit one that's on `main`. To see what production has applied, from the repo root:
 
 ```bash
-supabase migration list --remote
+supabase migration list --db-url "<session pooler URL>?sslmode=require"
 ```
-
-Every migration should show in both the Local and Remote columns.
-
-### Freeze what was deployed
-
-As soon as the push succeeds, list the applied migrations in `supabase/migrations/DEPLOYED` in a PR. CI then fails any PR that edits them. From the repo root, for the files you just pushed:
-
-```bash
-cd supabase/migrations && sha256sum <file>.sql ... >> DEPLOYED
-```
-
-`DEPLOYED` is append-only (CI checks that too). Any later schema change is a **new** migration, applied with the same `db push`.
-
-**Order on every schema change:** merge the migration, `supabase db push --remote`, then let the worker deploy. Railway deploys on merge, so if the new worker needs the new schema, push the migration before merging the worker change, or pause the deploy.
 
 ## 3. Check the worker is healthy
 
@@ -129,7 +113,7 @@ Within a few seconds Discord should get **`[storyline-worker] … worker failed 
 
 - **Worker:** Railway → service → **Deployments** → pick the last good deployment → **Redeploy**. Then revert the bad commit on `main`, so the next merge doesn't bring it back.
 - **Stop the worker entirely:** Railway → the active deployment → **Remove**. Jobs in flight get the draining window to finish. Redeploy to start it again.
-- **Schema:** migrations are forward-only and frozen once deployed. Undo a change with a **new** migration that reverses it, applied with `supabase db push --remote`. Never edit or delete a deployed migration.
+- **Schema:** migrations are forward-only and frozen once deployed. Undo a change with a **new** migration that reverses it; it applies when its PR merges. Never edit or delete a deployed migration.
 - **Bad data from a job:** every run is in `pipeline_runs` with its inputs and outputs. Find the run, fix the cause, and re-run the job (jobs are safe to re-run):
 
 ```bash
