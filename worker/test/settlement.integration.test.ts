@@ -1,4 +1,4 @@
-// Settlement under concurrency (from the test-adversary's findings), made deterministic:
+// Settlement under concurrency (from an adversarial review), made deterministic:
 // instead of sleeping, each test waits until Postgres shows a transaction blocked on a lock.
 
 import { test, before, after } from "node:test";

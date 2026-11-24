@@ -322,7 +322,7 @@ insert into external_ids (source, kind, league, external_id, game_id) values
   ('kalshi', 'game', 'nba', 'Q92KEY', 'a9200000-0000-0000-0000-0000000000e1');
 
 -- ---------------------------------------------------------------- one ESPN event per slate
--- qa found that the database no longer enforces "one ESPN event is at most one game per slate" or
+-- The database no longer enforces "one ESPN event is at most one game per slate" or
 -- "one Kalshi game key per game": games are identified by matchup (games_identity, Michael's call
 -- on STO-39), which accepts that tradeoff rather than storing the slate on each game ID. Ingest
 -- enforces it instead: worker/test/ingest.integration.test.ts, "one ESPN event never becomes

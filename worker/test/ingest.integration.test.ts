@@ -411,9 +411,9 @@ test("ingest: a team whose Kalshi abbreviation row is lost gets it back", { skip
   assert.deepEqual(rows.map((r) => r.kalshi_abbr), ["MIL", "ORL"]);
 });
 
-// Attack: a team's ESPN ID row lost (the same "lost provider ID" attack adv38 ran on markets). A
+// Attack: a team's ESPN ID row lost (the same "lost provider ID" attack as on markets, STO-38). A
 // team is found only by its ESPN ID, so ingest mints a second "Orlando Magic", then fails on the
-// Kalshi abbreviation the first one still holds. The adv38 rule for markets was "re-attach, don't
+// Kalshi abbreviation the first one still holds. The rule for markets was "re-attach, don't
 // duplicate, don't fail".
 test("ingest: a team whose ESPN ID row is lost is not duplicated and the run doesn't fail", { skip }, async () => {
   const d = await db("lost_team_espn");
