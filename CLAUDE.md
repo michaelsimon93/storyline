@@ -17,10 +17,12 @@ A change isn't finished until it has the tests its tier needs and CI is green. *
 | Tier | Code | Required tests | Where |
 |---|---|---|---|
 | 1. Money and integrity | picks, settlement, claims, ledger, locks, RLS and grants, job idempotency | Real Postgres. Prove it's **safe to re-run**. Security rules get a "can't do it" test. Concurrency claims get a concurrency test, shown to fail when the protection is removed. | `worker/test/*.integration.test.ts`, `supabase/tests/scenario_*.sql` |
-| 2. External data | Kalshi, ESPN and Claude clients and parsers | **Recorded fixtures** with a mocked `fetch`, including odd real responses and error/retry paths. Never hit the network. | `worker/test/` + `worker/test/fixtures/` |
-| 3. Taste logic | story detectors, shortlist, curation rules and prompts | **Invariants** (size limits, only games on the slate, every story has a valid market) plus one golden fixture per story angle. Don't pin exact scores or weights. | `worker/test/*.test.ts` |
+| 2. External data | Kalshi, ESPN and Claude clients and parsers, the grounding check on Claude's answers (ADR-014), and matching players and teams across sources | **Recorded fixtures** with a mocked `fetch`, including odd real responses and error/retry paths. Never hit the network. | `worker/test/` + `worker/test/fixtures/` |
+| 3. Taste logic | story detectors, shortlist, curation ranking and prompts | **Invariants** (size limits, only games on the slate, every story has a valid market) plus one golden fixture per story angle. Don't pin exact scores or weights. | `worker/test/*.test.ts` |
 | 4. Glue | config loading, alert and feed text, CLI | `tsc`. Add a unit test only for a real branch. | `worker/test/*.test.ts` |
 | Web app | | Component tests for card states; one end-to-end path: open → swipe → pick | `web/` |
+
+The tier follows what the code does, not the file it lives in. A job's write path (rows written, money, locks, safe re-runs) is tier 1. The choices it makes (which stories, which order) are tier 3. Tier 1 cases can live in a tier 3 module's test file.
 
 - **Test each rule in one place.** Pure logic gets unit tests. Integration tests prove the wiring, the database and safe re-runs. They don't re-check rules a unit test already covers.
 - **Name test files for the code, not the ticket or reviewer.** Add cases to the module's existing test file or scenario. No `*_qa`, `*_adversary` or `sto123_*` files.
@@ -56,7 +58,7 @@ CI runs Postgres 17 and is the source of truth.
 |---|---|
 | **Docs-only**: no SQL, TypeScript, scripts or CI config | None |
 | **Code** (default) | `eng-lead` |
-| **High-risk**: money (`place_pick`, settlement, claims, ledger), security (RLS, grants, `security definer`), concurrency (locks, job overlap) | `qa`, then `eng-lead` |
+| **High-risk**: tier 1 code (see the testing table) | `qa`, then `eng-lead` |
 | Touches `web/` | add `ui-reviewer` before `eng-lead` |
 
 **Process is paused until a real pick is placed on a live card.** No new agents, commands or process docs before then; fix a process problem only if it blocks a product PR. ADRs are for hard-to-reverse decisions. Run `/retro` at the end of each milestone.

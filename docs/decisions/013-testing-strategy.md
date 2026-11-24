@@ -33,9 +33,11 @@ The goal stays the same: catch the **silent** failures. A test earns its place i
 | Tier | Code | Tests |
 |---|---|---|
 | 1. Money and integrity | picks, settlement, claims, ledger, locks, RLS and grants, job idempotency | Full treatment: real Postgres, re-run tests, "can't do it" tests, concurrency tests, `qa` review |
-| 2. External data | Kalshi and ESPN parsers and clients, Claude reply parsing | Recorded-fixture tests, including odd real responses, retries and errors |
-| 3. Taste logic | story detectors, shortlist, curation rules and prompts | **Invariants** (never more than the size you asked for, never a game off the slate, every story has a valid market) plus one golden fixture per story angle. Don't pin exact scores or weights. |
+| 2. External data | Kalshi and ESPN parsers and clients, Claude reply parsing, the grounding check on Claude's answers (ADR-014), and matching players and teams across sources | Recorded-fixture tests, including odd real responses, retries and errors |
+| 3. Taste logic | story detectors, shortlist, curation ranking and prompts | **Invariants** (never more than the size you asked for, never a game off the slate, every story has a valid market) plus one golden fixture per story angle. Don't pin exact scores or weights. |
 | 4. Glue | config loading, alert and feed text, CLI wiring | `tsc`, plus a unit test only when there is a real branch to get wrong |
+
+The tier follows what the code does, not the file it lives in. A job's write path (rows written, money, locks, safe re-runs) is tier 1. The choices it makes (which stories, which order) are tier 3. Tier 1 cases can live in a tier 3 module's test file.
 
 **Two rules that apply to every tier:**
 - **Test each rule in one place.** Pure logic gets unit tests. Integration tests prove the wiring, the database and safe re-runs. They don't re-check rules a unit test already covers.
