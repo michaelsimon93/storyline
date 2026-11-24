@@ -411,9 +411,9 @@ test("ingest: a team whose Kalshi abbreviation row is lost gets it back", { skip
   assert.deepEqual(rows.map((r) => r.kalshi_abbr), ["MIL", "ORL"]);
 });
 
-// Attack: a team's ESPN ID row lost (the same "lost provider ID" attack adv38 ran on markets). A
+// Attack: a team's ESPN ID row lost (the same "lost provider ID" attack as on markets, STO-38). A
 // team is found only by its ESPN ID, so ingest mints a second "Orlando Magic", then fails on the
-// Kalshi abbreviation the first one still holds. The adv38 rule for markets was "re-attach, don't
+// Kalshi abbreviation the first one still holds. The rule for markets was "re-attach, don't
 // duplicate, don't fail".
 test("ingest: a team whose ESPN ID row is lost is not duplicated and the run doesn't fail", { skip }, async () => {
   const d = await db("lost_team_espn");
@@ -714,7 +714,7 @@ for (const [what, source, kind, externalId, table, insertRow] of [
   ["player", "kalshi", "player", "60bb439a-df6a-4fea-8312-4caa6a2c0fbe", "players",   // Anthony Black
    `insert into players (id, league, full_name) select player_id, 'nba', 'Anthony Black' from x`],
 ] as const) {
-  test(`STO-39: an ingest racing another run creating the same ${what} writes no second ${what}`, { skip }, async () => {
+  test(`ingest: an ingest racing another run creating the same ${what} writes no second ${what}`, { skip }, async () => {
     const d = await db(`race_${what}`);
     useFetch();
     const other = await d.connect();

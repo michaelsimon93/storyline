@@ -45,7 +45,7 @@ test("control: a story whose player's team is playing in the market's game is ma
   assert.deepEqual(picks.map((k) => [k.playerId, k.teamId, k.gameId, k.marketId, k.signalIds]), [[P.HOT.id, NY, GAME, "m1", [7]]]);
 });
 
-test("STO-109: a story whose player's team is not in the market's game is skipped and counted as no market", () => {
+test("story build: a story whose player's team is not in the market's game is skipped and counted as no market", () => {
   const { summary, picks } = build(99);
   assert.equal(summary.found, 1, "the streak was found");
   assert.equal(summary.matched, 0);

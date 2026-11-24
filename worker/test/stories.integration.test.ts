@@ -86,7 +86,7 @@ afterEach(() => restore());
 
 // ---------------------------------------------------------------- STO-102
 
-test("STO-102: a player who is Out tonight never reaches the shortlist, even with a hot streak that was found", { skip }, async () => {
+test("stories: a player who is Out tonight never reaches the shortlist, even with a hot streak that was found", { skip }, async () => {
   const r = await run();
   assert.equal(r.status, "ok");
   assert.ok(r.status === "ok");
@@ -131,7 +131,7 @@ test("each angle produces its story, matched to the in-band market, stored with 
 
 // ---------------------------------------------------------------- STO-103: the quota
 
-test("STO-103: each angle keeps its quota even when another angle outscores it", { skip }, async () => {
+test("stories: each angle keeps its quota even when another angle outscores it", { skip }, async () => {
   // Scores: return 63, backup 34, hot streak 21. Two slots, split hot streak : return : backup = 1 : 1 : 0.
   await setConfig("shortlist_size", 2); await setConfig("shortlist_split_backup_steps_in", 0);
   const r = await run();
@@ -140,7 +140,7 @@ test("STO-103: each angle keeps its quota even when another angle outscores it",
     "the lowest-scoring angle holds its place; the backup (34) is out although it outscores the streak");
 });
 
-test("STO-103: with no quotas at all the same two slots go purely by score", { skip }, async () => {
+test("stories: with no quotas at all the same two slots go purely by score", { skip }, async () => {
   await setConfig("shortlist_size", 2);
   for (const k of ["hot_streak", "back_from_injury", "backup_steps_in"]) await setConfig(`shortlist_split_${k}`, 0);
   const r = await run();
@@ -148,7 +148,7 @@ test("STO-103: with no quotas at all the same two slots go purely by score", { s
   assert.deepEqual((await list()).map((x) => [x.angle, x.score, x.slot_kind]), [["back_from_injury", 63, "fill"], ["backup_steps_in", 34, "fill"]]);
 });
 
-test("STO-103: slots no angle used are filled by score, and the summary shows quota and fill per angle", { skip }, async () => {
+test("stories: slots no angle used are filled by score, and the summary shows quota and fill per angle", { skip }, async () => {
   await setConfig("shortlist_size", 3); await setConfig("shortlist_split_hot_streak", 2);   // quota: hot 3*2/4=1, return 3/4=0, backup 0
   const r = await run();
   assert.ok(r.status === "ok");
@@ -189,7 +189,7 @@ test("without today's stored signals (the context pull hasn't run) stories are d
 
 // ---------------------------------------------------------------- STO-110, STO-111
 
-test("STO-110: a game that has already tipped off is never matched, even if its status still says scheduled", { skip }, async () => {
+test("stories: a game that has already tipped off is never matched, even if its status still says scheduled", { skip }, async () => {
   await db!.query(`update games set tip_off_at = now() - interval '1 minute' where id = '${GAME}'`);
   try {
     const r = await run();
@@ -201,7 +201,7 @@ test("STO-110: a game that has already tipped off is never matched, even if its 
   }
 });
 
-test("STO-111: a missing startup setting (not a story_ one) is also a failed story run with the same alert, not just a scheduler alert", { skip }, async () => {
+test("stories: a missing startup setting (not a story_ one) is also a failed story run with the same alert, not just a scheduler alert", { skip }, async () => {
   const saved = (await q(`select * from app_config where key = 'max_spread_cents'`))[0];
   await db!.query(`delete from app_config where key = 'max_spread_cents'`);
   const net = installFetch(() => undefined); restore = net.restore;
@@ -220,7 +220,7 @@ test("STO-111: a missing startup setting (not a story_ one) is also a failed sto
 
 // ---------------------------------------------------------------- STO-107 (last: it deletes settings from this file's own database)
 
-test("STO-107: a missing story setting fails only the story run, alerts naming each key, and the other jobs still run", { skip }, async () => {
+test("stories: a missing story setting fails only the story run, alerts naming each key, and the other jobs still run", { skip }, async () => {
   await run();
   const before = await list();
   restore(); const net = installFetch(() => undefined); restore = net.restore;
@@ -541,12 +541,12 @@ test("control: a key lock on the market (FOR UPDATE) does block the shortlist in
 });
 
 // attack (concurrency): poller mid-update while the story job writes its shortlist.
-test("STO-109 locks: the story job's insert is not blocked by a poller holding the market row mid-update", { skip }, async () => {
+test("stories: the story job's insert is not blocked by a poller holding the market row mid-update", { skip }, async () => {
   assert.equal(await race((c) => pollerUpdate(c, 40), insertStory), "ok");
 });
 
 // attack (concurrency): story job's transaction open (FK holds FOR KEY SHARE) while the poller refreshes prices.
-test("STO-109 locks: the poller's price refresh is not blocked by an open story-job transaction referencing the market", { skip }, async () => {
+test("stories: the poller's price refresh is not blocked by an open story-job transaction referencing the market", { skip }, async () => {
   assert.equal(await race(insertStory, (c) => pollerUpdate(c, 41)), "ok");
   assert.equal((await db!.query(`select yes_bid_cents from markets where id = $1`, [MARKET])).rows[0].yes_bid_cents, 41);
 });
