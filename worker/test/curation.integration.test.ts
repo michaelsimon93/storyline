@@ -59,7 +59,10 @@ test("loads each story's signal text and its player's open, tight-spread ladder 
   const [a, b] = input.stories;
   assert.equal(a!.storyId, "101");
   assert.equal(a!.playerName, "Jalen Brunson");
-  assert.deepEqual(a!.signals, [{ id: sig1, source: "espn", kind: "stat", trust: "verified", summary: "last 5: 31, 28, 35, 30, 29" }]);
+  const { observedAt, ...rest } = a!.signals[0]!;
+  assert.deepEqual(rest, { id: sig1, source: "espn", kind: "stat", trust: "verified", summary: "last 5: 31, 28, 35, 30, 29", slateDate: DAY });
+  assert.match(observedAt, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/, "STO-91: every signal carries its own observed time, as ISO UTC");
+  assert.deepEqual(a!.otherAngleSignals, [], "a player with one story has no other angles");
   // closed, wide-spread, no-ask and no-bid markets are not rungs; the other stat is not on this ladder
   assert.deepEqual(a!.ladder.map((l) => [l.strike, l.yesPriceCents]), [[20, 80], [25, 60], [30, 40]]);
   assert.match(a!.ladder[0]!.marketId, /^[0-9a-f-]{36}$/);
@@ -157,4 +160,36 @@ test("curation settings load from app_config, and a missing one names itself", {
   assert.equal(typeof c.curationModel, "string");
   await q(`delete from app_config where key = 'curation_max_per_game'`);
   await assert.rejects(loadCurationConfig(db!), (e: Error) => e instanceof ConfigError && /missing curation_max_per_game/.test(e.message));
+});
+
+// ---- STO-91: a fallback signal keeps its own dates all the way to the curator
+test("STO-91: a signal from an earlier day is shown with its own slateDate and observedAt, and its link when it has one", { skip }, async () => {
+  const run = await newRun();
+  const old = Number((await q<{ id: string }>(
+    `insert into signals (source, kind, slate_date, player_id, key, summary, evidence, observed_at, trust, run_id)
+     values ('espn', 'stat', '2026-11-20', $1, 'form:old', 'last 5: 20, 22, 18, 25, 21', '{"url":"https://example.test/a","observedAt":"x"}', '2026-11-20T15:00:00Z', 'verified', $2) returning id`, [P1, run]))[0]!.id);
+  const [s] = (await loadCurationInput(db!, DAY, [{ ...E1, signalIds: [old] }], 5)).stories;
+  assert.deepEqual(s!.signals, [{ id: old, source: "espn", kind: "stat", trust: "verified", summary: "last 5: 20, 22, 18, 25, 21",
+    observedAt: "2026-11-20T15:00:00.000Z", slateDate: "2026-11-20", url: "https://example.test/a" }]);
+});
+
+// ---- STO-120 (option A): the signals of the same player's other stories, labelled by angle, never another player's
+test("STO-120: a story also gets its player's other stories' signals (the Hield case), and never another player's", { skip }, async () => {
+  const run = await newRun();
+  const sig = async (player: string, key: string, summary: string) => Number((await q<{ id: string }>(
+    `insert into signals (source, kind, slate_date, player_id, key, summary, evidence, observed_at, trust, run_id)
+     values ('espn', 'stat', $1, $2, $3, $4, '{"quote":"q"}', now(), 'verified', $5) returning id`, [DAY, player, key, summary, run]))[0]!.id);
+  const form = await sig(P1, "form:hield", "last 5 threes: 4, 5, 3, 4, 4");
+  const absence = await sig(P1, "inj:powell", "Norman Powell is out tonight");
+  const shared = await sig(P1, "min:shared", "averaging 28 minutes");
+  const barnes = await sig(P2, "form:barnes", "Barnes: 10 rebounds a night");
+  const hot: CurationEntry = { ...E1, id: 201, angle: "hot_streak", signalIds: [form, shared] };
+  const backup: CurationEntry = { ...E1, id: 202, angle: "backup_steps_in", signalIds: [absence, shared] };
+  const other: CurationEntry = { ...E2, id: 203, signalIds: [barnes] };
+  const [h, b, o] = (await loadCurationInput(db!, DAY, [hot, backup, other], 5)).stories;
+  assert.deepEqual(h!.signals.map((x) => x.id), [form, shared]);
+  assert.deepEqual(h!.otherAngleSignals.map((x) => [x.id, x.angle]), [[absence, "backup_steps_in"]], "his absence signal comes in, labelled with its angle; the shared one is not repeated");
+  assert.deepEqual(b!.otherAngleSignals.map((x) => [x.id, x.angle]), [[form, "hot_streak"]]);
+  assert.deepEqual(o!.otherAngleSignals, [], "another player's signals never cross over");
+  assert.ok(![...h!.otherAngleSignals, ...h!.signals].some((x) => x.id === barnes));
 });
