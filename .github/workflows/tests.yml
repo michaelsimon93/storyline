@@ -121,12 +121,14 @@ jobs:
     needs: [schema, real-supabase, worker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read              # holds the production DB URL: no write access to the repo
     concurrency:
       group: migrate-production
       cancel-in-progress: false   # never cut a migration off halfway
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb   # v1.7.3, pinned: this job holds a production credential
         with:
           version: 3.1.0
       - name: Apply new migrations

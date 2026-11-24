@@ -56,7 +56,12 @@ Migrations apply automatically. On every push to `main`, after the tests pass, t
 - Railway's docs say not to rely on Wait for CI alone, so the worker checks for itself at startup: if the database doesn't have `REQUIRED_MIGRATION` (`worker/src/lib/schema.ts`), it alerts Discord, waits up to 15 minutes for it, then stops with "worker failed to start".
 - CI fails any PR that edits, deletes or renames a migration already on `main`, or adds one dated before the newest one on `main` (`scripts/check-migrations-frozen.sh`).
 
-**If `migrate` fails:** the Actions run shows the SQL error, and the worker deploy is skipped. Fix it with a **new** migration in a PR; never edit one that's on `main`. To see what production has applied, from the repo root:
+**If `migrate` fails:** the Actions run shows the SQL error, and the worker deploy is skipped.
+
+**Expected noise, not a problem:**
+- Several quick merges can leave a `migrate` run **cancelled** (GitHub keeps one pending run per group). The newest run applies everything, so only that commit deploys.
+- Two schema PRs merged in the reverse of their migration dates make the second `db push` fail ("migration before last remote"). Before merging a schema PR, update its branch from `main` so CI re-checks the order.
+- If a migration never lands, the worker alerts "database is behind", then "worker failed to start", and Railway's restarts repeat both. Fix the migration and the next restart recovers. Fix it with a **new** migration in a PR; never edit one that's on `main`. To see what production has applied, from the repo root:
 
 ```bash
 supabase migration list --db-url "<session pooler URL>?sslmode=require"
