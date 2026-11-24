@@ -100,13 +100,13 @@ export async function runPublish(db: Db, opts: { alert: Alert; date?: string }):
           // A savepoint per card: one bad row (a player traded since curation, a constraint) leaves that card out, not the whole deck.
           await client.query("savepoint card");
           try {
-          players.add(story.player_id);
-          const ins = await client.query(
-            `insert into cards (slate_date, sort_key, game_id, subject, player_id, team_id, market_id, blurb, blurb_facts, storyline_type, curation_run_id)
-             values ($1, $2, $3, 'player', $4, $5, $6, $7, $8, $9, $10) returning id`,
-            [slateDate, published.length + 1, story.game_id, story.player_id, story.team_id, p.marketId, p.blurb, JSON.stringify(p.blurbFacts), storylineTypeOf(story.angle), curationRunId]);
-          published.push({ cardId: ins.rows[0].id, storyId: p.storyId, playerName: m!.full_name, blurb: p.blurb, facts: p.blurbFacts, strike: Number(m!.strike), yesPriceCents: m!.yes_ask_cents });
-          await client.query("release savepoint card");
+            players.add(story.player_id);
+            const ins = await client.query(
+              `insert into cards (slate_date, sort_key, game_id, subject, player_id, team_id, market_id, blurb, blurb_facts, storyline_type, curation_run_id)
+               values ($1, $2, $3, 'player', $4, $5, $6, $7, $8, $9, $10) returning id`,
+              [slateDate, published.length + 1, story.game_id, story.player_id, story.team_id, p.marketId, p.blurb, JSON.stringify(p.blurbFacts), storylineTypeOf(story.angle), curationRunId]);
+            published.push({ cardId: ins.rows[0].id, storyId: p.storyId, playerName: m!.full_name, blurb: p.blurb, facts: p.blurbFacts, strike: Number(m!.strike), yesPriceCents: m!.yes_ask_cents });
+            await client.query("release savepoint card");
           } catch (e) {
             await client.query("rollback to savepoint card");
             players.delete(story.player_id);
