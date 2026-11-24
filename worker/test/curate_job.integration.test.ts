@@ -9,6 +9,7 @@ import { curateJob } from "../src/jobs/index.js";
 import type { CurationRequest } from "../src/sources/curate.js";
 import type { Curator } from "../src/sources/types.js";
 import { freshDb } from "./helpers/testDb.js";
+import { fakeWriter, GUIDE } from "./helpers/blurbs.js";
 
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
 const DBNAME = "storyline_curate_job_test";
@@ -76,7 +77,7 @@ test("loads the day's shortlist in display order with each story's signal IDs", 
 test("a good answer: ok run on the record, picks in its outputs, the attempt stored, no alert", { skip }, async () => {
   await config(2);
   const a = alerts(), c = scripted([await goodAnswer()]);
-  const r = await runCuration(db!, { alert: a.alert, date: DAY, curator: c });
+  const r = await runCuration(db!, { alert: a.alert, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE });
   assert.equal(r.status, "ok");
   if (r.status !== "ok") return;
   assert.equal(r.picks, 2);
@@ -85,14 +86,14 @@ test("a good answer: ok run on the record, picks in its outputs, the attempt sto
   assert.equal(run.status, "ok");
   assert.deepEqual(run.outputs.picks.map((p) => p.reason), ["Five straight 28+ games", "Starting in place of the star"]);
   assert.equal(run.outputs.stories, 3);
-  const att = await q<{ accepted: boolean }>(`select accepted from curation_attempts where run_id = $1`, [r.runId]);
+  const att = await q<{ accepted: boolean }>(`select accepted from curation_attempts where run_id = $1 and step = 'pick'`, [r.runId]);
   assert.deepEqual(att.map((x) => x.accepted), [true]);
 });
 
 test("what the model was shown: the story ids, signal text and in-band strikes, and no detector scores", { skip }, async () => {
   await config(2);
   const c = scripted([await goodAnswer()]);
-  await runCuration(db!, { alert: async () => {}, date: DAY, curator: c });
+  await runCuration(db!, { alert: async () => {}, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE });
   const req = c.seen[0]!;
   assert.equal(req.input.stories.length, 3);
   assert.deepEqual(req.input.stories[0]!.ladder.map((l) => l.strike), [25, 30]);      // the 80c strike was cut
@@ -105,19 +106,19 @@ test("what the model was shown: the story ids, signal text and in-band strikes, 
 test("every attempt fails: one alert, the run is failed, every attempt is kept, nothing is posted", { skip }, async () => {
   await config(2);
   const a = alerts(), c = scripted([{ nope: 1 }, new Error("HTTP 529"), "just words"]);
-  const r = await runCuration(db!, { alert: a.alert, date: DAY, curator: c });
+  const r = await runCuration(db!, { alert: a.alert, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE });
   assert.equal(r.status, "failed");
   assert.equal(a.sent.length, 1);
   assert.match(a.sent[0]!, /Curation failed for 2026-11-23: 3 attempts/);
   const run = (await q<{ status: string; error: string }>(`select status, error from pipeline_runs where id = $1`, [(r as { runId: number }).runId]))[0]!;
   assert.equal(run.status, "failed");
   assert.match(run.error, /every one of 3 curation attempts/);
-  const att = await q<{ accepted: boolean }>(`select accepted from curation_attempts where run_id = $1 order by attempt`, [(r as { runId: number }).runId]);
+  const att = await q<{ accepted: boolean }>(`select accepted from curation_attempts where run_id = $1 and step = 'pick' order by attempt`, [(r as { runId: number }).runId]);
   assert.deepEqual(att.map((x) => x.accepted), [false, false, false]);
 
   // through the job wrapper: nothing reaches #testing
   const posted: string[] = [];
-  const out = await curateJob(async () => {}, { post: async (m) => { posted.push(m); } }, DAY, scripted([{ nope: 1 }, { nope: 2 }, { nope: 3 }])).run(db!) as { status: string };
+  const out = await curateJob(async () => {}, { post: async (m) => { posted.push(m); } }, DAY, scripted([{ nope: 1 }, { nope: 2 }, { nope: 3 }]), fakeWriter(), GUIDE).run(db!) as { status: string };
   assert.equal(out.status, "failed");
   assert.deepEqual(posted, []);
 });
@@ -125,16 +126,16 @@ test("every attempt fails: one alert, the run is failed, every attempt is kept, 
 test("a retry that passes is accepted and the rejected attempt is still kept", { skip }, async () => {
   await config(2);
   const bad = { ranking: ["x"], picks: [] };
-  const r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: scripted([bad, await goodAnswer()]) });
+  const r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: scripted([bad, await goodAnswer()]), blurbWriter: fakeWriter(), styleGuide: GUIDE });
   assert.equal(r.status, "ok");
-  const att = await q<{ attempt: number; accepted: boolean; violations: { kind: string }[] }>(`select attempt, accepted, violations from curation_attempts where run_id = $1 order by attempt`, [(r as { runId: number }).runId]);
+  const att = await q<{ attempt: number; accepted: boolean; violations: { kind: string }[] }>(`select attempt, accepted, violations from curation_attempts where run_id = $1 and step = 'pick' order by attempt`, [(r as { runId: number }).runId]);
   assert.deepEqual(att.map((x) => x.accepted), [false, true]);
   assert.ok(att[0]!.violations.some((v) => v.kind === "ranking"));
 });
 
 test("no shortlist for the day: reported, the model is never called, yesterday's list is not used", { skip }, async () => {
   const a = alerts(), c = scripted([]);
-  const r = await runCuration(db!, { alert: a.alert, date: OTHER_DAY, curator: c });
+  const r = await runCuration(db!, { alert: a.alert, date: OTHER_DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE });
   assert.equal(r.status, "no_shortlist");
   assert.equal(c.seen.length, 0);
   assert.equal(a.sent.length, 1);
@@ -148,7 +149,7 @@ test("a missing curation setting stops only this step, naming the key", { skip }
   await q(`delete from app_config where key = 'curation_max_per_stat'`);
   try {
     const a = alerts(), c = scripted([]);
-    const r = await runCuration(db!, { alert: a.alert, date: DAY, curator: c });
+    const r = await runCuration(db!, { alert: a.alert, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE });
     assert.equal(r.status, "config_error");
     assert.deepEqual((r as { problems: string[] }).problems, ["missing curation_max_per_stat"]);
     assert.equal(c.seen.length, 0);
@@ -163,11 +164,11 @@ test("a missing curation setting stops only this step, naming the key", { skip }
 test("running it twice is safe: each run has its own attempts and its own accepted answer, the shortlist is untouched", { skip }, async () => {
   await config(2);
   const before = (await q<{ n: string }>(`select count(*) n from story_shortlist`))[0]!.n;
-  const r1 = await runCuration(db!, { alert: async () => {}, date: DAY, curator: scripted([await goodAnswer()]) });
-  const r2 = await runCuration(db!, { alert: async () => {}, date: DAY, curator: scripted([await goodAnswer()]) });
+  const r1 = await runCuration(db!, { alert: async () => {}, date: DAY, curator: scripted([await goodAnswer()]), blurbWriter: fakeWriter(), styleGuide: GUIDE });
+  const r2 = await runCuration(db!, { alert: async () => {}, date: DAY, curator: scripted([await goodAnswer()]), blurbWriter: fakeWriter(), styleGuide: GUIDE });
   assert.ok(r1.status === "ok" && r2.status === "ok" && r1.runId !== r2.runId);
   const per = await q<{ run_id: string; n: string; acc: string }>(
-    `select run_id, count(*) n, count(*) filter (where accepted) acc from curation_attempts where run_id = any($1::bigint[]) group by run_id order by run_id`, [[(r1 as { runId: number }).runId, (r2 as { runId: number }).runId]]);
+    `select run_id, count(*) n, count(*) filter (where accepted) acc from curation_attempts where step = 'pick' and run_id = any($1::bigint[]) group by run_id order by run_id`, [[(r1 as { runId: number }).runId, (r2 as { runId: number }).runId]]);
   assert.deepEqual(per.map((x) => [x.n, x.acc]), [["1", "1"], ["1", "1"]]);
   assert.equal((await q<{ n: string }>(`select count(*) n from story_shortlist`))[0]!.n, before);
 });
@@ -175,7 +176,7 @@ test("running it twice is safe: each run has its own attempts and its own accept
 test("the job posts the picks, with each story type, to #testing, and a failing feed doesn't fail the run", { skip }, async () => {
   await config(2);
   const posted: string[] = [];
-  const out = await curateJob(async () => {}, { post: async (m) => { posted.push(m); } }, DAY, scripted([await goodAnswer()])).run(db!) as { status: string; posted?: unknown };
+  const out = await curateJob(async () => {}, { post: async (m) => { posted.push(m); } }, DAY, scripted([await goodAnswer()]), fakeWriter(), GUIDE).run(db!) as { status: string; posted?: unknown };
   assert.equal(out.status, "ok");
   assert.ok(!("posted" in out), "the run's result is the counts, not the whole deck");
   const text = posted.join("\n");
@@ -185,7 +186,7 @@ test("the job posts the picks, with each story type, to #testing, and a failing 
 
   // a feed that throws can't fail a run that already succeeded
   const runsBefore = Number((await q<{ n: string }>(`select count(*) n from pipeline_runs where job = 'curate' and status = 'ok'`))[0]!.n);
-  const out2 = await curateJob(async () => {}, { post: async () => { throw new Error("discord down"); } }, DAY, scripted([await goodAnswer()])).run(db!) as { status: string };
+  const out2 = await curateJob(async () => {}, { post: async () => { throw new Error("discord down"); } }, DAY, scripted([await goodAnswer()]), fakeWriter(), GUIDE).run(db!) as { status: string };
   assert.equal(out2.status, "ok");
   assert.equal(Number((await q<{ n: string }>(`select count(*) n from pipeline_runs where job = 'curate' and status = 'ok'`))[0]!.n), runsBefore + 1);
 });

@@ -13,6 +13,7 @@ import { runStories, JOB as STORY_JOB } from "./stories.js";
 import { runCuration, JOB as CURATE_JOB } from "./curate.js";
 import { postCuration } from "../lib/curationText.js";
 import type { CurationRequest } from "../sources/curate.js";
+import type { BlurbRequest } from "../sources/claudeBlurbs.js";
 import type { Curator } from "../sources/types.js";
 
 /** Ingest, then post its summary to the test feed. No date = today's slate (storyline_today()). */
@@ -72,15 +73,15 @@ export function storyJob(alert: Alert, feed: TestFeed, date?: string): Job {
  * Not scheduled yet: run it with `npm run job -- curate`, after the story step. Its schedule needs its own settings loader
  * (STO-106's pattern), like the story step's.
  */
-export function curateJob(alert: Alert, feed: TestFeed, date?: string, curator?: Curator<CurationRequest, unknown>): Job {
+export function curateJob(alert: Alert, feed: TestFeed, date?: string, curator?: Curator<CurationRequest, unknown>, blurbWriter?: Curator<BlurbRequest, unknown>, styleGuide?: string): Job {
   return {
     name: CURATE_JOB,
     run: async (db) => {
-      const r = await runCuration(db, { alert, date, curator });
+      const r = await runCuration(db, { alert, date, curator, blurbWriter, styleGuide });
       if (r.status !== "ok") return r;   // the alert has gone out; the run is recorded
       // The run is already recorded ok: nothing about the test feed may fail it (STO-40).
       try {
-        await postCuration(feed, r.posted.shown, r.posted.selection, r.posted.attemptsUsed, r.posted.asked);
+        await postCuration(feed, r.posted.shown, r.posted.selection, r.posted.attemptsUsed, r.posted.asked, r.posted.blurbs);
       } catch (err) {
         console.error(`test feed: could not post curation: ${err instanceof Error ? err.message : err}`);
       }

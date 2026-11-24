@@ -12,7 +12,7 @@
 import type { Db } from "../lib/db.js";
 import type { StatKey } from "../domain/storyDetectors.js";
 import type { ShortlistEntry } from "../domain/shortlist.js";
-import type { CurationInput, CurationSignal, CurationStory, LadderStrike } from "../domain/curationRules.js";
+import type { CurationInput, CurationSignal, CurationStory, LadderStrike, OtherAngleSignal } from "../domain/curationRules.js";
 
 /** The fields of a shortlist entry (STO-76) that curation reads. Anything else on the entry, scores included, is deliberately not passed on. */
 export type CurationEntry = Pick<ShortlistEntry, "id" | "playerId" | "gameId" | "angle" | "stat" | "summary" | "signalIds">;
@@ -30,9 +30,13 @@ const LADDER_SQL = `
 
 export async function loadCurationInput(db: Db, slateDate: string, entries: CurationEntry[], maxSpreadCents: number): Promise<CurationInput> {
   const signalIds = [...new Set(entries.flatMap((e) => e.signalIds))];
-  const sig = await db.query<{ id: string; source: string; kind: CurationSignal["kind"]; trust: CurationSignal["trust"]; summary: string }>(
-    `select id, source, kind::text as kind, trust::text as trust, summary from signals where id = any($1::bigint[])`, [signalIds]);
-  const signals = new Map(sig.rows.map((r) => [Number(r.id), { id: Number(r.id), source: r.source, kind: r.kind, trust: r.trust, summary: r.summary }]));
+  const sig = await db.query<{ id: string; source: string; kind: CurationSignal["kind"]; trust: CurationSignal["trust"]; summary: string; observed_at: Date; slate_date: string; url: string | null }>(
+    `select id, source, kind::text as kind, trust::text as trust, summary, observed_at, slate_date::text as slate_date, evidence ->> 'url' as url
+       from signals where id = any($1::bigint[])`, [signalIds]);
+  const signals = new Map<number, CurationSignal>(sig.rows.map((r) => [Number(r.id), {
+    id: Number(r.id), source: r.source, kind: r.kind, trust: r.trust, summary: r.summary,
+    observedAt: r.observed_at.toISOString(), slateDate: r.slate_date, ...(r.url ? { url: r.url } : {}),
+  }]));
 
   const playerIds = [...new Set(entries.map((e) => e.playerId))];
   const pl = await db.query<{ id: string; full_name: string }>(`select id, full_name from players where id = any($1::uuid[])`, [playerIds]);
@@ -47,9 +51,21 @@ export async function loadCurationInput(db: Db, slateDate: string, entries: Cura
       if (!s) throw new Error(`shortlist entry ${e.id}: no signal ${id}`);
       return s;
     });
+    // STO-120: the signals of the same player's other stories, labelled by their angle. A signal shared with this story is not "other".
+    const ownIds = new Set(e.signalIds);
+    const otherAngleSignals: OtherAngleSignal[] = [];
+    const seen = new Set<number>();
+    for (const o of entries) {
+      if (o.playerId !== e.playerId || o.id === e.id) continue;
+      for (const id of o.signalIds) {
+        if (ownIds.has(id) || seen.has(id)) continue;
+        seen.add(id);
+        otherAngleSignals.push({ ...signals.get(id)!, angle: o.angle });
+      }
+    }
     const lad = await db.query<{ id: string; strike: string; yes_ask_cents: number }>(LADDER_SQL, [e.playerId, e.gameId, MARKET_STAT[e.stat], maxSpreadCents]);
     const ladder: LadderStrike[] = lad.rows.map((r) => ({ marketId: r.id, strike: Number(r.strike), yesPriceCents: r.yes_ask_cents }));
-    stories.push({ storyId: String(e.id), playerId: e.playerId, playerName: name, gameId: e.gameId, stat: e.stat, angle: e.angle, summary: e.summary, signals: own, ladder });
+    stories.push({ storyId: String(e.id), playerId: e.playerId, playerName: name, gameId: e.gameId, stat: e.stat, angle: e.angle, summary: e.summary, signals: own, otherAngleSignals, ladder });
   }
   return { slateDate, stories };
 }

@@ -5,6 +5,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import type { Db } from "../src/lib/db.js";
 import { runCuration } from "../src/jobs/curate.js";
+import { fakeWriter, GUIDE } from "./helpers/blurbs.js";
 import { loadCurationInput } from "../src/sources/curationInput.js";
 import type { CurationRequest } from "../src/sources/curate.js";
 import type { Curator } from "../src/sources/types.js";
@@ -51,7 +52,7 @@ const answer = (reason1 = "Five straight 28+ games") => ({
 const fake = (a: unknown, delayMs = 0): Curator<CurationRequest, unknown> =>
   ({ name: "fake", async curate() { if (delayMs) await new Promise((r) => setTimeout(r, delayMs)); return a; } });
 const attemptsOf = async (runId: number | undefined) =>
-  q<{ attempt: number; accepted: boolean }>(`select attempt, accepted from curation_attempts where run_id = $1 order by attempt`, [runId]);
+  q<{ attempt: number; accepted: boolean }>(`select attempt, accepted from curation_attempts where run_id = $1 and step = 'pick' order by attempt`, [runId]);
 
 // ---------------------------------------------------------------- findings (expected to FAIL until fixed)
 
@@ -59,7 +60,7 @@ const attemptsOf = async (runId: number | undefined) =>
 // the job crashes instead of returning ok/failed, and every attempt of the run (the accepted one included) is lost.
 test("qa: an answer containing U+0000 doesn't crash the job or lose the run's attempts", { skip }, async () => {
   let r: Awaited<ReturnType<typeof runCuration>> | undefined, err: unknown;
-  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer("Five straight\u0000 28+ games")) }); } catch (e) { err = e; }
+  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer("Five straight\u0000 28+ games")), blurbWriter: fakeWriter(), styleGuide: GUIDE }); } catch (e) { err = e; }
   assert.equal(err, undefined, `runCuration threw: ${(err as Error)?.message}`);
   assert.ok((await attemptsOf((r as { runId: number }).runId)).length >= 1, "the attempt isn't stored, so the pick can't be traced");
 });
@@ -70,7 +71,7 @@ test("qa: a rejected answer Postgres can't store doesn't erase the run's other a
   let i = 0;
   const c: Curator<CurationRequest, unknown> = { name: "fake", async curate() { return answers[i++]; } };
   let r: Awaited<ReturnType<typeof runCuration>> | undefined, err: unknown;
-  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c }); } catch (e) { err = e; }
+  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE }); } catch (e) { err = e; }
   assert.equal(err, undefined, `runCuration threw: ${(err as Error)?.message}`);
   assert.equal(r?.status, "ok");
   assert.equal((await attemptsOf((r as { runId: number }).runId)).length, 2);
@@ -81,8 +82,8 @@ test("qa: a rejected answer Postgres can't store doesn't erase the run's other a
 // coverage: two runs at the same moment (two pool connections): each gets its own run, attempts and one accepted answer.
 test("qa coverage: two concurrent runs don't share or double attempts", { skip }, async () => {
   const [a, b] = await Promise.all([
-    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50) }),
-    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50) }),
+    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50), blurbWriter: fakeWriter(), styleGuide: GUIDE }),
+    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50), blurbWriter: fakeWriter(), styleGuide: GUIDE }),
   ]);
   assert.ok(a.status === "ok" && b.status === "ok");
   assert.notEqual(a.runId, b.runId);
@@ -96,7 +97,7 @@ test("qa coverage: a story with no in-band strike is loaded, hidden, and not cou
   const c: Curator<CurationRequest, unknown> = { name: "fake", async curate(req) { seen.push(req); return answer(); } };
   await q(`update app_config set value = '3' where key = 'cards_per_day'`);
   try {
-    const r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c });
+    const r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE });
     assert.equal(r.status, "ok");
     assert.deepEqual(seen[0]!.input.stories.map((s) => s.storyId), [ids.s1, ids.s2]);
   } finally { await q(`update app_config set value = '2' where key = 'cards_per_day'`); }

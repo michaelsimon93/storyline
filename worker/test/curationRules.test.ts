@@ -12,7 +12,8 @@ const RULES: CurationRules = { n: 3, bandMin: 25, bandMax: 75, maxPerGame: 2, ma
 /** A story with a three-rung ladder: 20+ at 80c (out of band), 25+ at 55c, 30+ at 30c, 35+ at 10c (out of band). */
 const story = (id: string, o: Partial<CurationStory> = {}): CurationStory => ({
   storyId: id, playerId: `p-${id}`, playerName: `Player ${id}`, gameId: "g1", stat: "pts", angle: "hot_streak", summary: `story ${id}`,
-  signals: [{ id: 1, source: "espn", kind: "stat", trust: "verified", summary: "fact" }],
+  signals: [{ id: 1, source: "espn", kind: "stat", trust: "verified", summary: "fact", observedAt: "2026-11-23T14:00:00.000Z", slateDate: "2026-11-23" }],
+  otherAngleSignals: [],
   ladder: [
     { marketId: `${id}-20`, strike: 20, yesPriceCents: 80 },
     { marketId: `${id}-25`, strike: 25, yesPriceCents: 55 },

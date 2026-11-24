@@ -17,13 +17,24 @@
 
 import type { SignalKind, TrustLevel } from "../sources/types.js";
 
-/** A fact the curator may weigh. `id` is the stored signal's ID (what blurbs will cite in STO-77). */
+/** A fact the curator may weigh. `id` is the stored signal's ID (what blurbs cite, STO-77). */
 export interface CurationSignal {
   id: number;
   source: string;
   kind: SignalKind;
   trust: TrustLevel;
   summary: string;
+  /** ISO 8601 UTC: when we saw it. With `slateDate`, this is how a dated fact (ESPN-down fallback, ADR-024 rule 7.1) is told from tonight's news (STO-91). */
+  observedAt: string;
+  /** The Storyline day the signal belongs to ('YYYY-MM-DD'). Earlier than the slate day = a dated fact. */
+  slateDate: string;
+  /** Where it came from, when it has a link (a post from an approved account must be linked, ADR-024 rule 2). */
+  url?: string;
+}
+
+/** A signal from another story about the same player (STO-120, option A), with the angle of the story it came from. */
+export interface OtherAngleSignal extends CurationSignal {
+  angle: string;
 }
 
 /** One rung of the player's ladder. `marketId` is our market id (ADR-021), never a provider's. */
@@ -46,6 +57,11 @@ export interface CurationStory {
   angle: string;
   summary: string;
   signals: CurationSignal[];
+  /**
+   * The signals of the same player's other stories on the shortlist, not repeated from `signals` (STO-120). The curator and the
+   * blurb writer may use them for this player only: they are facts about him, just from another angle.
+   */
+  otherAngleSignals: OtherAngleSignal[];
   /** Every open, tight-spread strike we know for this player and stat. The curator is shown only the in-band part (`narrowToBand`); the rules still check the band on whatever it answers. */
   ladder: LadderStrike[];
 }

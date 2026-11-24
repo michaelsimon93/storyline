@@ -96,3 +96,15 @@ test("the ESPN context settings come through typed", () => {
     [5, 250, 5, 5, 1, "30 9 * * *"]);
   assert.throws(() => parseConfig(without("espn_pause_ms")), /missing espn_pause_ms/);
 });
+
+// ---- STO-77: the blurb length limit is a setting (ADR-018), loaded with the rest of curation's
+import { parseCurationConfig as parseCuration, ConfigError as CfgError } from "../src/lib/config.js";
+test("curation config includes blurb_max_chars, and a missing one is named", () => {
+  const rows = [
+    ["cards_per_day", 10], ["price_band_min", 25], ["price_band_max", 75], ["max_spread_cents", 5], ["curation_model", "m"], ["curation_effort", "high"],
+    ["curation_max_tokens", 16000], ["curation_max_attempts", 3], ["curation_max_per_game", 3], ["curation_max_per_stat", 4], ["blurb_max_chars", 200],
+  ].map(([key, value]) => ({ key: key as string, value }));
+  assert.equal(parseCuration(rows).blurbMaxChars, 200);
+  assert.throws(() => parseCuration(rows.filter((r) => r.key !== "blurb_max_chars")), (e: unknown) => e instanceof CfgError && e.problems.join() === "missing blurb_max_chars");
+  assert.throws(() => parseCuration(rows.map((r) => r.key === "blurb_max_chars" ? { ...r, value: "200" } : r)), /blurb_max_chars should be int/);
+});

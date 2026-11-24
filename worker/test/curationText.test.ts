@@ -7,7 +7,7 @@ import type { CurationInput, CurationStory, Selection } from "../src/domain/cura
 import { parseCurationConfig } from "../src/lib/config.js";
 
 const story = (id: number, angle: string): CurationStory => ({
-  storyId: String(id), playerId: `p${id}`, playerName: `Player ${id}`, gameId: `g${id % 3}`, stat: "pts", angle, summary: "s", signals: [],
+  storyId: String(id), playerId: `p${id}`, playerName: `Player ${id}`, gameId: `g${id % 3}`, stat: "pts", angle, summary: "s", signals: [], otherAngleSignals: [],
   ladder: [{ marketId: `m${id}`, strike: 20 + id, yesPriceCents: 40 }],
 });
 const shown = (n: number): CurationInput => ({ slateDate: "2026-11-23", stories: Array.from({ length: n }, (_, i) => story(i + 1, i % 2 ? "back_from_injury" : "hot_streak")) });
@@ -57,4 +57,25 @@ test("a deck shorter than asked says so, with the reason; a full deck doesn't", 
   assert.match(short, /\*\*Short deck: asked for 10\*\*, the game and stat caps and the players available allow 2/);
   assert.doesNotMatch(curationPostChunks(shown(4), sel(2), 1, 2)[0]!, /Short deck/);
   assert.doesNotMatch(curationPostChunks(shown(4), sel(2), 1)[0]!, /Short deck/);
+});
+
+// ---- STO-77: blurbs in the #testing post
+test("blurbs are quoted under their pick with the ids they cite, the other angle's marked, and the level mix is tallied", () => {
+  const shown = { slateDate: "2026-11-24", stories: [story(1, "hot_streak"), story(2, "backup_steps_in")] } satisfies CurationInput;
+  const sel = { ranking: ["1", "2"], picks: [{ storyId: "1", marketId: "m1", reason: "why" }, { storyId: "2", marketId: "m2", reason: "why" }] };
+  const market = { player: "p", team: "t", opponent: "o", home: true, stat: "points", strike: 25, yesPriceCents: 55 };
+  const sg = (id: number, via: string) => ({ id, source: "espn", kind: "stat" as const, trust: "verified" as const, summary: "s", observedAt: "2026-11-24T14:00:00.000Z", slateDate: "2026-11-24", via });
+  const text = curationPostChunks(shown, sel, 1, 2, [
+    { storyId: "1", blurb: "A fine blurb.", facts: { level: "full", market, signals: [sg(11, "own"), sg(12, "other_angle:backup_steps_in")] } },
+    { storyId: "2", blurb: "Thin one.", facts: { level: "market_only", market, signals: [] } },
+  ]).join("\n");
+  assert.match(text, /> A fine blurb\.\n\s+cites 11, 12 \(same player, other angle\) · full/);
+  assert.match(text, /> Thin one\.\n\s+cites nothing \(market only\) · market_only/);
+  assert.match(text, /Blurbs: full 1, market_only 1\./);
+});
+
+test("with no blurbs the post is unchanged from STO-11's", () => {
+  const shown2 = { slateDate: "2026-11-24", stories: [story(1, "hot_streak")] };
+  const text = curationPostChunks(shown2, { ranking: ["1"], picks: [{ storyId: "1", marketId: "m1", reason: "why" }] }, 1).join("\n");
+  assert.doesNotMatch(text, /cites|Blurbs:/);
 });
