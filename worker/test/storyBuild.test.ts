@@ -18,8 +18,8 @@ const CFG: StoryConfig = {
   shortlistSize: 50, shortlistSplitHotStreak: 1, shortlistSplitBackFromInjury: 1, shortlistSplitBackupStepsIn: 1,
 };
 
-/** Hot Hand's streak, a market for it in GAME (TOR at NY), and Hot Hand's team set to `team` on the slate. */
-function build(team: number) {
+/** Hot Hand's streak, a market for it in `marketGameId` (default GAME, TOR at NY), and Hot Hand's team set to `team` on the slate. */
+function build(team: number, marketGameId: string = GAME) {
   const slate: Slate = {
     slateDate: DAY, league: "nba",
     games: [{ id: GAME, homeTeamId: TOR, awayTeamId: NY, externalId: "1" }],
@@ -34,7 +34,7 @@ function build(team: number) {
   return buildSummary({
     runId: 1, slate, slateDate: DAY, inputs, cfg: CFG,
     stored: new Map([[`player:${P.HOT.id}|form:pts`, { id: 7, date: DAY }]]),
-    markets: [{ id: "m1", playerId: P.HOT.id, gameId: GAME, stat: "points", strike: 15, yesBidCents: 50, yesAskCents: 52 }],
+    markets: [{ id: "m1", playerId: P.HOT.id, gameId: marketGameId, stat: "points", strike: 15, yesBidCents: 50, yesAskCents: 52 }],
     rules: { bandMin: 25, bandMax: 75, maxSpreadCents: 5 },
   });
 }
@@ -48,6 +48,22 @@ test("control: a story whose player's team is playing in the market's game is ma
 test("STO-109: a story whose player's team is not in the market's game is skipped and counted as no market", () => {
   const { summary, picks } = build(99);
   assert.equal(summary.found, 1, "the streak was found");
+  assert.equal(summary.matched, 0);
+  assert.equal(summary.noMarket, 1);
+  assert.deepEqual(picks, []);
+});
+
+// coverage (home side): the existing test covers the away team; the home team must match too.
+test("STO-109 qa: a story whose player is on the HOME team of the market's game is matched", () => {
+  const { summary, picks } = build(TOR, GAME);
+  assert.equal(summary.matched, 1);
+  assert.deepEqual(picks.map((k) => [k.teamId, k.gameId, k.marketId]), [[TOR, GAME, "m1"]]);
+});
+
+// attack (outside data): a market whose game isn't on the slate (the `!game` branch) is skipped, not thrown on or written.
+test("STO-109 qa: a market whose game is not on the slate is skipped and counted as no market", () => {
+  const { summary, picks } = build(NY, "00000000-0000-0000-0000-0000000000ff");
+  assert.equal(summary.found, 1);
   assert.equal(summary.matched, 0);
   assert.equal(summary.noMarket, 1);
   assert.deepEqual(picks, []);
