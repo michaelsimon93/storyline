@@ -53,9 +53,3 @@ test("the good examples pass the code's own rules: short, one line, no betting l
     assert.deepEqual(kinds, [], text);
   }
 });
-
-test("the bad examples really are bad: each breaks a rule the code checks or one the guide names", () => {
-  const bad = [...guide.matchAll(/^- Bad: "(.+?)"/gm)].map((m) => m[1]!);
-  assert.equal(bad.length, 4);
-  assert.ok(bad.some((b) => /\b(lock|smash|hammer)\b/i.test(b)), "at least one shows banned betting language");
-});

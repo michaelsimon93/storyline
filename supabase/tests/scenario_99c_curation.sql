@@ -70,3 +70,78 @@ select t_err('curation priv: authenticated can''t insert attempts',  $q$insert i
 select t_err('curation priv: authenticated can''t change attempts',  $q$update curation_attempts set accepted = true$q$, 'permission denied%');
 select t_err('curation priv: authenticated can''t delete attempts',  $q$delete from curation_attempts$q$, 'permission denied%');
 reset role;
+
+-- ---------------------------------------------------------------- more "can't do it" attacks on curation_attempts (ADR-016), and the worker's path (STO-11)
+insert into pipeline_runs (job, slate_date, status) values ('sto11_qa_a', storyline_today(), 'ok');
+
+-- attacks: TRUNCATE skips row-level checks; app roles must not be able to wipe the trace of what the model saw.
+set role anon;
+select t_err('curation priv: anon can''t truncate attempts',          $q$truncate curation_attempts$q$, 'permission denied%');
+select t_err('curation priv: anon can''t update attempts',            $q$update curation_attempts set accepted = true$q$, 'permission denied%');
+select t_err('curation priv: anon can''t delete attempts',            $q$delete from curation_attempts$q$, 'permission denied%');
+select t_err('curation priv: anon can''t draw ids from its sequence', $q$select nextval('curation_attempts_id_seq')$q$, 'permission denied%');
+reset role;
+set role authenticated;
+select as_user('a9800000-0000-0000-0000-0000000000f2');
+select t_err('curation priv: authenticated can''t truncate attempts',          $q$truncate curation_attempts$q$, 'permission denied%');
+select t_err('curation priv: authenticated can''t draw ids from its sequence', $q$select nextval('curation_attempts_id_seq')$q$, 'permission denied%');
+select t_err('curation priv: authenticated can''t reach it through a CTE',     $q$with x as (select count(*) from curation_attempts) select * from x$q$, 'permission denied%');
+reset role;
+
+-- attacks: privileges on the identity sequence (Supabase default privileges grant sequences to app roles).
+select t_eq('curation priv: no sequence privileges on curation_attempts_id_seq for app roles',
+  (select count(*)::int from information_schema.usage_privileges
+    where object_name = 'curation_attempts_id_seq' and grantee in ('anon', 'authenticated', 'PUBLIC')), 0);
+
+-- attacks: no function exposed to app roles reads or writes the table (no security definer back door).
+select t_eq('curation priv: no function in public mentions curation_attempts',
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prosrc ilike '%curation_attempts%'), 0);
+
+-- coverage: the worker's role path works (service_role bypasses RLS, like story_shortlist).
+set role service_role;
+insert into curation_attempts (run_id, attempt, request) values ((select id from pipeline_runs where job = 'sto11_qa_a'), 1, '{}');
+select t_eq('curation priv: service_role can store and read back an attempt',
+  (select count(*)::int from curation_attempts where run_id = (select id from pipeline_runs where job = 'sto11_qa_a')), 1);
+reset role;
+
+-- coverage: a run with stored attempts can't be deleted out from under them (no cascade loses the trace).
+select t_err('curation attempts: a pipeline run with attempts can''t be deleted',
+  $q$delete from pipeline_runs where job = 'sto11_qa_a'$q$, '%foreign key%');
+
+-- coverage: violations is always a list, so "accepted means no violations" can't be dodged with an empty object.
+select t_err('curation attempts: violations must be an array, not an object',
+  $q$insert into curation_attempts (run_id, attempt, request, violations) values ((select id from pipeline_runs where job = 'sto11_qa_a'), 2, '{}', '{}')$q$, '%check%');
+
+reset role;
+
+-- ---------------------------------------------------------------- blurbs: their setting, and attempts kept per step (the pick call and the blurb call)
+select t_eq('blurb cfg: blurb_max_chars is a private bounded int starting at the spec''s 200',
+  (select array[config_int('blurb_max_chars'), min_value::int, max_value::int] from app_config where key = 'blurb_max_chars' and not is_public and value_type = 'int'),
+  array[200, 40, 200]);
+select t_err('blurb cfg: 201 is rejected (cards.blurb would refuse the blurb)', $q$update app_config set value = '201' where key = 'blurb_max_chars'$q$, '%invalid config%');
+select t_err('blurb cfg: 39 is rejected (no blurb could fit)',                   $q$update app_config set value = '39' where key = 'blurb_max_chars'$q$, '%invalid config%');
+select t_err('blurb cfg: a string is rejected',                                  $q$update app_config set value = '"long"' where key = 'blurb_max_chars'$q$, '%invalid config%');
+
+insert into pipeline_runs (job, slate_date, status) values ('sto77_scn_a', storyline_today(), 'ok');
+insert into curation_attempts (run_id, step, attempt, request, output, accepted)
+  values ((select id from pipeline_runs where job = 'sto77_scn_a'), 'pick',  1, '{}', '{"ranking": [], "picks": []}', true);
+-- the same attempt number and a second accepted answer are fine in the OTHER step
+insert into curation_attempts (run_id, step, attempt, request, output, accepted)
+  values ((select id from pipeline_runs where job = 'sto77_scn_a'), 'blurb', 1, '{}', '{"blurbs": []}', true);
+select t_eq('blurb attempts: the pick step and the blurb step each keep their own accepted answer',
+  (select array[count(*), count(*) filter (where step = 'pick'), count(*) filter (where step = 'blurb' and accepted)]::int[]
+     from curation_attempts where run_id = (select id from pipeline_runs where job = 'sto77_scn_a')), array[2, 1, 1]);
+select t_eq('blurb attempts: rows from before the step column are picks', (select column_default from information_schema.columns where table_name = 'curation_attempts' and column_name = 'step'), '''pick''::text');
+
+select t_err('blurb attempts: a step can''t have two accepted answers (never two sets of blurbs)',
+  $q$insert into curation_attempts (run_id, step, attempt, request, output, accepted) values ((select id from pipeline_runs where job = 'sto77_scn_a'), 'blurb', 2, '{}', '{}', true)$q$, '%curation_attempts_one_accepted%');
+select t_err('blurb attempts: the same blurb call can''t be stored twice',
+  $q$insert into curation_attempts (run_id, step, attempt, request) values ((select id from pipeline_runs where job = 'sto77_scn_a'), 'blurb', 1, '{}')$q$, '%curation_attempts_one_per_call%');
+select t_err('blurb attempts: only known steps',
+  $q$insert into curation_attempts (run_id, step, attempt, request) values ((select id from pipeline_runs where job = 'sto77_scn_a'), 'rewrite', 1, '{}')$q$, '%step%');
+
+-- ADR-016: nothing changed about who can touch the table
+set role anon;
+select t_err('blurb attempts: anon still can''t read the table', $q$select * from curation_attempts$q$, 'permission denied%');
+reset role;

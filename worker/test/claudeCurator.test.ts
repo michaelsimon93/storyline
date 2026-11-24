@@ -97,42 +97,25 @@ test("an effort that isn't one of the five levels is rejected up front", () => {
   assert.throws(() => createClaudeCurator({ client: f.client, ...opts, effort: "" }), /curation_effort/);
 });
 
-// ---- STO-91: every signal carries its dates, and the rules say what a dated fact may not be called
-test("STO-91: each signal is shown with observedAt and slateDate, and the prompt says a dated fact is never tonight's news", () => {
+// Prompts are taste (tier 3): check what must always be in them, not the exact wording.
+test("curator prompt: each signal is shown with observedAt and slateDate, and the rules mention dated facts", () => {
   const old = { ...REQ.input.stories[0]!.signals[0]!, id: 42, observedAt: "2026-11-20T15:00:00.000Z", slateDate: "2026-11-20" };
   const u = userPrompt({ ...REQ, input: { ...REQ.input, stories: [{ ...REQ.input.stories[0]!, signals: [REQ.input.stories[0]!.signals[0]!, old] }] } });
-  assert.ok(u.includes('"observedAt":"2026-11-20T15:00:00.000Z"'));
-  assert.ok(u.includes('"slateDate":"2026-11-20"'));
-  assert.ok(u.includes('"slateDate":"2026-11-23"'));
-  const sys = systemPrompt(REQ);
-  assert.match(sys, /slateDate/);
-  assert.match(sys, /earlier than the slate day|before the slate day/i);
-  assert.match(sys, /never (present|state)[^.]*tonight's news/i);
+  for (const want of ['"observedAt":"2026-11-20T15:00:00.000Z"', '"slateDate":"2026-11-20"', '"slateDate":"2026-11-23"']) assert.ok(u.includes(want), want);
+  assert.match(systemPrompt(REQ), /slateDate[^.]*tonight's news/i);
 });
 
-// ---- STO-120 (option A): same player, other angle
-const HIELD_REQ = (): CurationRequest => ({
-  ...REQ,
-  input: { ...REQ.input, stories: [{
+test("curator prompt: a story's other-angle signals are shown apart from its own, with their angle, and the rules limit facts to that player", () => {
+  const req: CurationRequest = { ...REQ, input: { ...REQ.input, stories: [{
     ...REQ.input.stories[0]!, storyId: "3", playerName: "Buddy Hield", angle: "hot_streak",
-    signals: [{ ...REQ.input.stories[0]!.signals[0]!, id: 101, summary: "last 5: 4.0 threes a game" }],
+    signals: [{ ...REQ.input.stories[0]!.signals[0]!, id: 101 }],
     otherAngleSignals: [{ ...REQ.input.stories[0]!.signals[0]!, id: 202, kind: "injury", summary: "Norman Powell is out tonight", angle: "backup_steps_in" }],
-  }] },
-});
-
-test("STO-120: other-angle signals are shown labelled \"same player, other angle\" with the angle they came from, apart from the story's own", () => {
-  const stories = JSON.parse(userPrompt(HIELD_REQ()).split("\n")[1]!) as { signals: { id: number }[]; sameAngleOther?: unknown; samePlayerOtherAngle: { id: number; angle: string; summary: string }[] }[];
-  assert.deepEqual(stories[0]!.signals.map((s) => s.id), [101]);
-  assert.deepEqual(stories[0]!.samePlayerOtherAngle.map((s) => [s.id, s.angle]), [[202, "backup_steps_in"]]);
-  assert.match(stories[0]!.samePlayerOtherAngle[0]!.summary, /Powell/);
-});
-
-test("STO-120: the rules say facts may come only from the player's own signals, never another player's, and that several stories favour a player", () => {
+  }] } };
+  const [s] = JSON.parse(userPrompt(req).split("\n")[1]!) as { signals: { id: number }[]; samePlayerOtherAngle: { id: number; angle: string }[] }[];
+  assert.deepEqual(s!.signals.map((g) => g.id), [101]);
+  assert.deepEqual(s!.samePlayerOtherAngle.map((g) => [g.id, g.angle]), [[202, "backup_steps_in"]]);
   const sys = systemPrompt(REQ);
   assert.match(sys, /same player, other angle/i);
-  assert.match(sys, /only facts (attached|listed) (to|for) that (same )?player|only (the )?facts attached to that player/i);
-  assert.match(sys, /never (another|a different) player's/i);
-  assert.match(sys, /more than one story[^.]*(favou?r|count)/i);
-  assert.match(sys, /most compelling angle/i);
+  assert.match(sys, /never another player's/i);
   assert.match(sys, /one pick per player/, "one card per player is unchanged");
 });

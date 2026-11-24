@@ -12,19 +12,22 @@ Michael is Head of Product and directs the build. Teaching matters as much as sh
 - Be concise by default. Go deeper when he asks why.
 
 ## Testing is part of done
-A change isn't finished until it has tests and CI is green. No exceptions for "small" changes.
+A change isn't finished until it has the tests its tier needs and CI is green. **A test earns its place if it would catch a bug that ships silently.** Depth follows risk (ADR-013):
 
-| What you're changing | Required tests | Where |
-|---|---|---|
-| Pure logic (parsing, mapping, matching, math, money) | Unit tests: normal cases **and** edge cases that would silently corrupt data | `worker/test/*.test.ts` |
-| External API clients | **Recorded fixtures** with a mocked `fetch`, including error/retry paths. Never hit the network. | `worker/test/` + `worker/test/fixtures/` |
-| Worker jobs (ingest, poller, curation, settlement) | Integration test: fixtures in, real Postgres, assert rows. Prove it's **safe to re-run**. | `worker/test/*.integration.test.ts` |
-| Schema, RLS, SQL functions | `supabase/tests/scenario_*.sql` printing `PASS`/`FAIL`. Security rules get a "can't do it" test. | `supabase/tests/` |
-| Web app | Component tests for card states; one end-to-end path: open → swipe → pick | `web/` |
+| Tier | Code | Required tests | Where |
+|---|---|---|---|
+| 1. Money and integrity | picks, settlement, claims, ledger, locks, RLS and grants, job idempotency | Real Postgres. Prove it's **safe to re-run**. Security rules get a "can't do it" test. Concurrency claims get a concurrency test, shown to fail when the protection is removed. | `worker/test/*.integration.test.ts`, `supabase/tests/scenario_*.sql` |
+| 2. External data | Kalshi, ESPN and Claude clients and parsers, the grounding check on Claude's answers (ADR-014), and matching players and teams across sources | **Recorded fixtures** with a mocked `fetch`, including odd real responses and error/retry paths. Never hit the network. | `worker/test/` + `worker/test/fixtures/` |
+| 3. Taste logic | story detectors, shortlist, curation ranking and prompts | **Invariants** (size limits, only games on the slate, every story has a valid market) plus one golden fixture per story angle. Don't pin exact scores or weights. | `worker/test/*.test.ts` |
+| 4. Glue | config loading, alert and feed text, CLI | `tsc`. Add a unit test only for a real branch. | `worker/test/*.test.ts` |
+| Web app | | Component tests for card states; one end-to-end path: open → swipe → pick | `web/` |
 
+The tier follows what the code does, not the file it lives in. A job's write path (rows written, money, locks, safe re-runs) is tier 1. The choices it makes (which stories, which order) are tier 3. Tier 1 cases can live in a tier 3 module's test file.
+
+- **Test each rule in one place.** Pure logic gets unit tests. Integration tests prove the wiring, the database and safe re-runs. They don't re-check rules a unit test already covers.
+- **Name test files for the code, not the ticket or reviewer.** Add cases to the module's existing test file or scenario. No `*_qa`, `*_adversary` or `sto123_*` files.
 - **Write the failing case first** for money, results, or matching. **Bugs get a regression test** before the fix.
 - **Don't mock the database.** Use real Postgres; `supabase/tests/supabase_stubs.sql` stands in for Supabase's auth layer.
-- **Concurrency claims need a concurrency test**, shown to fail when the protection is removed.
 - Keep fixtures small: trimmed real responses, not synthetic guesses.
 
 ## Running tests
@@ -44,6 +47,7 @@ CI runs Postgres 17 and is the source of truth.
 ## Workflow
 - Never commit to `main`. Branch → PR → CI green → Michael merges. No agent merges.
 - Work is tracked in Linear (team `STO`, project **Storyline**; milestones v1, v1.1, v2+). Spec and ADRs say *what and why*; Linear says *what's next*. Link spec sections, don't copy them.
+- **The ticket is the brief.** A prompt may be just a ticket ID. Read the issue, its sub-issues and any decisions recorded on them. Its `Agent brief` section, if present, says what to read first, what to confirm before coding, and what's out of scope. Ask Michael only for what the brief leaves open.
 - **Every PR has an issue** (check before creating one). Branch `<type>/sto-12-short-name` (`feat`, `fix`, `chore`, `docs`); PR title starts `STO-12:`; `Fixes STO-12` as the PR description's first line. Cloud sessions start on a random branch name: rename it when you start work, not at `/ship`.
 - **Product calls go to Michael as `needs-decision`**: label the issue, state the question and options, and don't build past it.
 - Labels: one area (`db`, `worker`, `curation`, `web`, `infra`) per issue. No cycles, no estimates.
@@ -55,13 +59,13 @@ CI runs Postgres 17 and is the source of truth.
 |---|---|
 | **Docs-only**: no SQL, TypeScript, scripts or CI config | None |
 | **Code** (default) | `eng-lead` |
-| **High-risk**: money (`place_pick`, settlement, claims, ledger), security (RLS, grants, `security definer`), concurrency (locks, job overlap) | `qa`, then `eng-lead` |
+| **High-risk**: tier 1 code (see the testing table) | `qa`, then `eng-lead` |
 | Touches `web/` | add `ui-reviewer` before `eng-lead` |
 
-**Process is paused until a real pick is placed on a live card.** No new agents, commands or process docs before then; fix a process problem only if it blocks a product PR. ADRs are for hard-to-reverse decisions. Run `/retro` at the end of each milestone.
+**Process evolves with the build.** Change it when the change saves time on every future PR, in its own small PR. Run `/retro` at the end of each milestone. Write an ADR only for a decision that would take a migration or a rewrite to reverse.
 
 ## Schema and code rules
-- **Each schema change is a new migration** named `supabase/migrations/YYYYMMDDHHMMSS_name.sql` (UTC). Deployed migrations (listed in `supabase/migrations/DEPLOYED`) are frozen; CI enforces it.
+- **Each schema change is a new migration** named `supabase/migrations/YYYYMMDDHHMMSS_name.sql` (UTC), dated after the newest one on `main`. Merged = deployed: CI applies migrations on merge, and any migration on `main` is frozen (CI enforces it). Bump `REQUIRED_MIGRATION` in `worker/src/lib/schema.ts` in the same PR (a test fails if you don't).
 - New tables and functions are locked down by default. Grant deliberately and add a "can't do it" test (ADR-016).
 - **No hard-coded tunables.** Sizes, thresholds, money amounts and intervals are `app_config` rows, read via `config_int()` / `loadConfig()`. No defaults in code (ADR-018).
 - Risky or user-visible features ship behind a flag; log `flag_exposure` when a flag changes what a user sees.

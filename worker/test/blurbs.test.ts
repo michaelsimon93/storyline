@@ -21,20 +21,16 @@ const REQ: BlurbRequest = { input: INPUT, rules: RULES, styleGuide: GUIDE, feedb
 const GOOD = { blurbs: [{ storyId: "3", blurb: "Hield is hitting four threes a night, and with Powell out he should get shots.", signalIds: [101, 202] }] };
 
 // ---------------------------------------------------------------- the prompt
-test("the system prompt carries the length from config, the banned words, the citation and trust rules, and the whole style guide", () => {
+test("the system prompt carries the length from config, the banned words, the rule terms, and the whole style guide", () => {
   const sys = blurbSystemPrompt(REQ);
   assert.match(sys, /at most 180 characters/);
   for (const w of ["lock", "hammer", "smash"]) assert.ok(sys.includes(w), w);
-  assert.match(sys, /signalIds/);
-  assert.match(sys, /never another player's/i);
-  assert.match(sys, /Per <source>/);
-  assert.match(sys, /never as breaking news or tonight's news/i);
-  assert.match(sys, /market_only/);
+  for (const term of ["signalIds", "attributed", "slateDate", "market_only"]) assert.ok(sys.includes(term), `the rules mention ${term}`);
   assert.ok(sys.includes("Voice: punchy."), "the style guide is in the prompt, in full");
   assert.doesNotMatch(sys, /\b200\b/, "the limit is the configured one, not a number in the prompt");
 });
 
-test("the user prompt shows each signal's id and both dates (STO-91), and labels the other angle's signals with where they came from (STO-120)", () => {
+test("the user prompt shows each signal's id and both dates and labels the other angle's signals with where they came from", () => {
   const stories = JSON.parse(blurbUserPrompt(REQ).split("\n")[1]!) as { signals: Record<string, unknown>[]; samePlayerOtherAngle: Record<string, unknown>[]; market: unknown; level: string }[];
   assert.deepEqual(stories[0]!.signals[0], { id: 101, source: "espn", kind: "stat", trust: "verified", summary: "last 5: 4.0 threes a game", observedAt: "2026-11-21T14:00:00.000Z", slateDate: "2026-11-21" });
   assert.deepEqual(stories[0]!.samePlayerOtherAngle.map((s) => [s.id, s.angle, s.slateDate]), [[202, "backup_steps_in", DAY]]);

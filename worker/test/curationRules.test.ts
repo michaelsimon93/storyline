@@ -3,9 +3,12 @@
 // Every rule is checked against OUR input, never against what the model says about itself: the player, game and
 // stat of a pick come from the story it names, so the model can't dodge a rule by mislabelling.
 
-import { test } from "node:test";
+import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { checkSelection, narrowToBand, type CurationInput, type CurationRules, type CurationStory } from "../src/domain/curationRules.js";
+import * as H from "./helpers/curationSlates.js";
+import { curateWithRules, type CurationRequest } from "../src/sources/curate.js";
+import type { Curator } from "../src/sources/types.js";
 
 const RULES: CurationRules = { n: 3, bandMin: 25, bandMax: 75, maxPerGame: 2, maxPerStat: 2, maxAttempts: 3 };
 
@@ -153,4 +156,96 @@ test("the pick count only counts players the curator could actually pick", () =>
   const dead = story("z", { ladder: [{ marketId: "z-1", strike: 5, yesPriceCents: 95 }] });
   const input: CurationInput = { slateDate: "x", stories: [story("a", { gameId: "g1" }), story("b", { gameId: "g2" }), dead] };
   assert.deepEqual(kinds({ ranking: ["a", "b"], picks: [pick("a"), pick("b")] }, input), []);
+});
+
+describe("hostile and boundary inputs", () => {
+const { PROD, story, slate, bestPossible, kinds } = H;
+
+// attacks: the caps vs N. With the starting config (10 cards, 3 per game) any slate of 3 games or fewer can never pass.
+test("curation rules: on a 3-game slate with the starting config, the best answer the caps allow is accepted", () => {
+  const input = slate(3, 12);                       // 12 players, 3 games: the caps allow at most 9 cards, the rule demands 10
+  const best = bestPossible(input, PROD);
+  assert.equal(best.picks.length, 9);
+  assert.deepEqual(kinds(input, best, PROD), [], "no possible answer passes: curation fails every attempt on every small slate");
+});
+
+// attacks: the stat cap vs N. A shortlist that is all points stories (the story step does not guarantee stat spread) can't pass either.
+test("curation rules: a points-only shortlist across many games still yields a deck", () => {
+  const input: CurationInput = { slateDate: "2026-11-23", stories: Array.from({ length: 12 }, (_, i) => story(`s${i}`, `g${i}`, "pts")) };
+  const best = bestPossible(input, PROD);
+  assert.deepEqual(kinds(input, best, PROD), [], "only 4 points cards are allowed but 10 are demanded");
+});
+
+// attacks: "one-line reason" with Unicode line breaks. JS trim() and /[\r\n]/ don't catch U+2028/U+2029/NEL/VT/FF.
+test("curation rules: a reason with a Unicode line or paragraph separator is not one line", () => {
+  const input = slate(4, 4);
+  const r: CurationRules = { ...PROD, n: 1 };
+  for (const sep of [" ", " ", "\u0085", "\v", "\f"]) {
+    const out = { ranking: input.stories.map((s) => s.storyId), picks: [{ storyId: "s0", marketId: "s0-m", reason: `line one${sep}line two` }] };
+    assert.deepEqual(kinds(input, out, r), ["reason"], `U+${sep.charCodeAt(0).toString(16).padStart(4, "0")} passed as one line`);
+  }
+});
+
+// attacks: a leading newline. The check trims before testing, but the untrimmed reason is what is stored and posted.
+test("curation rules: a reason that starts with a newline is rejected (or stored trimmed), not posted as two lines", () => {
+  const input = slate(4, 4);
+  const r: CurationRules = { ...PROD, n: 1 };
+  const out = { ranking: input.stories.map((s) => s.storyId), picks: [{ storyId: "s0", marketId: "s0-m", reason: "\nWhy a fan cares\n" }] };
+  const res = checkSelection(input, out, r);
+  if (res.ok) assert.ok(!/[\r\n]/.test(res.selection.picks[0]!.reason), `accepted reason keeps its newlines: ${JSON.stringify(res.selection.picks[0]!.reason)}`);
+});
+
+// coverage: prototype-ish keys as ids are plain data (Map lookups), never a crash or a false match.
+test("curation rules: __proto__ / constructor / toString as story or market ids are just unknown ids", () => {
+  const input = slate(4, 4);
+  const r: CurationRules = { ...PROD, n: 1 };
+  for (const id of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
+    assert.deepEqual(kinds(input, { ranking: input.stories.map((s) => s.storyId), picks: [{ storyId: id, marketId: "s0-m", reason: "x" }] }, r).sort(), ["unknown_story"]);
+    assert.deepEqual(kinds(input, { ranking: input.stories.map((s) => s.storyId), picks: [{ storyId: "s0", marketId: id, reason: "x" }] }, r), ["unknown_strike"]);
+    assert.deepEqual(kinds(input, JSON.parse(`{"ranking": [], "picks": [], "${id}": {"x": 1}}`), r).includes("ranking"), true);
+  }
+  // and a real story whose id is "__proto__" works
+  const odd: CurationInput = { slateDate: "x", stories: [story("__proto__", "g1", "pts")] };
+  assert.deepEqual(kinds(odd, { ranking: ["__proto__"], picks: [{ storyId: "__proto__", marketId: "__proto__-m", reason: "x" }] }, { ...PROD, n: 1 }), []);
+});
+
+// coverage: numeric ids (what a model may emit for our numeric shortlist ids) are malformed, not coerced.
+test("curation rules: numeric storyId/marketId and a non-string reason are malformed", () => {
+  const input = slate(4, 4);
+  for (const p of [{ storyId: 0, marketId: "s0-m", reason: "x" }, { storyId: "s0", marketId: 1, reason: "x" }, { storyId: "s0", marketId: "s0-m", reason: null }]) {
+    assert.deepEqual(kinds(input, { ranking: ["s0", "s1", "s2", "s3"], picks: [p] }, { ...PROD, n: 1 }), ["malformed"]);
+  }
+  assert.deepEqual(kinds(input, { ranking: [0, 1], picks: [] }, PROD), ["malformed"]);
+});
+
+// coverage: the same story picked twice, and one player with two stories.
+test("curation rules: the same story twice, or two stories of one player, is a player_repeat", () => {
+  const input: CurationInput = { slateDate: "x", stories: [story("a", "g1", "pts"), story("b", "g2", "reb", { playerId: "p-a" }), story("c", "g3", "ast")] };
+  const r: CurationRules = { ...PROD, n: 2 };
+  const rank = ["a", "b", "c"];
+  assert.ok(kinds(input, { ranking: rank, picks: [{ storyId: "c", marketId: "c-m", reason: "x" }, { storyId: "c", marketId: "c-m", reason: "x" }] }, r).includes("player_repeat"));
+  assert.ok(kinds(input, { ranking: rank, picks: [{ storyId: "a", marketId: "a-m", reason: "x" }, { storyId: "b", marketId: "b-m", reason: "x" }] }, r).includes("player_repeat"));
+  // two players → want is 2 even though there are 3 stories
+  assert.deepEqual(kinds(input, { ranking: rank, picks: [{ storyId: "b", marketId: "b-m", reason: "x" }, { storyId: "c", marketId: "c-m", reason: "x" }] }, r), []);
+  // the model can't borrow another story's strike, even the same player's
+  assert.ok(kinds(input, { ranking: rank, picks: [{ storyId: "a", marketId: "b-m", reason: "x" }, { storyId: "c", marketId: "c-m", reason: "x" }] }, r).includes("unknown_strike"));
+});
+
+// coverage: a ladder that lists one marketId twice with different prices can't sneak an out-of-band rung through.
+test("curation rules: duplicate marketIds on a ladder never accept an out-of-band price", () => {
+  const dup = story("a", "g1", "pts", { ladder: [{ marketId: "m", strike: 20, yesPriceCents: 90 }, { marketId: "m", strike: 25, yesPriceCents: 50 }] });
+  const r = checkSelection({ slateDate: "x", stories: [dup] }, { ranking: ["a"], picks: [{ storyId: "a", marketId: "m", reason: "x" }] }, { ...PROD, n: 1 });
+  assert.equal(r.ok, false);
+});
+
+// coverage: caps are inclusive at the edge and the band edges are inclusive.
+test("curation rules: exactly maxPerGame / maxPerStat picks pass; one more fails", () => {
+  const r: CurationRules = { ...PROD, n: 3, maxPerGame: 3, maxPerStat: 3 };
+  const input: CurationInput = { slateDate: "x", stories: ["a", "b", "c", "d"].map((id) => story(id, "g1", "pts", { ladder: [{ marketId: `${id}-m`, strike: 25, yesPriceCents: id === "a" ? 25 : 75 }] })) };
+  const ok = { ranking: ["a", "b", "c", "d"], picks: ["a", "b", "c"].map((id) => ({ storyId: id, marketId: `${id}-m`, reason: "x" })) };
+  assert.deepEqual(kinds(input, ok, r), []);
+  const four = { ...ok, picks: ["a", "b", "c", "d"].map((id) => ({ storyId: id, marketId: `${id}-m`, reason: "x" })) };
+  // four picks is over the caps AND over the most the caps allow (3), so pick_count is reported too (changed with the cap-aware count)
+  assert.deepEqual(kinds(input, four, { ...r, n: 4 }).sort(), ["game_cap", "pick_count", "stat_cap"]);
+});
 });

@@ -62,7 +62,7 @@ test("a cited id must be one the writer was shown for this story: invented, anot
   assert.deepEqual(kinds(inp, answer({ storyId: "1", blurb: "x", signalIds: [1.5] }, { storyId: "2", blurb: "y", signalIds: [2] })), ["malformed"]);
 });
 
-test("STO-120 (Hield): picked on hot_streak, he may cite Powell's absence only through his backup_steps_in story's signal id", () => {
+test("blurb rules: Hield, picked on hot_streak, he may cite Powell's absence only through his backup_steps_in story's signal id", () => {
   const hield = story("3", {
     signals: [sig(101, { summary: "last 5: 4.0 threes a game" })],
     otherAngleSignals: [other(202, "backup_steps_in", { kind: "injury", summary: "Norman Powell is out tonight" })],
@@ -79,12 +79,12 @@ test("trust: a story whose only signals are unreviewed was built as market-only,
   assert.deepEqual(kinds(inp, answer({ storyId: "1", blurb: "From a rumour.", signalIds: [77] })), ["unknown_signal"]);
 });
 
-test("STO-91: a news or injury signal from an earlier day can't be cited at all", () => {
+test("blurb rules: a news or injury signal from an earlier day can't be cited at all", () => {
   const inp = input(story("1", { signals: [sig(1), sig(5, { kind: "injury", slateDate: "2026-11-22", observedAt: "2026-11-22T14:00:00.000Z" })] }));
   assert.deepEqual(kinds(inp, answer({ storyId: "1", blurb: "Out tonight.", signalIds: [5] })), ["dated_news"]);
 });
 
-test("STO-91: a dated stat may be cited, but not dressed up as fresh news", () => {
+test("blurb rules: a dated stat may be cited, but not dressed up as fresh news", () => {
   const inp = input(story("1", { signals: [sig(1, { slateDate: "2026-11-21", observedAt: "2026-11-21T14:00:00.000Z" })] }));
   ok(inp, answer({ storyId: "1", blurb: "Four threes a night over his last five games.", signalIds: [1] }));
   for (const blurb of ["Breaking: four threes a night.", "Just announced: he's on fire.", "Per this morning's report he is hot."]) {

@@ -25,3 +25,5 @@ Tunable values (deck size, price band, stake, grants, intervals) were scattered 
 - Tuning is a SQL update (later: the admin dashboard), with history.
 - New tunables must be added as `app_config` rows with a type and range; new risky features ship behind a flag.
 - `hashtext` bucketing is stable within a Postgres major version; a major upgrade could reshuffle buckets (acceptable at this scale).
+
+**Exception (STO-130):** the worker's startup schema wait (`worker/src/lib/schema.ts`, 30s poll, 15 min limit) is hard-coded. It runs before the worker can trust the schema, and `app_config` rows may be what's missing.

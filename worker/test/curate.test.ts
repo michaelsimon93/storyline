@@ -1,11 +1,12 @@
 // The retry wrapper around a Curator (STO-11): reject an answer that breaks the rules, retry up to a cap,
 // and if every attempt fails send one detailed alert and return nothing to publish. Fake curators only; no network.
 
-import { test } from "node:test";
+import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { curateWithRules, type CurationRequest } from "../src/sources/curate.js";
 import type { CurationInput, CurationRules, CurationStory } from "../src/domain/curationRules.js";
 import type { Curator } from "../src/sources/types.js";
+import * as H from "./helpers/curationSlates.js";
 
 const RULES: CurationRules = { n: 2, bandMin: 25, bandMax: 75, maxPerGame: 2, maxPerStat: 2, maxAttempts: 3 };
 const story = (id: string, gameId: string, stat: string): CurationStory => ({
@@ -120,4 +121,50 @@ test("storable: NUL and lone surrogates are replaced in every string and key, an
   const out = storable({ "k\u0000ey": ["a\u0000b", { x: "ok \u{1F600} ünï", y: "lone \uD83D here", z: "low \uDE00 here" }], n: 3, b: true, nil: null }) as Record<string, unknown>;
   assert.deepEqual(out, { "k�ey": ["a�b", { x: "ok \u{1F600} ünï", y: "lone � here", z: "low � here" }], n: 3, b: true, nil: null });
   assert.doesNotThrow(() => JSON.parse(JSON.stringify(out)));
+});
+
+describe("hostile and boundary inputs", () => {
+const { PROD, story, slate, bestPossible, always } = H;
+
+// attacks: the same infeasibility end to end: a perfect curator still burns every attempt and publishes nothing.
+test("curate: a curator that always gives the best possible answer on a 1-game slate is not rejected", async () => {
+  const input = slate(1, 8);                        // a playoff night: one game, eight players
+  const c = always(bestPossible(input, PROD));
+  const sent: string[] = [];
+  const r = await curateWithRules(c, input, PROD, async (m) => { sent.push(m); });
+  assert.equal(r.ok, true, `rejected ${c.calls} times; alert: ${sent[0]?.split("\n")[1]}`);
+});
+
+// attacks: zero eligible stories (every ladder out of band, or a misconfigured band). It must not be reported as a good deck.
+test("curate: no story with an in-band strike: the curator isn't called and an empty deck isn't 'ok'", async () => {
+  const input: CurationInput = { slateDate: "2026-11-23", stories: [story("a", "g1", "pts", { ladder: [{ marketId: "a-m", strike: 40, yesPriceCents: 90 }] })] };
+  const c = always({ ranking: [], picks: [] });
+  const sent: string[] = [];
+  const r = await curateWithRules(c, input, PROD, async (m) => { sent.push(m); });
+  assert.equal(c.calls, 0, "Claude is paid to curate an empty list");
+  assert.equal(r.ok, false, "a 0-card deck comes back ok, the job records ok and posts '0 cards'");
+  assert.equal(sent.length, 1, "no alert for a day with nothing to publish");
+});
+
+// attacks: hostile huge output. 20k invented story ids are echoed verbatim into the retry prompt (and token bill).
+test("curate: a huge invented ranking doesn't balloon the retry feedback", async () => {
+  const input = slate(4, 4);
+  const huge = { ranking: Array.from({ length: 20000 }, (_, i) => `fake-story-${i}`), picks: [] };
+  const seen: CurationRequest[] = [];
+  const c: Curator<CurationRequest, unknown> = { name: "fake", async curate(req) { seen.push(req); return huge; } };
+  await curateWithRules(c, input, { ...PROD, maxAttempts: 2 }, async () => {});
+  const size = seen[1]!.feedback.join("\n").length;
+  assert.ok(size < 5000, `retry feedback is ${size} chars`);
+});
+
+// ---------------------------------------------------------------- coverage (expected to PASS)
+
+// coverage: maxAttempts edge values that config bounds already forbid are still refused by code.
+test("curate: maxAttempts 0, -1, 1.5, NaN, Infinity throw before any call", async () => {
+  for (const m of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const c = always({});
+    await assert.rejects(curateWithRules(c, slate(4, 4), { ...PROD, maxAttempts: m }, async () => {}));
+    assert.equal(c.calls, 0);
+  }
+});
 });

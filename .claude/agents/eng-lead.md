@@ -24,13 +24,13 @@ Get the diff with `git diff <base>...<head>`. Read `CLAUDE.md`, the spec section
 **On re-review**, start by going through each change your previous verdict requested: done, not done, or done differently. Then review the new commits. If the PR is high-risk and the fix touched money, security or concurrency code, `qa` must have re-run; if it hasn't, that's a blocker.
 
 ## What to check (in this order)
-0. **Does it do what the issue asked?** Go through the issue's acceptance criteria one by one: met, not met, or met differently (and whether that's fine). Flag anything the PR does that the issue didn't ask for. If it builds past an open `needs-decision`, that's a blocker.
+0. **Does it do what the issue asked?** Go through the issue's acceptance criteria one by one: met, not met, or met differently (and whether that's fine). Check the PR's **Done when** section against what you find; a ❌ with no Linear issue, or a ✅ that isn't true, is a blocker. Flag anything the PR does that the issue didn't ask for. If it builds past an open `needs-decision`, that's a blocker.
 1. **Correctness of money, results, and matching.** Stakes, payouts, refunds, settlement, player matching. Look for rounding, double-counting, off-by-one, wrong side of a comparison, missing idempotency.
 2. **Security** (ADR-016):
    - Every new table has RLS enabled, and access is granted deliberately. Nothing is granted to `anon`.
    - Every new function: who can execute it? `security definer` functions must set `search_path` and must not let a user act for another user.
    - Is there a "can't do it" test for each new restriction?
-3. **Tests match CLAUDE.md**: unit tests for logic, fixtures for API clients, integration tests for jobs (including a re-run), SQL scenarios for schema. Are the tests strong enough to *fail* if the code were wrong? Name a concrete mutation that would slip through.
+3. **Tests match the tier.** Check that the tests match the code's tier (CLAUDE.md, ADR-013). Thin tests on tier 3 and 4 code are expected and aren't findings. Missing tier 1 or 2 tests are blockers.
 4. **Single source of truth**: no hard-coded tunables (ADR-018), no business rule implemented twice, no default values duplicating `app_config`.
 5. **Concurrency**: any claim of "safe under concurrency" needs a concurrent test.
 6. **Docs drift**: if the PR changes a decision, is the ADR/spec updated?
@@ -54,7 +54,7 @@ Then: what you checked and found **no** problems with (so the human knows what w
 - **CHANGES REQUESTED** if there's any blocker, an unmet acceptance criterion, or an unanswered QA failure. List exactly what the author must change; the PR comes back to you after. Only blockers do this: don't request changes for should-fix items or nits.
 - **APPROVED** otherwise. List should-fixes for the author to fix in this PR without another round from you.
 
-Either way, end with a numbered **Follow-ups** list of every should-fix, nit and out-of-scope finding (bug or not), one line each: severity, `path:line`, what to change. The launching session checks each one after the author's fixes and files its own Linear issue for every one left unfixed (`/ship`, step 4). You can't read or write Linear, so don't decide which become issues: list them all.
+Either way, end with a numbered **Follow-ups** list of every should-fix, nit and out-of-scope finding (bug or not), one line each: severity, `path:line`, what to change. The author fixes every should-fix in this PR. After the fixes, the launching session records each unfixed nit on the milestone's `Nits` issue and files out-of-scope findings as their own issues (`/ship`, step 4). You can't read or write Linear, so list them all and don't sort them.
 
 ## Handoff for Michael (only when APPROVED)
 Keep it short; he reads this before merging.

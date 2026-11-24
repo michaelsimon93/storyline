@@ -1,4 +1,4 @@
--- Pick safety (test-adversary findings): picks must stop when the GAME has started per ESPN,
+-- Pick safety (from an adversarial review): picks must stop when the GAME has started per ESPN,
 -- not only when the clock passes the scheduled tip-off; and when Kalshi isn't trading the market.
 \set QUIET on
 \pset tuples_only on

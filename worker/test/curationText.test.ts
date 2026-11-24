@@ -1,10 +1,11 @@
 // The #testing post for a curation run (STO-11): picks, reasons and the story-type mix. Pure.
 
-import { test } from "node:test";
+import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { curationPostChunks, postCuration } from "../src/lib/curationText.js";
 import type { CurationInput, CurationStory, Selection } from "../src/domain/curationRules.js";
 import { parseCurationConfig } from "../src/lib/config.js";
+import * as H from "./helpers/curationSlates.js";
 
 const story = (id: number, angle: string): CurationStory => ({
   storyId: String(id), playerId: `p${id}`, playerName: `Player ${id}`, gameId: `g${id % 3}`, stat: "pts", angle, summary: "s", signals: [], otherAngleSignals: [],
@@ -59,7 +60,7 @@ test("a deck shorter than asked says so, with the reason; a full deck doesn't", 
   assert.doesNotMatch(curationPostChunks(shown(4), sel(2), 1)[0]!, /Short deck/);
 });
 
-// ---- STO-77: blurbs in the #testing post
+// blurbs in the #testing post
 test("blurbs are quoted under their pick with the ids they cite, the other angle's marked, and the level mix is tallied", () => {
   const shown = { slateDate: "2026-11-24", stories: [story(1, "hot_streak"), story(2, "backup_steps_in")] } satisfies CurationInput;
   const sel = { ranking: ["1", "2"], picks: [{ storyId: "1", marketId: "m1", reason: "why" }, { storyId: "2", marketId: "m2", reason: "why" }] };
@@ -74,8 +75,15 @@ test("blurbs are quoted under their pick with the ids they cite, the other angle
   assert.match(text, /Blurbs: full 1, market_only 1\./);
 });
 
-test("with no blurbs the post is unchanged from STO-11's", () => {
-  const shown2 = { slateDate: "2026-11-24", stories: [story(1, "hot_streak")] };
-  const text = curationPostChunks(shown2, { ranking: ["1"], picks: [{ storyId: "1", marketId: "m1", reason: "why" }] }, 1).join("\n");
-  assert.doesNotMatch(text, /cites|Blurbs:/);
+describe("hostile and boundary inputs", () => {
+const { story } = H;
+
+// coverage: markdown and mentions in player names / reasons can't break the post's structure or its size limit.
+test("curation text: a 10k-char reason and markdown in names keep every chunk under Discord's limit", () => {
+  const input: CurationInput = { slateDate: "x", stories: Array.from({ length: 30 }, (_, i) => story(`s${i}`, `g${i}`, "pts", { playerName: `@everyone **${"x".repeat(60)}` })) };
+  const sel = { ranking: [], picks: input.stories.map((s) => ({ storyId: s.storyId, marketId: `${s.storyId}-m`, reason: "y".repeat(10000) })) };
+  const chunks = curationPostChunks(input, sel, 1);
+  for (const c of chunks) assert.ok(c.length <= 2000, `chunk of ${c.length}`);
+  assert.equal(chunks.join("\n").match(/^\d+\. /gm)!.length, 30);
+});
 });
