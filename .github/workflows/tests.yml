@@ -53,14 +53,12 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Deployed migrations are frozen
-        run: bash scripts/check-migrations.test.sh && bash scripts/check-migrations.sh
-      - name: DEPLOYED manifest is append-only (PRs)
+      - name: Migrations on main are frozen (PRs)
         if: github.event_name == 'pull_request'
         run: |
           git fetch --depth=1 origin "${{ github.base_ref }}"
-          bash scripts/check-deployed-append-only.test.sh
-          bash scripts/check-deployed-append-only.sh "origin/${{ github.base_ref }}"
+          bash scripts/check-migrations-frozen.test.sh
+          bash scripts/check-migrations-frozen.sh "origin/${{ github.base_ref }}"
       - name: Run migration + scenario tests
         run: bash supabase/tests/run.sh
 
@@ -115,3 +113,29 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:integration
+
+  # Merged = deployed (STO-130). After main's tests pass, apply any new migrations to Supabase.
+  # Railway's "Wait for CI" holds the worker deploy until this workflow finishes, and the worker
+  # also waits for its schema at startup (worker/src/lib/schema.ts) in case it doesn't.
+  migrate:
+    needs: [schema, real-supabase, worker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read              # holds the production DB URL: no write access to the repo
+    concurrency:
+      group: migrate-production
+      cancel-in-progress: false   # never cut a migration off halfway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb   # v1.7.3, pinned: this job holds a production credential
+        with:
+          version: 3.1.0
+      - name: Apply new migrations
+        env:
+          # Session pooler URL ending in ?sslmode=require (docs/runbook-deploy.md §2). Only here, never in a session.
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then echo "::error::The SUPABASE_DB_URL repository secret isn't set"; exit 1; fi
+          supabase db push --db-url "$SUPABASE_DB_URL" --yes
+          supabase migration list --db-url "$SUPABASE_DB_URL"

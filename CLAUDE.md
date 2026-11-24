@@ -65,7 +65,7 @@ CI runs Postgres 17 and is the source of truth.
 **Process evolves with the build.** Change it when the change saves time on every future PR, in its own small PR. Run `/retro` at the end of each milestone. Write an ADR only for a decision that would take a migration or a rewrite to reverse.
 
 ## Schema and code rules
-- **Each schema change is a new migration** named `supabase/migrations/YYYYMMDDHHMMSS_name.sql` (UTC). Deployed migrations (listed in `supabase/migrations/DEPLOYED`) are frozen; CI enforces it.
+- **Each schema change is a new migration** named `supabase/migrations/YYYYMMDDHHMMSS_name.sql` (UTC), dated after the newest one on `main`. Merged = deployed: CI applies migrations on merge, and any migration on `main` is frozen (CI enforces it). Bump `REQUIRED_MIGRATION` in `worker/src/lib/schema.ts` in the same PR (a test fails if you don't).
 - New tables and functions are locked down by default. Grant deliberately and add a "can't do it" test (ADR-016).
 - **No hard-coded tunables.** Sizes, thresholds, money amounts and intervals are `app_config` rows, read via `config_int()` / `loadConfig()`. No defaults in code (ADR-018).
 - Risky or user-visible features ship behind a flag; log `flag_exposure` when a flag changes what a user sees.

@@ -8,6 +8,7 @@ import { loadConfig } from "./lib/config.js";
 import { webhookAlert } from "./lib/alert.js";
 import { testFeed } from "./lib/testFeed.js";
 import { alertText } from "./lib/alertText.js";
+import { waitForSchema } from "./lib/schema.js";
 import { ingestJob, scheduledJobs, onDemandJobs } from "./jobs/index.js";
 import { runJob, startScheduler, type RunOutcome } from "./scheduler.js";
 
@@ -23,6 +24,8 @@ function report(outcome: RunOutcome) {
 
 async function main() {
   const db = connect();
+  // Never run against a database that's missing this build's migrations (STO-130).
+  await waitForSchema(db, alert);
 
   switch (command) {
     case "run": {
@@ -69,7 +72,7 @@ main().catch(async (err) => {
   // A worker that can't start (bad config, database down) must not crash-loop silently.
   if (command === "run") {
     await alert(alertText({ severity: "failed", job: "worker", headline: "worker failed to start", error: err,
-      note: "no jobs will run until this is fixed; the error above is usually config or the database" }));
+      note: "no jobs will run until this is fixed; the error above is usually config, the database, or a migration that never applied" }));
   }
   process.exit(1);
 });
