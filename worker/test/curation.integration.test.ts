@@ -12,6 +12,7 @@ import type { CurationRules } from "../src/domain/curationRules.js";
 import type { Curator } from "../src/sources/types.js";
 import { freshDb } from "./helpers/testDb.js";
 import { runCuration } from "../src/jobs/curate.js";
+import { fakeWriter, GUIDE } from "./helpers/blurbs.js";
 
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
 const DBNAME = "storyline_curation_test";
@@ -60,7 +61,10 @@ test("loads each story's signal text and its player's open, tight-spread ladder 
   const [a, b] = input.stories;
   assert.equal(a!.storyId, "101");
   assert.equal(a!.playerName, "Jalen Brunson");
-  assert.deepEqual(a!.signals, [{ id: sig1, source: "espn", kind: "stat", trust: "verified", summary: "last 5: 31, 28, 35, 30, 29" }]);
+  const { observedAt, ...rest } = a!.signals[0]!;
+  assert.deepEqual(rest, { id: sig1, source: "espn", kind: "stat", trust: "verified", summary: "last 5: 31, 28, 35, 30, 29", slateDate: DAY });
+  assert.match(observedAt, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/, "STO-91: every signal carries its own observed time, as ISO UTC");
+  assert.deepEqual(a!.otherAngleSignals, [], "a player with one story has no other angles");
   // closed, wide-spread, no-ask and no-bid markets are not rungs; the other stat is not on this ladder
   assert.deepEqual(a!.ladder.map((l) => [l.strike, l.yesPriceCents]), [[20, 80], [25, 60], [30, 40]]);
   assert.match(a!.ladder[0]!.marketId, /^[0-9a-f-]{36}$/);
@@ -160,6 +164,38 @@ test("curation settings load from app_config, and a missing one names itself", {
   await assert.rejects(loadCurationConfig(db!), (e: Error) => e instanceof ConfigError && /missing curation_max_per_game/.test(e.message));
 });
 
+// A fallback signal keeps its own dates all the way to the curator (ADR-024 rule 7.1)
+test("curation input: a signal from an earlier day is shown with its own slateDate and observedAt, and its link when it has one", { skip }, async () => {
+  const run = await newRun();
+  const old = Number((await q<{ id: string }>(
+    `insert into signals (source, kind, slate_date, player_id, key, summary, evidence, observed_at, trust, run_id)
+     values ('espn', 'stat', '2026-11-20', $1, 'form:old', 'last 5: 20, 22, 18, 25, 21', '{"url":"https://example.test/a","observedAt":"x"}', '2026-11-20T15:00:00Z', 'verified', $2) returning id`, [P1, run]))[0]!.id);
+  const [s] = (await loadCurationInput(db!, DAY, [{ ...E1, signalIds: [old] }], 5)).stories;
+  assert.deepEqual(s!.signals, [{ id: old, source: "espn", kind: "stat", trust: "verified", summary: "last 5: 20, 22, 18, 25, 21",
+    observedAt: "2026-11-20T15:00:00.000Z", slateDate: "2026-11-20", url: "https://example.test/a" }]);
+});
+
+// Same player, other angle: the signals of his other stories, labelled by angle, never another player's
+test("curation input: a story also gets its player's other stories' signals (the Hield case), and never another player's", { skip }, async () => {
+  const run = await newRun();
+  const sig = async (player: string, key: string, summary: string) => Number((await q<{ id: string }>(
+    `insert into signals (source, kind, slate_date, player_id, key, summary, evidence, observed_at, trust, run_id)
+     values ('espn', 'stat', $1, $2, $3, $4, '{"quote":"q"}', now(), 'verified', $5) returning id`, [DAY, player, key, summary, run]))[0]!.id);
+  const form = await sig(P1, "form:hield", "last 5 threes: 4, 5, 3, 4, 4");
+  const absence = await sig(P1, "inj:powell", "Norman Powell is out tonight");
+  const shared = await sig(P1, "min:shared", "averaging 28 minutes");
+  const barnes = await sig(P2, "form:barnes", "Barnes: 10 rebounds a night");
+  const hot: CurationEntry = { ...E1, id: 201, angle: "hot_streak", signalIds: [form, shared] };
+  const backup: CurationEntry = { ...E1, id: 202, angle: "backup_steps_in", signalIds: [absence, shared] };
+  const other: CurationEntry = { ...E2, id: 203, signalIds: [barnes] };
+  const [h, b, o] = (await loadCurationInput(db!, DAY, [hot, backup, other], 5)).stories;
+  assert.deepEqual(h!.signals.map((x) => x.id), [form, shared]);
+  assert.deepEqual(h!.otherAngleSignals.map((x) => [x.id, x.angle]), [[absence, "backup_steps_in"]], "his absence signal comes in, labelled with its angle; the shared one is not repeated");
+  assert.deepEqual(b!.otherAngleSignals.map((x) => [x.id, x.angle]), [[form, "hot_streak"]]);
+  assert.deepEqual(o!.otherAngleSignals, [], "another player's signals never cross over");
+  assert.ok(![...h!.otherAngleSignals, ...h!.signals].some((x) => x.id === barnes));
+});
+
 describe("hostile and boundary inputs", () => {
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
 const DBNAME = "storyline_curation_hostile_test";
@@ -202,7 +238,7 @@ const answer = (reason1 = "Five straight 28+ games") => ({
 const fake = (a: unknown, delayMs = 0): Curator<CurationRequest, unknown> =>
   ({ name: "fake", async curate() { if (delayMs) await new Promise((r) => setTimeout(r, delayMs)); return a; } });
 const attemptsOf = async (runId: number | undefined) =>
-  q<{ attempt: number; accepted: boolean }>(`select attempt, accepted from curation_attempts where run_id = $1 order by attempt`, [runId]);
+  q<{ attempt: number; accepted: boolean }>(`select attempt, accepted from curation_attempts where run_id = $1 and step = 'pick' order by attempt`, [runId]);
 
 // ---------------------------------------------------------------- findings (expected to FAIL until fixed)
 
@@ -210,7 +246,7 @@ const attemptsOf = async (runId: number | undefined) =>
 // the job crashes instead of returning ok/failed, and every attempt of the run (the accepted one included) is lost.
 test("curation: an answer containing U+0000 doesn't crash the job or lose the run's attempts", { skip }, async () => {
   let r: Awaited<ReturnType<typeof runCuration>> | undefined, err: unknown;
-  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer("Five straight\u0000 28+ games")) }); } catch (e) { err = e; }
+  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer("Five straight\u0000 28+ games")), blurbWriter: fakeWriter(), styleGuide: GUIDE }); } catch (e) { err = e; }
   assert.equal(err, undefined, `runCuration threw: ${(err as Error)?.message}`);
   assert.ok((await attemptsOf((r as { runId: number }).runId)).length >= 1, "the attempt isn't stored, so the pick can't be traced");
 });
@@ -221,7 +257,7 @@ test("curation: a rejected answer Postgres can't store doesn't erase the run's o
   let i = 0;
   const c: Curator<CurationRequest, unknown> = { name: "fake", async curate() { return answers[i++]; } };
   let r: Awaited<ReturnType<typeof runCuration>> | undefined, err: unknown;
-  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c }); } catch (e) { err = e; }
+  try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE }); } catch (e) { err = e; }
   assert.equal(err, undefined, `runCuration threw: ${(err as Error)?.message}`);
   assert.equal(r?.status, "ok");
   assert.equal((await attemptsOf((r as { runId: number }).runId)).length, 2);
@@ -232,8 +268,8 @@ test("curation: a rejected answer Postgres can't store doesn't erase the run's o
 // coverage: two runs at the same moment (two pool connections): each gets its own run, attempts and one accepted answer.
 test("curation: two concurrent runs don't share or double attempts", { skip }, async () => {
   const [a, b] = await Promise.all([
-    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50) }),
-    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50) }),
+    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50), blurbWriter: fakeWriter(), styleGuide: GUIDE }),
+    runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50), blurbWriter: fakeWriter(), styleGuide: GUIDE }),
   ]);
   assert.ok(a.status === "ok" && b.status === "ok");
   assert.notEqual(a.runId, b.runId);
@@ -247,7 +283,7 @@ test("curation: a story with no in-band strike is loaded, hidden, and not counte
   const c: Curator<CurationRequest, unknown> = { name: "fake", async curate(req) { seen.push(req); return answer(); } };
   await q(`update app_config set value = '3' where key = 'cards_per_day'`);
   try {
-    const r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c });
+    const r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: c, blurbWriter: fakeWriter(), styleGuide: GUIDE });
     assert.equal(r.status, "ok");
     assert.deepEqual(seen[0]!.input.stories.map((s) => s.storyId), [ids.s1, ids.s2]);
   } finally { await q(`update app_config set value = '2' where key = 'cards_per_day'`); }

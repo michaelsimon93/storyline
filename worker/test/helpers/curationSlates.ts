@@ -8,7 +8,7 @@ export const PROD: CurationRules = { n: 10, bandMin: 25, bandMax: 75, maxPerGame
 export const STATS = ["pts", "reb", "ast", "3pm"];
 
 export const story = (id: string, gameId: string, stat: string, o: Partial<CurationStory> = {}): CurationStory => ({
-  storyId: id, playerId: `p-${id}`, playerName: `Player ${id}`, gameId, stat, angle: "hot_streak", summary: id, signals: [],
+  storyId: id, playerId: `p-${id}`, playerName: `Player ${id}`, gameId, stat, angle: "hot_streak", summary: id, signals: [], otherAngleSignals: [],
   ladder: [{ marketId: `${id}-m`, strike: 25, yesPriceCents: 50 }], ...o,
 });
 /** `players` distinct players spread round-robin over `games` games and the four stats. */

@@ -10,7 +10,7 @@ import * as H from "./helpers/curationSlates.js";
 
 const RULES: CurationRules = { n: 2, bandMin: 25, bandMax: 75, maxPerGame: 2, maxPerStat: 2, maxAttempts: 3 };
 const story = (id: string, gameId: string, stat: string): CurationStory => ({
-  storyId: id, playerId: `p-${id}`, playerName: `Player ${id}`, gameId, stat, angle: "hot_streak", summary: id, signals: [],
+  storyId: id, playerId: `p-${id}`, playerName: `Player ${id}`, gameId, stat, angle: "hot_streak", summary: id, signals: [], otherAngleSignals: [],
   ladder: [{ marketId: `${id}-hi`, strike: 30, yesPriceCents: 90 }, { marketId: `${id}-mid`, strike: 25, yesPriceCents: 50 }],
 });
 const INPUT: CurationInput = { slateDate: "2026-11-23", stories: [story("a", "g1", "pts"), story("b", "g2", "reb"), story("c", "g3", "ast")] };

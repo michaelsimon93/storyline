@@ -15,7 +15,8 @@ const REQ: CurationRequest = {
     slateDate: "2026-11-23",
     stories: [{
       storyId: "7", playerId: "p1", playerName: "Jalen Brunson", gameId: "g1", stat: "pts", angle: "hot_streak", summary: "Hot streak: 31.0 PTS over his last 4",
-      signals: [{ id: 41, source: "espn", kind: "stat", trust: "verified", summary: "last 5 games: 31, 28, 35, 30, 29" }],
+      signals: [{ id: 41, source: "espn", kind: "stat", trust: "verified", summary: "last 5 games: 31, 28, 35, 30, 29", observedAt: "2026-11-23T14:00:00.000Z", slateDate: "2026-11-23" }],
+      otherAngleSignals: [],
       ladder: [{ marketId: "m-25", strike: 25, yesPriceCents: 70 }, { marketId: "m-30", strike: 30, yesPriceCents: 48 }],
     }],
   },
@@ -94,4 +95,27 @@ test("an effort that isn't one of the five levels is rejected up front", () => {
   const f = fakeClient(text("{}"));
   assert.throws(() => createClaudeCurator({ client: f.client, ...opts, effort: "turbo" }), /curation_effort/);
   assert.throws(() => createClaudeCurator({ client: f.client, ...opts, effort: "" }), /curation_effort/);
+});
+
+// Prompts are taste (tier 3): check what must always be in them, not the exact wording.
+test("curator prompt: each signal is shown with observedAt and slateDate, and the rules mention dated facts", () => {
+  const old = { ...REQ.input.stories[0]!.signals[0]!, id: 42, observedAt: "2026-11-20T15:00:00.000Z", slateDate: "2026-11-20" };
+  const u = userPrompt({ ...REQ, input: { ...REQ.input, stories: [{ ...REQ.input.stories[0]!, signals: [REQ.input.stories[0]!.signals[0]!, old] }] } });
+  for (const want of ['"observedAt":"2026-11-20T15:00:00.000Z"', '"slateDate":"2026-11-20"', '"slateDate":"2026-11-23"']) assert.ok(u.includes(want), want);
+  assert.match(systemPrompt(REQ), /slateDate[^.]*tonight's news/i);
+});
+
+test("curator prompt: a story's other-angle signals are shown apart from its own, with their angle, and the rules limit facts to that player", () => {
+  const req: CurationRequest = { ...REQ, input: { ...REQ.input, stories: [{
+    ...REQ.input.stories[0]!, storyId: "3", playerName: "Buddy Hield", angle: "hot_streak",
+    signals: [{ ...REQ.input.stories[0]!.signals[0]!, id: 101 }],
+    otherAngleSignals: [{ ...REQ.input.stories[0]!.signals[0]!, id: 202, kind: "injury", summary: "Norman Powell is out tonight", angle: "backup_steps_in" }],
+  }] } };
+  const [s] = JSON.parse(userPrompt(req).split("\n")[1]!) as { signals: { id: number }[]; samePlayerOtherAngle: { id: number; angle: string }[] }[];
+  assert.deepEqual(s!.signals.map((g) => g.id), [101]);
+  assert.deepEqual(s!.samePlayerOtherAngle.map((g) => [g.id, g.angle]), [[202, "backup_steps_in"]]);
+  const sys = systemPrompt(REQ);
+  assert.match(sys, /same player, other angle/i);
+  assert.match(sys, /never another player's/i);
+  assert.match(sys, /one pick per player/, "one card per player is unchanged");
 });

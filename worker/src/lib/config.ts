@@ -63,6 +63,7 @@ const CURATION_SPEC = {
   curationMaxAttempts:  { key: "curation_max_attempts",  type: "int" },
   curationMaxPerGame:   { key: "curation_max_per_game",  type: "int" },
   curationMaxPerStat:   { key: "curation_max_per_stat",  type: "int" },
+  blurbMaxChars:        { key: "blurb_max_chars",        type: "int" },   // STO-77
 } as const;
 
 type SpecShape = Record<string, { key: string; type: "int" | "string" }>;

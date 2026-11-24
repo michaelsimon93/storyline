@@ -22,7 +22,7 @@ const scaffold = (): CurationInput => ({
   slateDate: "2026-11-23",
   stories: REAL.ranking.map((id, i) => ({
     storyId: id, playerId: `player-${id}`, playerName: `Player ${id}`, gameId: `game-${i % 5}`, stat: ["pts", "reb", "ast", "3pm"][i % 4]!,
-    angle: "hot_streak", summary: "s", signals: [],
+    angle: "hot_streak", summary: "s", signals: [], otherAngleSignals: [],
     ladder: [{ marketId: REAL.picks.find((p) => p.storyId === id)?.marketId ?? `m-${id}`, strike: 10, yesPriceCents: 40 }],
   })),
 });
