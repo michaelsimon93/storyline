@@ -30,7 +30,7 @@ Get the diff with `git diff <base>...<head>`. Read `CLAUDE.md`, the spec section
    - Every new table has RLS enabled, and access is granted deliberately. Nothing is granted to `anon`.
    - Every new function: who can execute it? `security definer` functions must set `search_path` and must not let a user act for another user.
    - Is there a "can't do it" test for each new restriction?
-3. **Tests match CLAUDE.md**: unit tests for logic, fixtures for API clients, integration tests for jobs (including a re-run), SQL scenarios for schema. Are the tests strong enough to *fail* if the code were wrong? Name a concrete mutation that would slip through.
+3. **Tests match the tier.** Check that the tests match the code's tier (CLAUDE.md, ADR-013). Thin tests on tier 3 and 4 code are expected and aren't findings. Missing tier 1 or 2 tests are blockers.
 4. **Single source of truth**: no hard-coded tunables (ADR-018), no business rule implemented twice, no default values duplicating `app_config`.
 5. **Concurrency**: any claim of "safe under concurrency" needs a concurrent test.
 6. **Docs drift**: if the PR changes a decision, is the ADR/spec updated?
