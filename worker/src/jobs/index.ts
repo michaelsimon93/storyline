@@ -10,6 +10,10 @@ import { pollPrices } from "./poller.js";
 import { runEspnContext, JOB as CONTEXT_ESPN_JOB, type ContextRunResult } from "./contextEspn.js";
 import type { Alert } from "../lib/alert.js";
 import { runStories, JOB as STORY_JOB } from "./stories.js";
+import { runCuration, JOB as CURATE_JOB } from "./curate.js";
+import { postCuration } from "../lib/curationText.js";
+import type { CurationRequest } from "../sources/curate.js";
+import type { Curator } from "../sources/types.js";
 
 /** Ingest, then post its summary to the test feed. No date = today's slate (storyline_today()). */
 export function ingestJob(feed: TestFeed, date?: string): Job {
@@ -63,9 +67,32 @@ export function storyJob(alert: Alert, feed: TestFeed, date?: string): Job {
   };
 }
 
+/**
+ * The curation step (STO-11): Claude ranks the day's shortlist and picks the cards; the picks and reasons go to #testing.
+ * Not scheduled yet: run it with `npm run job -- curate`, after the story step. Its schedule needs its own settings loader
+ * (STO-106's pattern), like the story step's.
+ */
+export function curateJob(alert: Alert, feed: TestFeed, date?: string, curator?: Curator<CurationRequest, unknown>): Job {
+  return {
+    name: CURATE_JOB,
+    run: async (db) => {
+      const r = await runCuration(db, { alert, date, curator });
+      if (r.status !== "ok") return r;   // the alert has gone out; the run is recorded
+      // The run is already recorded ok: nothing about the test feed may fail it (STO-40).
+      try {
+        await postCuration(feed, r.posted.shown, r.posted.selection, r.posted.attemptsUsed, r.posted.asked);
+      } catch (err) {
+        console.error(`test feed: could not post curation: ${err instanceof Error ? err.message : err}`);
+      }
+      const { posted: _posted, ...summary } = r;   // the run's result is the counts, not the whole deck
+      return summary;
+    },
+  };
+}
+
 /** Jobs that run only when asked (`npm run job -- <name>`), not on a schedule. */
 export function onDemandJobs(feed: TestFeed, alert: Alert): Job[] {
-  return [storyJob(alert, feed)];
+  return [storyJob(alert, feed), curateJob(alert, feed)];
 }
 
 export function scheduledJobs(config: Config, feed: TestFeed, alert: Alert): Scheduled[] {
