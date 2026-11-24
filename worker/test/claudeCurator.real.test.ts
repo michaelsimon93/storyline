@@ -32,14 +32,14 @@ test("the real answer has exactly the shape we asked for, and nothing else", () 
   for (const p of REAL.picks) assert.deepEqual(Object.keys(p).sort(), ["marketId", "reason", "storyId"]);
   for (const id of REAL.ranking) assert.equal(typeof id, "string");
   assert.equal(new Set(REAL.ranking).size, REAL.ranking.length, "every story once");
-  assert.equal(REAL.picks.length, 10);
+  assert.equal(REAL.picks.length, RULES.n);
   for (const p of REAL.picks) {
     assert.match(p.marketId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     assert.ok(REAL.ranking.includes(p.storyId));
     assert.equal(p.reason, p.reason.trim());
     assert.doesNotMatch(p.reason, /[\p{Cc}\u2028\u2029]/u);
   }
-  assert.deepEqual(REAL.picks.map((p) => p.storyId), REAL.ranking.slice(0, 10), "the deck is the top of the ranking, in order");
+  assert.deepEqual(REAL.picks.map((p) => p.storyId), REAL.ranking.slice(0, RULES.n), "the deck is the top of the ranking, in order");
 });
 
 test("our rule checks accept the real answer", () => {
