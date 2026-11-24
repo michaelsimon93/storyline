@@ -84,7 +84,7 @@ test("bad settings are rejected, not turned into odd behaviour", async () => {
   await assert.rejects(collectStoryInputs(slate([]), { ...OPTS, pauseMs: -1 }), /pauseMs/);
 });
 
-// STO-102 (found by qa): a feed that loads but has rows the parser couldn't read must not turn an Out player healthy.
+// STO-102: a feed that loads but has rows the parser couldn't read must not turn an Out player healthy.
 test("a degraded injuries feed: the more severe of the feed's and ingest's status wins, so an unreadable Out row can't make him healthy", () => {
   const degraded = (statusByAthlete = new Map()) => ({ feedOk: true, feedDegraded: true, statusByAthlete });
   const clean = { feedOk: true, feedDegraded: false, statusByAthlete: new Map() };

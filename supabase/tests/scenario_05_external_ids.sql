@@ -322,13 +322,13 @@ insert into external_ids (source, kind, league, external_id, game_id) values
   ('kalshi', 'game', 'nba', 'Q92KEY', 'a9200000-0000-0000-0000-0000000000e1');
 
 -- ---------------------------------------------------------------- one ESPN event per slate
--- qa found that the database no longer enforces "one ESPN event is at most one game per slate" or
+-- The database no longer enforces "one ESPN event is at most one game per slate" or
 -- "one Kalshi game key per game": games are identified by matchup (games_identity, Michael's call
 -- on STO-39), which accepts that tradeoff rather than storing the slate on each game ID. Ingest
 -- enforces it instead: worker/test/ingest.integration.test.ts, "one ESPN event never becomes
 -- two games on one slate".
 -- Coverage: the replay case (same ESPN event, different slate) is still allowed.
-select t_eq('external ids: one ESPN event may be a game on another slate (STO-32 replay)',
+select t_eq('external ids: one ESPN event may be a game on another slate (a postponed game replayed)',
   (select t_err('x', $q$insert into external_ids (source, kind, league, external_id, game_id)
      values ('espn', 'game', 'nba', 'q92', 'a9200000-0000-0000-0000-0000000000e3')$q$, '%') like 'FAIL%'), true);
 delete from external_ids where game_id = 'a9200000-0000-0000-0000-0000000000e3';

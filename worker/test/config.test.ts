@@ -45,7 +45,7 @@ const story = [
   { key: "shortlist_split_back_from_injury", value: 1 }, { key: "shortlist_split_backup_steps_in", value: 1 },
 ];
 
-test("STO-106: the worker's startup config needs no story settings (a missing one must not stop every job)", () => {
+test("config: the worker's startup config needs no story settings (a missing one must not stop every job)", () => {
   assert.doesNotThrow(() => parseConfig(valid), "boot config with no story_* rows at all");
   assert.equal("storyScoreMax" in parseConfig([...valid, ...story]), false, "story settings are not part of the startup config");
 });

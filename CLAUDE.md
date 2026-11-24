@@ -47,6 +47,7 @@ CI runs Postgres 17 and is the source of truth.
 ## Workflow
 - Never commit to `main`. Branch → PR → CI green → Michael merges. No agent merges.
 - Work is tracked in Linear (team `STO`, project **Storyline**; milestones v1, v1.1, v2+). Spec and ADRs say *what and why*; Linear says *what's next*. Link spec sections, don't copy them.
+- **The ticket is the brief.** A prompt may be just a ticket ID. Read the issue, its sub-issues and any decisions recorded on them. Its `Agent brief` section, if present, says what to read first, what to confirm before coding, and what's out of scope. Ask Michael only for what the brief leaves open.
 - **Every PR has an issue** (check before creating one). Branch `<type>/sto-12-short-name` (`feat`, `fix`, `chore`, `docs`); PR title starts `STO-12:`; `Fixes STO-12` as the PR description's first line. Cloud sessions start on a random branch name: rename it when you start work, not at `/ship`.
 - **Product calls go to Michael as `needs-decision`**: label the issue, state the question and options, and don't build past it.
 - Labels: one area (`db`, `worker`, `curation`, `web`, `infra`) per issue. No cycles, no estimates.
@@ -61,7 +62,7 @@ CI runs Postgres 17 and is the source of truth.
 | **High-risk**: tier 1 code (see the testing table) | `qa`, then `eng-lead` |
 | Touches `web/` | add `ui-reviewer` before `eng-lead` |
 
-**Process is paused until a real pick is placed on a live card.** No new agents, commands or process docs before then; fix a process problem only if it blocks a product PR. ADRs are for hard-to-reverse decisions. Run `/retro` at the end of each milestone.
+**Process evolves with the build.** Change it when the change saves time on every future PR, in its own small PR. Run `/retro` at the end of each milestone. Write an ADR only for a decision that would take a migration or a rewrite to reverse.
 
 ## Schema and code rules
 - **Each schema change is a new migration** named `supabase/migrations/YYYYMMDDHHMMSS_name.sql` (UTC), dated after the newest one on `main`. Merged = deployed: CI applies migrations on merge, and any migration on `main` is frozen (CI enforces it). Bump `REQUIRED_MIGRATION` in `worker/src/lib/schema.ts` in the same PR (a test fails if you don't).
