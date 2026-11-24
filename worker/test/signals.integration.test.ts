@@ -88,7 +88,7 @@ test("a run that stores signals then fails doesn't take them away from the last 
 // attacks: concurrent runs on two real connections with overlapping keys in opposite order and different
 // observedAt; must not deadlock, must not duplicate, and the newest text must end up on every key.
 // (Rounds share a day, so after round 0 this can't see the lower-run-id-drops-newer-text bug; the
-// deterministic version of that is in scenario_94_signals_qa.sql.)
+// deterministic version of that is in scenario_93_signals.sql.)
 test("two connections racing with overlapping keys: no deadlock, no duplicates, newest text wins", { skip }, async () => {
   const day = await dayPlus(11);
   const keys = Array.from({ length: 200 }, (_, i) => `ov:${i}`);
