@@ -59,7 +59,7 @@ export interface CardBlurb { storyId: string; blurb: string; facts: BlurbFacts }
 
 export type BlurbViolationKind =
   | "malformed" | "story_set" | "format" | "length" | "banned_word" | "no_citation" | "unknown_signal"
-  | "dated_news" | "dated_phrasing" | "market_only_number";
+  | "dated_news" | "dated_phrasing" | "market_only_number" | "unattributed";
 export interface BlurbViolation { kind: BlurbViolationKind; message: string }
 export type BlurbCheck = { ok: true; blurbs: CardBlurb[] } | { ok: false; violations: BlurbViolation[] };
 
@@ -79,6 +79,18 @@ function parseShape(out: unknown): RawBlurb[] | undefined {
     list.push({ storyId: b.storyId, blurb: b.blurb, signalIds: b.signalIds as number[] });
   }
   return list;
+}
+
+const NUMBER = /\d+(?:\.\d+)?/gu;
+const ONES = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+/** Spelled-out numbers count as numbers too (the style guide's own example writes "four threes"). "one" is left out: it is mostly a pronoun ("one of the best"). */
+const NUMBER_WORDS = new Set([...ONES.slice(2), ...TENS.slice(2), "hundred"]);
+/** The words that spell a whole number up to 99, so a line of 4 allows "four" and a line of 25 allows "twenty-five". */
+function wordsFor(n: string): string[] {
+  const v = Number(n);
+  if (!Number.isInteger(v) || v < 1 || v > 99) return [];
+  return v < 20 ? [ONES[v]!] : [TENS[Math.floor(v / 10)]!, ONES[v % 10]!].filter(Boolean);
 }
 
 export function checkBlurbs(input: BlurbInput, output: unknown, rules: BlurbRules): BlurbCheck {
@@ -106,7 +118,7 @@ export function checkBlurbs(input: BlurbInput, output: unknown, rules: BlurbRule
     const text = b.blurb.trim();
     const before = v.length;
 
-    if (text === "" || /[\p{Cc}\u2028\u2029]/u.test(text)) add("format", `${label}: the blurb must be one line of plain text (no line breaks or control characters)`);
+    if (text === "" || /[\p{Cc}\p{Cf}\p{Cs}\u2028\u2029]/u.test(text)) add("format", `${label}: the blurb must be one line of plain text (no line breaks or control characters)`);
     if (charLength(text) > rules.maxChars) add("length", `${label}: the blurb is ${charLength(text)} characters; at most ${rules.maxChars}`);
     const word = BANNED.exec(text);
     if (word) add("banned_word", `${label}: "${word[0]}" is betting language; this is a fan story, not betting advice`);
@@ -127,11 +139,19 @@ export function checkBlurbs(input: BlurbInput, output: unknown, rules: BlurbRule
     for (const g of dated) {
       if (g.kind !== "stat") add("dated_news", `${label}: signal ${g.id} is ${g.kind} from ${g.slateDate}, before the slate day ${input.slateDate}; it can't be used`);
     }
+    // ADR-024 rule 2: a post from an approved account is only ever reported as theirs. The account is the first part of the link's path
+    // (x.com/<account>/status/…), and the blurb must name it. Whether the link is shown with the card is publishing's job (STO-12).
+    for (const g of cited) {
+      const account = g.trust === "attributed" && g.url ? /^https?:\/\/[^/]+\/([^/?#]+)/u.exec(g.url)?.[1] : undefined;
+      if (account && !text.toLowerCase().includes(account.toLowerCase())) add("unattributed", `${label}: signal ${g.id} is a post from @${account}; say it is their reporting by naming @${account}, don't state it as fact`);
+    }
     if (dated.length && FRESH_NEWS.test(text)) add("dated_phrasing", `${label}: signal ${dated[0]!.id} is from ${dated[0]!.slateDate}; don't word it as breaking or fresh news`);
 
     if (story.level === "market_only") {
-      const ok = new Set([String(story.market.strike), String(story.market.yesPriceCents)]);
-      const stray = (text.match(/\d+(?:\.\d+)?/gu) ?? []).filter((n) => !ok.has(n));
+      // The numbers a market-only blurb may use: the line, the price, and any number in a team name ("Philadelphia 76ers").
+      const ok = new Set([String(story.market.strike), String(story.market.yesPriceCents), ...(`${story.market.team} ${story.market.opponent}`.match(NUMBER) ?? [])]);
+      const okWords = new Set([...ok].flatMap(wordsFor));
+      const stray = [...(text.match(NUMBER) ?? []).filter((n) => !ok.has(n)), ...(text.toLowerCase().match(/[a-z]+/gu) ?? []).filter((w) => NUMBER_WORDS.has(w) && !okWords.has(w))];
       if (stray.length) add("market_only_number", `${label}: no stats are available, so the only numbers allowed are the line (${story.market.strike}) and the price (${story.market.yesPriceCents}); remove ${[...new Set(stray)].join(", ")}`);
     }
 

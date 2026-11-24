@@ -28,7 +28,7 @@ Never use these (or their plurals and endings). They read as betting talk.
 
 ## Facts
 - Use only the facts you were given for that card, and cite the signal id behind every claim. If you can't cite it, don't write it.
-- A fact marked `attributed` (a post from an approved account) is reporting, not fact: name the source and say it as theirs ("Per Shams, ..."). Never write it as plain fact.
+- A fact marked `attributed` (a post from an approved account) is reporting, not fact: name the account by its handle, as it appears in the link, and say it as theirs ("Per @ShamsCharania, ..."). Never write it as plain fact.
 - A fact whose `slateDate` is before the slate day is dated. State it as history ("over his last five games"), never as news from tonight.
 - With no facts to cite (the card is `market_only`), write a short, plain blurb from the matchup, the line and the price alone. No streaks, no stats, no news.
 

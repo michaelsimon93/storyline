@@ -131,6 +131,40 @@ test("duplicate cited ids are collapsed so blurb_facts lists each fact once", ()
   assert.equal(b!.facts.signals.length, 1);
 });
 
+// attacks: a lone surrogate passes the format rule, then can't be stored (jsonb rejects it in pipeline_runs.outputs, and cards.blurb is UTF-8 text)
+test("one line of plain text: a lone surrogate half is rejected, since Postgres can't store it", () => {
+  for (const blurb of ["Hield \uD83D is hot", "Hield \uDD25 is hot"]) {
+    assert.deepEqual(kinds(input(story("1")), answer({ storyId: "1", blurb, signalIds: [1] })), ["format"], JSON.stringify(blurb));
+  }
+});
+
+// attacks: an invisible format character (zero-width space, soft hyphen) inside a banned word hides it from the banned-word check
+test("betting language: a banned word split by an invisible character is still rejected", () => {
+  for (const blurb of ["Hield is a lo​ck tonight.", "Hammer­ed it home: ham‍mer time."]) {
+    assert.equal(checkBlurbs(input(story("1")), answer({ storyId: "1", blurb, signalIds: [1] }), RULES).ok, false, JSON.stringify(blurb));
+  }
+});
+
+// attacks: market-only number rule vs. a real team name with digits (ESPN displayName "Philadelphia 76ers"): naming the matchup, as the prompt asks, is rejected
+test("market-only level: naming a team whose name has a number in it is not a stray stat", () => {
+  const m = story("1", { level: "market_only", signals: [], otherAngleSignals: [], market: { ...market, opponent: "Philadelphia 76ers" } });
+  ok(input(m), answer({ storyId: "1", blurb: "Hield and the Bulls host the Philadelphia 76ers; the line is 4 threes.", signalIds: [] }));
+});
+
+// attacks: market-only "no stats" rule only sees digits, and the style guide itself spells numbers out ("four threes"): an invented stat in words passes
+test("market-only level: an invented stat written in words is still a stray stat", () => {
+  const m = story("1", { level: "market_only", signals: [], otherAngleSignals: [] });
+  assert.equal(checkBlurbs(input(m), answer({ storyId: "1", blurb: "Hield has hit six or more threes in five straight games.", signalIds: [] }), RULES).ok, false);
+});
+
+// attacks: trust rule (ADR-024 rule 2): a post from an approved account cited but written as plain fact, with no attribution
+test("trust: an attributed signal stated as plain fact, with no source named, is rejected", () => {
+  const shams = sig(9, { kind: "injury", trust: "attributed", source: "x", url: "https://x.com/ShamsCharania/status/1", summary: "ShamsCharania: Norman Powell is out tonight" });
+  const inp = input(story("1", { signals: [sig(1), shams] }));
+  assert.equal(checkBlurbs(inp, answer({ storyId: "1", blurb: "Norman Powell is out, so Hield gets every shot he wants.", signalIds: [1, 9] }), RULES).ok, false,
+    "an X post was published as fact, not as attributed reporting");
+});
+
 // ---------------------------------------------------------------- building the blurb input
 
 const pickStory = (id: string, playerId: string, o: Partial<CurationStory> = {}): CurationStory => ({
@@ -173,4 +207,12 @@ test("buildBlurbInput: a pick that isn't on the shown stories is a bug, not some
 
 test("the banned list is the one the style guide shows (see blurbStyleGuide.test.ts); it has the three from the ticket", () => {
   for (const w of ["lock", "hammer", "smash"]) assert.ok((BANNED_WORDS as readonly string[]).includes(w));
+});
+
+// the other side of the rules above: honest wording is not rejected
+test("market-only level: the line spelled out is fine (the style guide's own example), and so is naming an attributed post's account", () => {
+  const m = story("1", { level: "market_only", signals: [], otherAngleSignals: [], market: { ...market, strike: 4 } });
+  ok(input(m), answer({ storyId: "1", blurb: "The line is four threes, and it's priced as a real toss-up.", signalIds: [] }));
+  const shams = sig(9, { kind: "injury", trust: "attributed", source: "x", url: "https://x.com/ShamsCharania/status/1", summary: "ShamsCharania: Norman Powell is out tonight" });
+  ok(input(story("1", { signals: [sig(1), shams] })), answer({ storyId: "1", blurb: "Per @ShamsCharania, Norman Powell is out, so Hield gets more shots.", signalIds: [1, 9] }));
 });
