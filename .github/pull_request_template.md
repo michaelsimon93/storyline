@@ -6,6 +6,9 @@ Fixes STO-<!-- issue number -->
 ## What
 <!-- One concern per PR. If this list needs "and", consider splitting. -->
 
+## Done when
+<!-- Every acceptance criterion from the issue and sub-issues, word for word: ✅ done or ❌ not done + one line. A ❌ needs its own Linear issue. -->
+
 ## How it's tested
 <!-- Which tests are new; which failed before the change. For concurrency/security claims, the test that proves it. -->
 
@@ -22,4 +25,5 @@ Fixes STO-<!-- issue number -->
 - [ ] `qa` run and findings answered (high-risk only)
 - [ ] `ui-reviewer` run (`web/` only)
 - [ ] `eng-lead` verdict: APPROVED (not needed for docs-only)
-- [ ] **Follow-ups** comment posted: every unfixed finding has its own Linear issue (not needed for docs-only)
+- [ ] Every should-fix fixed in this PR
+- [ ] **Follow-ups** comment posted: unfixed nits on the milestone's `Nits` issue, out-of-scope findings as their own issues (not needed for docs-only)
