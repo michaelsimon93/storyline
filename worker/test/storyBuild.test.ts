@@ -54,14 +54,14 @@ test("STO-109: a story whose player's team is not in the market's game is skippe
 });
 
 // coverage (home side): the existing test covers the away team; the home team must match too.
-test("STO-109 qa: a story whose player is on the HOME team of the market's game is matched", () => {
+test("story build: a story whose player is on the HOME team of the market's game is matched", () => {
   const { summary, picks } = build(TOR, GAME);
   assert.equal(summary.matched, 1);
   assert.deepEqual(picks.map((k) => [k.teamId, k.gameId, k.marketId]), [[TOR, GAME, "m1"]]);
 });
 
 // attack (outside data): a market whose game isn't on the slate (the `!game` branch) is skipped, not thrown on or written.
-test("STO-109 qa: a market whose game is not on the slate is skipped and counted as no market", () => {
+test("story build: a market whose game is not on the slate is skipped and counted as no market", () => {
   const { summary, picks } = build(NY, "00000000-0000-0000-0000-0000000000ff");
   assert.equal(summary.found, 1);
   assert.equal(summary.matched, 0);

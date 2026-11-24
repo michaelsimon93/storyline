@@ -316,7 +316,7 @@ function feedWithHotOut(edit: (row: Record<string, unknown>) => void) {
 // ---------------------------------------------------------------- STO-102: hostile / malformed injury data
 
 // Attacks STO-102 fail-closed: ESPN sends the Out player's row without a `date`; the row is skipped, so he looks healthy.
-test("QA STO-102: an Out player whose injury row is malformed (skipped) still never reaches the shortlist", { skip }, async () => {
+test("stories: an Out player whose injury row is malformed (skipped) still never reaches the shortlist", { skip }, async () => {
   net({ injuries: feedWithHotOut((r) => { delete r.date; }) });
   const r = await run();
   assert.ok(r.status === "ok");
@@ -327,7 +327,7 @@ test("QA STO-102: an Out player whose injury row is malformed (skipped) still ne
 });
 
 // Attacks STO-102 fail-closed: the Out player's row has no athlete id link, so it can't be tied to him.
-test("QA STO-102: an Out player whose injury row has no athlete id never reaches the shortlist", { skip }, async () => {
+test("stories: an Out player whose injury row has no athlete id never reaches the shortlist", { skip }, async () => {
   net({ injuries: feedWithHotOut((r) => { (r.athlete as { links: unknown[] }).links = []; }) });
   const r = await run();
   assert.ok(r.status === "ok");
@@ -335,7 +335,7 @@ test("QA STO-102: an Out player whose injury row has no athlete id never reaches
 });
 
 // Coverage: duplicate injury rows in the wrong order (Day-To-Day listed after Out) — the worse status wins.
-test("QA STO-102: a player listed twice (Out and Day-To-Day) is dropped whichever order ESPN lists them", { skip }, async () => {
+test("stories: a player listed twice (Out and Day-To-Day) is dropped whichever order ESPN lists them", { skip }, async () => {
   const body = injuries([{ team: NY, athleteId: P.HOTOUT.espn, name: P.HOTOUT.name, status: "Day-To-Day" }, ...HURT_TODAY]);
   net({ injuries: () => json(body) });
   const r = await run();
@@ -344,7 +344,7 @@ test("QA STO-102: a player listed twice (Out and Day-To-Day) is dropped whicheve
 });
 
 // Coverage: player traded mid-season — ESPN lists him Out under a team that isn't on the slate.
-test("QA STO-102: Out under another team (traded) is still Out for us", { skip }, async () => {
+test("stories: Out under another team (traded) is still Out for us", { skip }, async () => {
   const body = injuries([{ team: 5, athleteId: P.HOTOUT.espn, name: P.HOTOUT.name, status: "Out" }, ...HURT_TODAY.filter((h) => h.athleteId !== P.HOTOUT.espn)]);
   net({ injuries: () => json(body) });
   const r = await run();
@@ -355,13 +355,13 @@ test("QA STO-102: Out under another team (traded) is still Out for us", { skip }
 // ---------------------------------------------------------------- the transactional replace
 
 // Coverage: an insert fails half way through the replace; the old list must survive whole, nothing partial.
-test("QA replace: an insert that fails half way leaves yesterday's list intact and the run failed", { skip }, async () => {
+test("stories: an insert that fails half way leaves yesterday's list intact and the run failed", { skip }, async () => {
   await run();
   const before = await list();
   assert.ok(before.length >= 2, "need at least two rows to fail on the second");
   await db!.query(`
     create or replace function qa_fail_second() returns trigger language plpgsql as $$
-    begin if new.position = 2 then raise exception 'qa: insert failed half way'; end if; return new; end $$;
+    begin if new.position = 2 then raise exception 'stories: insert failed half way'; end if; return new; end $$;
     create trigger qa_fail_second before insert on story_shortlist for each row execute function qa_fail_second();`);
   try {
     await assert.rejects(run(), /half way/);
@@ -374,7 +374,7 @@ test("QA replace: an insert that fails half way leaves yesterday's list intact a
 });
 
 // Coverage: a re-run after a market closes removes that story and its signal links; nothing lingers.
-test("QA replace: a re-run after a market closes drops that story and its links", { skip }, async () => {
+test("stories: a re-run after a market closes drops that story and its links", { skip }, async () => {
   await run();
   assert.ok((await list()).some((x) => x.player === P.HOT.name));
   await db!.query(`update markets set status = 'closed' where player_id = $1`, [P.HOT.id]);
@@ -389,7 +389,7 @@ test("QA replace: a re-run after a market closes drops that story and its links"
 // ---------------------------------------------------------------- concurrency: two runs for one day at once
 
 // Coverage: two scheduler runs of the story job at the same moment; the advisory lock lets one through.
-test("QA concurrency: two runJob(story) at once → one runs, one is skipped, one list", { skip }, async () => {
+test("stories: two runJob(story) at once → one runs, one is skipped, one list", { skip }, async () => {
   const feed = { post: async () => {} };
   const [a, b] = await Promise.all([runJob(db!, storyJob(alert, feed, DAY), alert), runJob(db!, storyJob(alert, feed, DAY), alert)]);
   assert.deepEqual([a.status, b.status].sort(), ["ok", "skipped"]);
@@ -400,7 +400,7 @@ test("QA concurrency: two runJob(story) at once → one runs, one is skipped, on
 
 // Attacks the replace itself without the lock (e.g. a manual `runStories` call, or the lock connection dropped):
 // whatever happens, the list must be one run's list, never a mix or duplicates, and no run left 'running'.
-test("QA concurrency: two runStories for one day at once (no lock) never leave a mixed or doubled list", { skip }, async () => {
+test("stories: two runStories for one day at once (no lock) never leave a mixed or doubled list", { skip }, async () => {
   await run();
   const single = (await list()).map(({ run_id, ...x }) => x);
   // Barrier on a second real connection: hold SHARE on the table so both runs queue at their `delete`, then release
@@ -427,7 +427,7 @@ test("QA concurrency: two runStories for one day at once (no lock) never leave a
 // ---------------------------------------------------------------- markets with odd prices
 
 // Coverage: only an open, unsettled, in-band, tight market matches; every odd one is "no market".
-test("QA market: closed, settled, null-priced, crossed, wide, 1¢ and 99¢ markets never match", { skip }, async () => {
+test("stories: closed, settled, null-priced, crossed, wide, 1¢ and 99¢ markets never match", { skip }, async () => {
   await db!.query(`update markets set status = 'closed' where player_id = $1`, [P.HOT.id]);
   let strike = 20;
   const ins = (title: string, status: string, bid: number | null, ask: number | null, result: string | null = null) =>
@@ -447,7 +447,7 @@ test("QA market: closed, settled, null-priced, crossed, wide, 1¢ and 99¢ marke
 });
 
 // Coverage: the band comes from app_config — widened to 1..99, a 1¢ ask with a 1¢ spread is matchable at the edge.
-test("QA market: band edges come from app_config (1¢ matches once the band is 1..99)", { skip }, async () => {
+test("stories: band edges come from app_config (1¢ matches once the band is 1..99)", { skip }, async () => {
   await db!.query(`update app_config set value = '1' where key = 'price_band_min'; update app_config set value = '99' where key = 'price_band_max'`);
   await db!.query(`update markets set status = 'closed' where player_id = $1`, [P.HOT.id]);
   await db!.query(`insert into markets (league, game_id, kind, title, player_id, stat, strike, status, yes_bid_cents, yes_ask_cents) values
@@ -460,7 +460,7 @@ test("QA market: band edges come from app_config (1¢ matches once the band is 1
 // ---------------------------------------------------------------- a player with several stories
 
 // Coverage: Hot Hand streaks on points AND rebounds with markets on both; he takes one hot_streak slot, his best stat.
-test("QA several stories: one player hot on two stats with two markets gets one hot_streak row", { skip }, async () => {
+test("stories: one player hot on two stats with two markets gets one hot_streak row", { skip }, async () => {
   const log = gameLog(NY, Array.from({ length: 10 }, (_, k) => ({ game: k + 1, min: 30, pts: k + 1 > 7 ? 16 : 12, reb: k + 1 > 7 ? 7 : 4, ast: 2, fg3m: 0 })));
   net({ [`gamelog-${P.HOT.espn}`]: () => json(log) });
   await db!.query(`insert into markets (league, game_id, kind, title, player_id, stat, strike, status, yes_bid_cents, yes_ask_cents) values
@@ -474,7 +474,7 @@ test("QA several stories: one player hot on two stats with two markets gets one 
 });
 
 // Hostile: STAR (not on the slate, no market) is Out; nothing about him is stored on the shortlist.
-test("QA slate: a player who isn't on the slate never gets a row, even though his log was fetched", { skip }, async () => {
+test("stories: a player who isn't on the slate never gets a row, even though his log was fetched", { skip }, async () => {
   const r = await run();
   assert.ok(r.status === "ok");
   assert.equal(Number((await q(`select count(*) from story_shortlist s join players p on p.id = s.player_id where p.full_name = $1`, [STAR.name]))[0].count), 0);

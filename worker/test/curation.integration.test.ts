@@ -208,7 +208,7 @@ const attemptsOf = async (runId: number | undefined) =>
 
 // attacks: model output Postgres jsonb can't hold (U+0000). The reason passes every rule, then storeAttempts throws:
 // the job crashes instead of returning ok/failed, and every attempt of the run (the accepted one included) is lost.
-test("qa: an answer containing U+0000 doesn't crash the job or lose the run's attempts", { skip }, async () => {
+test("curation: an answer containing U+0000 doesn't crash the job or lose the run's attempts", { skip }, async () => {
   let r: Awaited<ReturnType<typeof runCuration>> | undefined, err: unknown;
   try { r = await runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer("Five straight\u0000 28+ games")) }); } catch (e) { err = e; }
   assert.equal(err, undefined, `runCuration threw: ${(err as Error)?.message}`);
@@ -216,7 +216,7 @@ test("qa: an answer containing U+0000 doesn't crash the job or lose the run's at
 });
 
 // attacks: same storage path with a rejected answer: one bad attempt (lone surrogate / NUL) must not erase the others.
-test("qa: a rejected answer Postgres can't store doesn't erase the run's other attempts", { skip }, async () => {
+test("curation: a rejected answer Postgres can't store doesn't erase the run's other attempts", { skip }, async () => {
   const answers = [{ ranking: ["\u0000"], picks: [] }, answer()];
   let i = 0;
   const c: Curator<CurationRequest, unknown> = { name: "fake", async curate() { return answers[i++]; } };
@@ -230,7 +230,7 @@ test("qa: a rejected answer Postgres can't store doesn't erase the run's other a
 // ---------------------------------------------------------------- coverage (expected to PASS)
 
 // coverage: two runs at the same moment (two pool connections): each gets its own run, attempts and one accepted answer.
-test("qa coverage: two concurrent runs don't share or double attempts", { skip }, async () => {
+test("curation: two concurrent runs don't share or double attempts", { skip }, async () => {
   const [a, b] = await Promise.all([
     runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50) }),
     runCuration(db!, { alert: async () => {}, date: DAY, curator: fake(answer(), 50) }),
@@ -242,7 +242,7 @@ test("qa coverage: two concurrent runs don't share or double attempts", { skip }
 
 // coverage: a story whose ladder has nothing in band is loaded with its (out-of-band) ladder, hidden from the model,
 // and not required in the ranking; the pick count ignores that player.
-test("qa coverage: a story with no in-band strike is loaded, hidden, and not counted", { skip }, async () => {
+test("curation: a story with no in-band strike is loaded, hidden, and not counted", { skip }, async () => {
   const seen: CurationRequest[] = [];
   const c: Curator<CurationRequest, unknown> = { name: "fake", async curate(req) { seen.push(req); return answer(); } };
   await q(`update app_config set value = '3' where key = 'cards_per_day'`);
@@ -254,10 +254,10 @@ test("qa coverage: a story with no in-band strike is loaded, hidden, and not cou
 });
 
 // coverage: an entry listing the same signal id twice yields the signal twice (the table's PK prevents it from the store).
-test("qa coverage: the loader tolerates a repeated signal id and an entry with no signals", { skip }, async () => {
+test("curation: the loader tolerates a repeated signal id and an entry with no signals", { skip }, async () => {
   const run = (await q<{ id: number }>(`insert into pipeline_runs (job, slate_date, status) values ('qa', $1, 'ok') returning id`, [DAY]))[0]!.id;
   const sig = Number((await q<{ id: string }>(`insert into signals (source, kind, slate_date, player_id, key, summary, evidence, observed_at, trust, run_id)
-    values ('espn','stat',$1,$2,'qa:k','fact','{"quote":"q"}', now(), 'verified', $3) returning id`, [DAY, P1, run]))[0]!.id);
+    values ('espn','stat',$1,$2,'curation:k','fact','{"quote":"q"}', now(), 'verified', $3) returning id`, [DAY, P1, run]))[0]!.id);
   const input = await loadCurationInput(db!, DAY, [
     { id: 1, playerId: P1, gameId: G1, angle: "hot_streak", stat: "pts", summary: "s", signalIds: [sig, sig] },
     { id: 2, playerId: P2, gameId: G1, angle: "hot_streak", stat: "reb", summary: "s", signalIds: [] },

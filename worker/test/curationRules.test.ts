@@ -161,7 +161,7 @@ describe("hostile and boundary inputs", () => {
 const { PROD, story, slate, bestPossible, kinds } = H;
 
 // attacks: the caps vs N. With the starting config (10 cards, 3 per game) any slate of 3 games or fewer can never pass.
-test("qa: on a 3-game slate with the starting config, the best answer the caps allow is accepted", () => {
+test("curation rules: on a 3-game slate with the starting config, the best answer the caps allow is accepted", () => {
   const input = slate(3, 12);                       // 12 players, 3 games: the caps allow at most 9 cards, the rule demands 10
   const best = bestPossible(input, PROD);
   assert.equal(best.picks.length, 9);
@@ -169,14 +169,14 @@ test("qa: on a 3-game slate with the starting config, the best answer the caps a
 });
 
 // attacks: the stat cap vs N. A shortlist that is all points stories (the story step does not guarantee stat spread) can't pass either.
-test("qa: a points-only shortlist across many games still yields a deck", () => {
+test("curation rules: a points-only shortlist across many games still yields a deck", () => {
   const input: CurationInput = { slateDate: "2026-11-23", stories: Array.from({ length: 12 }, (_, i) => story(`s${i}`, `g${i}`, "pts")) };
   const best = bestPossible(input, PROD);
   assert.deepEqual(kinds(input, best, PROD), [], "only 4 points cards are allowed but 10 are demanded");
 });
 
 // attacks: "one-line reason" with Unicode line breaks. JS trim() and /[\r\n]/ don't catch U+2028/U+2029/NEL/VT/FF.
-test("qa: a reason with a Unicode line or paragraph separator is not one line", () => {
+test("curation rules: a reason with a Unicode line or paragraph separator is not one line", () => {
   const input = slate(4, 4);
   const r: CurationRules = { ...PROD, n: 1 };
   for (const sep of [" ", " ", "\u0085", "\v", "\f"]) {
@@ -186,7 +186,7 @@ test("qa: a reason with a Unicode line or paragraph separator is not one line", 
 });
 
 // attacks: a leading newline. The check trims before testing, but the untrimmed reason is what is stored and posted.
-test("qa: a reason that starts with a newline is rejected (or stored trimmed), not posted as two lines", () => {
+test("curation rules: a reason that starts with a newline is rejected (or stored trimmed), not posted as two lines", () => {
   const input = slate(4, 4);
   const r: CurationRules = { ...PROD, n: 1 };
   const out = { ranking: input.stories.map((s) => s.storyId), picks: [{ storyId: "s0", marketId: "s0-m", reason: "\nWhy a fan cares\n" }] };
@@ -195,7 +195,7 @@ test("qa: a reason that starts with a newline is rejected (or stored trimmed), n
 });
 
 // coverage: prototype-ish keys as ids are plain data (Map lookups), never a crash or a false match.
-test("qa coverage: __proto__ / constructor / toString as story or market ids are just unknown ids", () => {
+test("curation rules: __proto__ / constructor / toString as story or market ids are just unknown ids", () => {
   const input = slate(4, 4);
   const r: CurationRules = { ...PROD, n: 1 };
   for (const id of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
@@ -209,7 +209,7 @@ test("qa coverage: __proto__ / constructor / toString as story or market ids are
 });
 
 // coverage: numeric ids (what a model may emit for our numeric shortlist ids) are malformed, not coerced.
-test("qa coverage: numeric storyId/marketId and a non-string reason are malformed", () => {
+test("curation rules: numeric storyId/marketId and a non-string reason are malformed", () => {
   const input = slate(4, 4);
   for (const p of [{ storyId: 0, marketId: "s0-m", reason: "x" }, { storyId: "s0", marketId: 1, reason: "x" }, { storyId: "s0", marketId: "s0-m", reason: null }]) {
     assert.deepEqual(kinds(input, { ranking: ["s0", "s1", "s2", "s3"], picks: [p] }, { ...PROD, n: 1 }), ["malformed"]);
@@ -218,7 +218,7 @@ test("qa coverage: numeric storyId/marketId and a non-string reason are malforme
 });
 
 // coverage: the same story picked twice, and one player with two stories.
-test("qa coverage: the same story twice, or two stories of one player, is a player_repeat", () => {
+test("curation rules: the same story twice, or two stories of one player, is a player_repeat", () => {
   const input: CurationInput = { slateDate: "x", stories: [story("a", "g1", "pts"), story("b", "g2", "reb", { playerId: "p-a" }), story("c", "g3", "ast")] };
   const r: CurationRules = { ...PROD, n: 2 };
   const rank = ["a", "b", "c"];
@@ -231,14 +231,14 @@ test("qa coverage: the same story twice, or two stories of one player, is a play
 });
 
 // coverage: a ladder that lists one marketId twice with different prices can't sneak an out-of-band rung through.
-test("qa coverage: duplicate marketIds on a ladder never accept an out-of-band price", () => {
+test("curation rules: duplicate marketIds on a ladder never accept an out-of-band price", () => {
   const dup = story("a", "g1", "pts", { ladder: [{ marketId: "m", strike: 20, yesPriceCents: 90 }, { marketId: "m", strike: 25, yesPriceCents: 50 }] });
   const r = checkSelection({ slateDate: "x", stories: [dup] }, { ranking: ["a"], picks: [{ storyId: "a", marketId: "m", reason: "x" }] }, { ...PROD, n: 1 });
   assert.equal(r.ok, false);
 });
 
 // coverage: caps are inclusive at the edge and the band edges are inclusive.
-test("qa coverage: exactly maxPerGame / maxPerStat picks pass; one more fails", () => {
+test("curation rules: exactly maxPerGame / maxPerStat picks pass; one more fails", () => {
   const r: CurationRules = { ...PROD, n: 3, maxPerGame: 3, maxPerStat: 3 };
   const input: CurationInput = { slateDate: "x", stories: ["a", "b", "c", "d"].map((id) => story(id, "g1", "pts", { ladder: [{ marketId: `${id}-m`, strike: 25, yesPriceCents: id === "a" ? 25 : 75 }] })) };
   const ok = { ranking: ["a", "b", "c", "d"], picks: ["a", "b", "c"].map((id) => ({ storyId: id, marketId: `${id}-m`, reason: "x" })) };
