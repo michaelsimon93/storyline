@@ -12,6 +12,8 @@ import type { Alert } from "../lib/alert.js";
 import { runStories, JOB as STORY_JOB } from "./stories.js";
 import { runCuration, JOB as CURATE_JOB } from "./curate.js";
 import { postCuration } from "../lib/curationText.js";
+import { runPublish, JOB as PUBLISH_JOB } from "./publish.js";
+import { postPublish } from "../lib/publishText.js";
 import type { CurationRequest } from "../sources/curate.js";
 import type { BlurbRequest } from "../sources/claudeBlurbs.js";
 import type { Curator } from "../sources/types.js";
@@ -91,9 +93,29 @@ export function curateJob(alert: Alert, feed: TestFeed, date?: string, curator?:
   };
 }
 
+/**
+ * The publish step (STO-12): the latest curation run's cards go live, and #testing gets the deck. Run on demand:
+ * `npm run job -- publish`, after curate. Scheduling is STO-117.
+ */
+export function publishJob(alert: Alert, feed: TestFeed, date?: string): Job {
+  return {
+    name: PUBLISH_JOB,
+    run: async (db) => {
+      const r = await runPublish(db, { alert, date });
+      if (r.status !== "ok") return r;
+      try {
+        await postPublish(feed, r);
+      } catch (err) {
+        console.error(`test feed: could not post publish: ${err instanceof Error ? err.message : err}`);
+      }
+      return { status: r.status, slateDate: r.slateDate, runId: r.runId, published: r.published.length, asked: r.asked, skipped: r.skipped };
+    },
+  };
+}
+
 /** Jobs that run only when asked (`npm run job -- <name>`), not on a schedule. */
 export function onDemandJobs(feed: TestFeed, alert: Alert): Job[] {
-  return [storyJob(alert, feed), curateJob(alert, feed)];
+  return [storyJob(alert, feed), curateJob(alert, feed), publishJob(alert, feed)];
 }
 
 export function scheduledJobs(config: Config, feed: TestFeed, alert: Alert): Scheduled[] {
