@@ -21,6 +21,7 @@ import { installFetch, json } from "./helpers/mockFetch.js";
 import { P, STAR, NY, TOR, DAY, GAME, LOGS, HURT_TODAY, storyRoutes, injuries, gameLog } from "./helpers/storyWorld.js";
 import pg from "pg";
 
+describe("the story step end to end", () => {
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
 const FETCH = { retries: 0, baseDelayMs: 1 };
 const OBSERVED = `${DAY}T10:00:00.000Z`;
@@ -241,6 +242,8 @@ test("STO-107: a missing story setting fails only the story run, alerts naming e
   assert.deepEqual((await q(`select status from pipeline_runs where job = 'story' order by id`)).map((x) => x.status), ["ok", "failed"], "this job's run is the failed one");
   assert.match((await q(`select error from pipeline_runs where job = 'story' and status = 'failed'`))[0].error, /story_score_max/);
   assert.deepEqual(await list(), before, "yesterday's good list is not wiped by a config error");
+});
+
 });
 
 describe("hostile and boundary inputs", () => {
