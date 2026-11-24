@@ -9,6 +9,8 @@ Ship the current branch for: $ARGUMENTS
 - **Branch name first.** If the current branch isn't `<type>/sto-NN-short-name` (`feat`, `fix`, `chore`, `docs`), rename it: `git branch -m <type>/sto-NN-short-name`, push it, and delete the old remote branch if it was pushed. Cloud sessions start on random names like `hopeful-goldberg-3k2pqw`.
 - PR title starts with `STO-NN:` so Linear links the PR even if the rename couldn't happen.
 - Fill in `.github/pull_request_template.md`, especially **Risks & where to look**, which tells Michael what to read closely. The **Why** section carries the 3–5 line reasoning for each non-obvious choice.
+- **Done when** section: every acceptance criterion from the issue and its sub-issues, word for word, each marked ✅ done or ❌ not done with a one-line reason. A ❌ without its own Linear issue means the PR isn't ready.
+- If the change affects what a job outputs, do one real run and paste 2–3 examples of the output into the PR description.
 - Pick the review row from CLAUDE.md → "Review depth". Docs-only PRs skip review: once CI is green, go straight to the handoff in step 4 and write the checklist and approval comment yourself.
 
 ## 2. Run the reviewers
@@ -22,14 +24,15 @@ Order: `qa` (high-risk only) → `ui-reviewer` (`web/` only) → `eng-lead`. Tel
 **Post every report as a PR comment**, headed `**qa (agent) report**`, `**ui-reviewer (agent) report**` or `**eng-lead (agent) verdict: …** (round n)`.
 
 ## 3. Keep rounds short
-- Only a **blocker** sends the PR back through `eng-lead`. Fix should-fix items in the same PR without another round; nits are optional.
+- Only a **blocker** sends the PR back through `eng-lead`. **Fix every should-fix in this PR** without another round; none are left open. Fix nits that take a few minutes.
 - On a high-risk PR, re-run `qa` only if the fix touched money, security or concurrency code.
 
-## 4. File follow-ups, then hand off
+## 4. Record follow-ups, then hand off
 After the last fix commit, go through every non-blocker finding (`eng-lead`'s numbered follow-ups, plus `qa`/`ui-reviewer` items it didn't cover):
-- Fixed → name the commit.
-- Not fixed → **its own** Linear issue (one finding = one issue). Title says what to change; labels `follow-up` + one area; description links the PR comment and names `path:line`, the finding and the suggested fix; related to the PR's issue.
+- **Fixed** → name the commit. Every should-fix must land here.
+- **Nit, not fixed** → one checklist line on the milestone's rolling `Nits` Linear issue (e.g. STO-131, "Nits: v1"): `- [ ] PR #NN · path:line · what to change`. No issue per nit.
+- **Out of scope** (a bug or work outside this PR) → its own Linear issue: title says what to change; labels `follow-up` + one area; description links the PR comment and names `path:line`, the finding and the suggested fix; related to the PR's issue.
 
-Post a PR comment headed `**Follow-ups**` listing every finding → commit or `STO-NN`. Then hand off to Michael with `eng-lead`'s handoff. Michael merges only once the follow-ups comment is posted.
+Post a PR comment headed `**Follow-ups**` listing every finding → commit, `Nits` line, or `STO-NN`. Then hand off to Michael with `eng-lead`'s handoff. Michael merges only once the follow-ups comment is posted.
 
 **Your final message to Michael always ends with** the verify checklist and the approval comment in a code block, copied in full, never summarized. The approval comment is plain English (see `eng-lead.md`, handoff item 5).
