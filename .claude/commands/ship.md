@@ -6,6 +6,7 @@ argument-hint: <Linear issue, e.g. STO-12>
 Ship the current branch for: $ARGUMENTS
 
 ## 1. Open the PR
+- **Done check first.** Don't open a PR until: (a) the full suite for the tiers you touched ran *after the last commit and last edit* (re-run if not); (b) every test that didn't pass is accounted for: counts add up (passed + skipped = total), and each skip is an expected one, named in the PR under **Risks & where to look**. Fix or explain anything else. If this check fails, close the gap and carry on; stop only for a specific blocker that needs Michael.
 - **Branch name first.** If the current branch isn't `<type>/sto-NN-short-name` (`feat`, `fix`, `chore`, `docs`), rename it: `git branch -m <type>/sto-NN-short-name`, push it, and delete the old remote branch if it was pushed. Cloud sessions start on random names like `hopeful-goldberg-3k2pqw`.
 - PR title starts with `STO-NN:` so Linear links the PR even if the rename couldn't happen.
 - Fill in `.github/pull_request_template.md`, especially **Risks & where to look**, which tells Michael what to read closely. The **Why** section carries the 3–5 line reasoning for each non-obvious choice.
