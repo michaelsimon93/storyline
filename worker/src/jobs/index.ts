@@ -5,6 +5,10 @@ import type { Config } from "../lib/config.js";
 import type { TestFeed } from "../lib/testFeed.js";
 import { ingestSummaryText, storySummaryMessages } from "../lib/feedText.js";
 import type { Job, Scheduled } from "../scheduler.js";
+import type { Db } from "../lib/db.js";
+import { loadOptionalSchedules } from "../lib/jobSchedules.js";
+import { alertText } from "../lib/alertText.js";
+import { resolveSlateDate } from "./ingest.js";
 import { ingest } from "./ingest.js";
 import { pollPrices } from "./poller.js";
 import { runEspnContext, JOB as CONTEXT_ESPN_JOB, type ContextRunResult } from "./contextEspn.js";
@@ -50,8 +54,7 @@ export function contextEspnJob(alert: Alert, date?: string): Job {
 
 /**
  * The story step (STO-76): find the day's stories, match each to a market, store the shortlist, post it to #testing.
- * Not scheduled yet: run it with `npm run job -- story`. Its schedule needs its own settings loader (STO-106's pattern)
- * so a missing cron row can't stop the worker; that is a follow-up.
+ * Scheduled through its own tolerant loader (STO-112); also runnable by hand: `npm run job -- story`.
  */
 export function storyJob(alert: Alert, feed: TestFeed, date?: string): Job {
   return {
@@ -72,8 +75,7 @@ export function storyJob(alert: Alert, feed: TestFeed, date?: string): Job {
 
 /**
  * The curation step (STO-11): Claude ranks the day's shortlist and picks the cards; the picks and reasons go to #testing.
- * Not scheduled yet: run it with `npm run job -- curate`, after the story step. Its schedule needs its own settings loader
- * (STO-106's pattern), like the story step's.
+ * Scheduled through its own tolerant loader, behind `afterStory` (STO-117); by hand `npm run job -- curate` is unguarded.
  */
 export function curateJob(alert: Alert, feed: TestFeed, date?: string, curator?: Curator<CurationRequest, unknown>, blurbWriter?: Curator<BlurbRequest, unknown>, styleGuide?: string): Job {
   return {
@@ -95,7 +97,7 @@ export function curateJob(alert: Alert, feed: TestFeed, date?: string, curator?:
 
 /**
  * The publish step (STO-12): the latest curation run's cards go live, and #testing gets the deck. Run on demand:
- * `npm run job -- publish`, after curate. Scheduling is STO-117.
+ * `npm run job -- publish`, after curate; also scheduled (STO-117).
  */
 export function publishJob(alert: Alert, feed: TestFeed, date?: string): Job {
   return {
@@ -113,6 +115,29 @@ export function publishJob(alert: Alert, feed: TestFeed, date?: string): Job {
   };
 }
 
+/**
+ * The scheduled curate run refuses to start unless today's latest story run succeeded (STO-117): curating a stale or missing
+ * shortlist would publish yesterday's idea of the day. It alerts and publishes nothing. Not applied to `npm run job -- curate`.
+ */
+export function afterStory(inner: Job, alert: Alert, date?: string): Job {
+  return {
+    name: inner.name,
+    run: async (db) => {
+      const slateDate = await resolveSlateDate(db, date);
+      const { rows } = await db.query<{ status: string }>(
+        `select status from pipeline_runs where job = $1 and slate_date = $2 order by id desc limit 1`, [STORY_JOB, slateDate]);
+      const story = rows[0]?.status;
+      if (story === "ok") return inner.run(db);
+      await alert(alertText({
+        severity: "failed", job: inner.name,
+        headline: `${inner.name} did not run: ${story ? `today's story run is ${story}` : "no story run for today"} (${slateDate})`,
+        note: `Nothing was curated or published. Fix the story step, then run by hand: npm run job -- story, then curate, then publish.`,
+      }));
+      return { status: "skipped_no_story", slateDate, storyRun: story ?? null };
+    },
+  };
+}
+
 /** Jobs that run only when asked (`npm run job -- <name>`), not on a schedule. */
 export function onDemandJobs(feed: TestFeed, alert: Alert): Job[] {
   return [storyJob(alert, feed), curateJob(alert, feed), publishJob(alert, feed)];
@@ -124,4 +149,13 @@ export function scheduledJobs(config: Config, feed: TestFeed, alert: Alert): Sch
     { job: contextEspnJob(alert), pattern: config.contextEspnScheduleEt },
     { job: { name: "price_poll", run: (db) => pollPrices(db) }, everySeconds: config.pollerIntervalSeconds },
   ];
+}
+
+/** The story, curate and publish steps, each on its own `app_config` schedule; a bad or missing row skips only that job and alerts. */
+export function optionalScheduledJobs(db: Db, feed: TestFeed, alert: Alert): Promise<Scheduled[]> {
+  return loadOptionalSchedules(db, alert, [
+    { key: "story_schedule_et", job: storyJob(alert, feed) },
+    { key: "curate_schedule_et", job: afterStory(curateJob(alert, feed), alert) },
+    { key: "publish_schedule_et", job: publishJob(alert, feed) },
+  ]);
 }
