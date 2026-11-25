@@ -1,0 +1,269 @@
+{
+ "id": "1f5314a1-6626-9b80-b343-6b8cbec2adcf",
+ "model": "grok-4.3",
+ "object": "response",
+ "status": "completed",
+ "usage": {
+  "input_tokens": 11094,
+  "input_tokens_details": {
+   "cached_tokens": 2944
+  },
+  "output_tokens": 2149,
+  "output_tokens_details": {
+   "reasoning_tokens": 958
+  },
+  "total_tokens": 13243,
+  "num_sources_used": 0,
+  "num_server_side_tools_used": 3,
+  "cost_in_usd_ticks": 1361488000,
+  "server_side_tool_usage_details": {
+   "web_search_calls": 0,
+   "x_search_calls": 3,
+   "x_posts_fetched": 24,
+   "x_users_fetched": 0,
+   "code_interpreter_calls": 0,
+   "file_search_calls": 0,
+   "mcp_calls": 0,
+   "document_search_calls": 0,
+   "image_generation_calls": 0
+  },
+  "context_details": {
+   "input_tokens": 9300,
+   "output_tokens": 1626
+  }
+ },
+ "output": [
+  {
+   "id": "rs_1f5314a1-6626-9b80-b343-6b8cbec2adcf",
+   "summary": [],
+   "type": "reasoning",
+   "status": "completed"
+  },
+  {
+   "call_id": "xs_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-0",
+   "input": "{\"query\":\"NBA games tonight discussions players teams\",\"limit\":\"10\",\"from_date\":\"2026-11-25\"}",
+   "name": "x_semantic_search",
+   "type": "custom_tool_call",
+   "id": "ctc_1f5314a1-6626-9b80-b343-6b8cbec2adcf_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-0",
+   "status": "completed"
+  },
+  {
+   "call_id": "xs_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-1",
+   "input": "{\"query\":\"NBA since:2026-11-25 min_faves:10\",\"limit\":\"10\",\"mode\":\"Latest\"}",
+   "name": "x_keyword_search",
+   "type": "custom_tool_call",
+   "id": "ctc_1f5314a1-6626-9b80-b343-6b8cbec2adcf_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-1",
+   "status": "completed"
+  },
+  {
+   "call_id": "xs_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-2",
+   "input": "{\"query\":\"\\\"tonight\\\" (game OR vs OR matchup) NBA since:2026-11-25 min_faves:5\",\"limit\":\"5\",\"mode\":\"Latest\"}",
+   "name": "x_keyword_search",
+   "type": "custom_tool_call",
+   "id": "ctc_1f5314a1-6626-9b80-b343-6b8cbec2adcf_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-2",
+   "status": "completed"
+  },
+  {
+   "id": "tco_1f5314a1-6626-9b80-b343-6b8cbec2adcf_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-0",
+   "summary": [],
+   "type": "reasoning",
+   "status": "completed"
+  },
+  {
+   "id": "tco_1f5314a1-6626-9b80-b343-6b8cbec2adcf_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-1",
+   "summary": [],
+   "type": "reasoning",
+   "status": "completed"
+  },
+  {
+   "id": "tco_1f5314a1-6626-9b80-b343-6b8cbec2adcf_call-f5ef14d2-8e31-46ac-9008-c25862a597e8-2",
+   "summary": [],
+   "type": "reasoning",
+   "status": "completed"
+  },
+  {
+   "content": [
+    {
+     "type": "output_text",
+     "text": "{\n  \"stories\": [\n    {\n      \"subject\": \"Detroit Pistons\",\n      \"kind\": \"team\",\n      \"why_care\": \"Pistons delivered an 18-point victory over the Magic as part of tonight's NBA action.\",\n      \"chatter\": \"low\",\n      \"chatter_basis\": \"Single post with under 200 views and no likes/engagement metrics shown\",\n      \"posts\": [\n        {\n          \"url\": \"https://x.com/Pulssix/status/2125447623779705198\",\n          \"handle\": \"@Pulssix\",\n          \"excerpt\": \"✅ Detroit Pistons 104–86 Orlando Magic ... Detroit delivers an 18-point victory.\"\n        }\n      ]\n    },\n    {\n      \"subject\": \"Boston Celtics\",\n      \"kind\": \"team\",\n      \"why_care\": \"Celtics exploded for 131 points to beat the Wizards and stop their slide.\",\n      \"chatter\": \"low\",\n      \"chatter_basis\": \"Single post with under 200 views and no likes/engagement metrics shown\",\n      \"posts\": [\n        {\n          \"url\": \"https://x.com/Pulssix/status/2125447623779705198\",\n          \"handle\": \"@Pulssix\",\n          \"excerpt\": \"✅ Boston Celtics 131–116 Washington Wizards ... Boston explodes for 131 points.\"\n        },\n        {\n          \"url\": \"https://x.com/inquirersports/status/2125471945684660733\",\n          \"handle\": \"@inquirersports\",\n          \"excerpt\": \"NBA scores today: Mavericks, Pistons win big, Celtics stop slide\"\n        }\n      ]\n    },\n    {\n      \"subject\": \"Dallas Mavericks vs Denver Nuggets\",\n      \"kind\": \"game\",\n      \"why_care\": \"Mavericks leading Nuggets in Q3 with potential for a shootout featuring Jokic/Murray and Kyrie/Flagg.\",\n      \"chatter\": \"low\",\n      \"chatter_basis\": \"Two posts with under 200 views each and minimal engagement\",\n      \"posts\": [\n        {\n          \"url\": \"https://x.com/Pulssix/status/2125447623779705198\",\n          \"handle\": \"@Pulssix\",\n          \"excerpt\": \"🔴 Dallas Mavericks 67–53 Denver Nuggets (Q3) ... Dallas leads in Denver.\"\n        },\n        {\n          \"url\": \"https://x.com/ARBasketball_/status/2125416190562419177\",\n          \"handle\": \"@ARBasketball_\",\n          \"excerpt\": \"Nuggets vs. Mavs tonight has SHOOTOUT written all over it. 🔥 Jokić & Murray Kyrie & Flagg\"\n        }\n      ]\n    },\n    {\n      \"subject\": \"Giannis Antetokounmpo and Joel Embiid\",\n      \"kind\": \"player\",\n      \"why_care\": \"Giannis is questionable and Embiid is doubtful/out for tonight's Heat-76ers game, impacting the matchup.\",\n      \"chatter\": \"medium\",\n      \"chatter_basis\": \"Injury watch post with 18 likes and 592 views; multiple mentions across betting/injury discussions\",\n      \"posts\": [\n        {\n          \"url\": \"https://x.com/CFCPlaybook_/status/2125622860890660895\",\n          \"handle\": \"@CFCPlaybook_\",\n          \"excerpt\": \"🚨 NBA INJURY WATCH! Giannis is QUESTIONABLE. Joel Embiid is DOUBTFUL.\"\n        },\n        {\n          \"url\": \"https://x.com/Cryptosmoker_/status/2125581235338547510\",\n          \"handle\": \"@Cryptosmoker_\",\n          \"excerpt\": \"Miami winning tonight fs embid is out. Gianni’s is questionable\"\n        },\n        {\n          \"url\": \"https://x.com/FantasyDailies/status/2125585065459826858\",\n          \"handle\": \"@FantasyDailies\",\n          \"excerpt\": \"Heat-76ers has the top total (238.5) with Embiid and Giannis day-to-day.\"\n        }\n      ]\n    },\n    {\n      \"subject\": \"Victor Wembanyama and De'Aaron Fox\",\n      \"kind\": \"player\",\n      \"why_care\": \"Both are questionable for tonight's action as Spurs await their return amid other star absences.\",\n      \"chatter\": \"low\",\n      \"chatter_basis\": \"Injury watch post with 18 likes but limited specific discussion on these two\",\n      \"posts\": [\n        {\n          \"url\": \"https://x.com/CFCPlaybook_/status/2125622860890660895\",\n          \"handle\": \"@CFCPlaybook_\",\n          \"excerpt\": \"Wembanyama and De'Aaron Fox are QUESTIONABLE. ... A lot of star power could be missing from tonight's NBA action.\"\n        },\n        {\n          \"url\": \"https://x.com/FantasyDailies/status/2125585065459826858\",\n          \"handle\": \"@FantasyDailies\",\n          \"excerpt\": \"Spurs (15-3) wait on Wemby + Fox.\"\n        }\n      ]\n    }\n  ]\n}",
+     "logprobs": [],
+     "annotations": [
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125391334152560647",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125391334152560647"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125641763998085480",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125641763998085480"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125581235338547510",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125581235338547510"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125548931836968984",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125548931836968984"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125641832864342388",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125641832864342388"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125640435079008492",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125640435079008492"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125447623779705198",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125447623779705198"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125642409711476956",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125642409711476956"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125640910851723436",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125640910851723436"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125640811807138129",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125640811807138129"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125636384052690952",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125636384052690952"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125585065459826858",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125585065459826858"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125636281472282909",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125636281472282909"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125642254907834678",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125642254907834678"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125471945684660733",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125471945684660733"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125642582420345073",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125642582420345073"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125545046703325465",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125545046703325465"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125416190562419177",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125416190562419177"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125641065919324245",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125641065919324245"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125622860890660895",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125622860890660895"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125641363232280999",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125641363232280999"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125423533123567814",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125423533123567814"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125641997213942174",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125641997213942174"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125638125447750069",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125638125447750069"
+      }
+     ]
+    }
+   ],
+   "id": "msg_1f5314a1-6626-9b80-b343-6b8cbec2adcf",
+   "role": "assistant",
+   "type": "message",
+   "status": "completed"
+  }
+ ],
+ "error": null
+}

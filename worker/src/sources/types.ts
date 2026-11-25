@@ -52,7 +52,7 @@ export interface SignalDraft {
   summary: string;
   /** Where it came from: a URL or a quote, plus when we saw it. */
   /** `observedAt` is an ISO 8601 UTC timestamp: when we saw it. The ESPN-down fallback keeps it as the signal's date. */
-  evidence: { url?: string; quote?: string; observedAt: string };
+  evidence: { url?: string; quote?: string; /** The account a post came from (X), always present on an X signal. */ handle?: string; observedAt: string };
   trust: TrustLevel;
   /**
    * Unique per (source, subject, slate day): the signals table's unique constraint will be exactly

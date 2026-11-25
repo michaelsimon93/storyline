@@ -66,12 +66,21 @@ const CURATION_SPEC = {
   blurbMaxChars:        { key: "blurb_max_chars",        type: "int" },   // STO-77
 } as const;
 
+// The X source's settings (STO-75), loaded by its own job only, like the two above (STO-106).
+const X_SPEC = {
+  xModel:          { key: "x_model",             type: "string" },
+  xTimeoutMs:      { key: "x_timeout_ms",        type: "int" },
+  xMaxStories:     { key: "x_max_stories",       type: "int" },
+  xMaxPostsPerRun: { key: "x_max_posts_per_run", type: "int" },
+} as const;
+
 type SpecShape = Record<string, { key: string; type: "int" | "string" }>;
 type Typed<S extends SpecShape> = { [K in keyof S]: S[K]["type"] extends "int" ? number : string };
 
 export type Config = Typed<typeof SPEC>;
 export type StoryConfig = Typed<typeof STORY_SPEC>;
 export type CurationConfig = Typed<typeof CURATION_SPEC>;
+export type XConfig = Typed<typeof X_SPEC>;
 
 export class ConfigError extends Error {
   /** One entry per bad setting, e.g. `missing story_score_max`, so an alert can name each key without parsing the message. */
@@ -137,4 +146,12 @@ export async function loadCurationConfig(db: Db): Promise<CurationConfig> {
   const keys = Object.values(CURATION_SPEC).map((s) => s.key);
   const { rows } = await db.query<{ key: string; value: unknown }>(`select key, value from app_config where key = any($1::text[])`, [keys]);
   return parseCurationConfig(rows);
+}
+
+export const parseXConfig = (rows: { key: string; value: unknown }[]): XConfig => parseSpec(X_SPEC, rows);
+
+export async function loadXConfig(db: Db): Promise<XConfig> {
+  const keys = Object.values(X_SPEC).map((s) => s.key);
+  const { rows } = await db.query<{ key: string; value: unknown }>(`select key, value from app_config where key = any($1::text[])`, [keys]);
+  return parseXConfig(rows);
 }
