@@ -11,12 +11,15 @@ export const story = (subject: string, kind: string, posts: [handle: string, id:
 });
 
 /** A completed Responses API body whose message text is `answer` (as JSON), with usage in the recorded shape. */
+const citationsFor = (answer: unknown) => ((answer as { stories?: { posts?: { url: string }[] }[] })?.stories ?? [])
+  .flatMap((s) => s.posts ?? []).map((p, i) => ({ type: "url_citation", url: p.url.replace(/^(https:\/\/x\.com)\/[^/]+\/status\//u, "$1/i/status/"), start_index: i, end_index: i + 1, title: String(i + 1) }));
+
 export function xaiResponse(answer: unknown, usage: { ticks?: number; posts?: number; searches?: number } = {}) {
   return {
     id: "resp-test", model: "grok-4.3", object: "response", status: "completed",
     output: [
       { type: "reasoning", id: "rs_1", summary: [], status: "completed" },
-      { type: "message", id: "msg_1", role: "assistant", status: "completed", content: [{ type: "output_text", text: typeof answer === "string" ? answer : JSON.stringify(answer), annotations: [] }] },
+      { type: "message", id: "msg_1", role: "assistant", status: "completed", content: [{ type: "output_text", text: typeof answer === "string" ? answer : JSON.stringify(answer), annotations: typeof answer === "string" ? [] : citationsFor(answer) }] },
     ],
     usage: { input_tokens: 1, output_tokens: 1, cost_in_usd_ticks: usage.ticks ?? 1_000_000_000,
       server_side_tool_usage_details: { x_search_calls: usage.searches ?? 3, x_posts_fetched: usage.posts ?? 20 } },

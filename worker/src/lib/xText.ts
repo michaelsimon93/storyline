@@ -32,7 +32,7 @@ export function xSummaryMessages(s: XSummary): string[] {
     `🐦 **X · slate ${s.slateDate}** · ${mode}`,
     `${s.storiesKept} stories kept${drops} · ${s.postsKept} posts${s.postsOverCap ? ` (${s.postsOverCap} over the cap, dropped)` : ""} · ${s.signalsStored} signals stored`,
     `Spend: about ${money(s.spend.usdEstimate)} (estimate) · ${s.spend.postsFetched} posts fetched · ${s.spend.searchCalls} searches`,
-    ...(s.dropped.length ? [`Dropped: ${s.dropped.slice(0, 5).map((d) => `${clean(d.story)} (${d.reason})`).join("; ")}${s.dropped.length > 5 ? `; …and ${s.dropped.length - 5} more` : ""}`] : []),
+    ...(s.dropped.length ? [`Dropped: ${s.dropped.slice(0, 5).map((d) => `${clip(clean(d.story), 60)} (${d.reason})`).join("; ")}${s.dropped.length > 5 ? `; …and ${s.dropped.length - 5} more` : ""}`] : []),
   ].join("\n");
 
   const order = { unreviewed: 0, approved: 1, rejected: 2 } as const;

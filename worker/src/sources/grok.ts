@@ -29,7 +29,11 @@ export interface GrokUsage {
   searchCalls: number;
 }
 
-export interface GrokAnswer { answer: unknown; usage: GrokUsage }
+export interface GrokAnswer {
+  answer: unknown; usage: GrokUsage;
+  /** Status ids of the posts the search actually fetched (the response's url_citation annotations). A post Grok writes that isn't among them has no fetched post behind it. */
+  citedStatusIds: Set<string>;
+}
 
 /** Ticks → US dollars, on the unverified 1e-10 assumption. */
 export const ticksToUsd = (ticks: number) => ticks / 1e10;
@@ -60,12 +64,15 @@ export async function askGrok(opts: GrokOptions, call: { input: string; schema: 
   if (parsed?.error) throw new GrokError(`xAI error: ${JSON.stringify(parsed.error).slice(0, 200)}`);
   if (parsed?.status && parsed.status !== "completed") throw new GrokError(`xAI response status ${parsed.status}${parsed.incomplete_details ? `: ${JSON.stringify(parsed.incomplete_details)}` : ""}`);
 
-  const text = (parsed?.output ?? [])
+  const parts = (parsed?.output ?? [])
     .filter((o: any) => o?.type === "message")
     .flatMap((o: any) => o.content ?? [])
-    .filter((c: any) => c?.type === "output_text" && typeof c.text === "string")
-    .map((c: any) => c.text as string)
-    .join("");
+    .filter((c: any) => c?.type === "output_text" && typeof c.text === "string");
+  const text = parts.map((c: any) => c.text as string).join("");
+  const citedStatusIds = new Set<string>(parts
+    .flatMap((c: any) => (Array.isArray(c.annotations) ? c.annotations : []))
+    .flatMap((a: any) => (a?.type === "url_citation" && typeof a.url === "string" ? [/\/status\/(\d{1,25})(?:[/?#]|$)/u.exec(a.url)?.[1]] : []))
+    .filter((id: string | undefined): id is string => !!id));
   if (!text) throw new GrokError("xAI answered with no text");
 
   const u = parsed?.usage ?? {};
@@ -74,5 +81,5 @@ export async function askGrok(opts: GrokOptions, call: { input: string; schema: 
     postsFetched: Number(u.server_side_tool_usage_details?.x_posts_fetched ?? 0),
     searchCalls: Number(u.server_side_tool_usage_details?.x_search_calls ?? 0),
   };
-  try { return { answer: JSON.parse(text), usage }; } catch { return { answer: text, usage }; }
+  try { return { answer: JSON.parse(text), usage, citedStatusIds }; } catch { return { answer: text, usage, citedStatusIds }; }
 }

@@ -77,9 +77,10 @@ export async function runXContext(db: Db, opts: XRunOptions): Promise<XRunResult
       } catch (e) { throw new SourceDown(e instanceof Error ? e.message : String(e)); }
 
       const approved = await approvedHandles(db);
+      await withdrawUnapproved(db);
       let built;
       try {
-        built = buildX({ answer: got.answer, ref, approved, observedAt: (opts.now?.() ?? new Date()).toISOString(), maxStories: cfg.xMaxStories, maxPosts: cfg.xMaxPostsPerRun });
+        built = buildX({ answer: got.answer, ref, approved, observedAt: (opts.now?.() ?? new Date()).toISOString(), maxStories: cfg.xMaxStories, maxPosts: cfg.xMaxPostsPerRun, citedIds: got.citedStatusIds });
       } catch (e) { throw new SourceDown(e instanceof Error ? e.message : String(e)); }   // an answer we can't read is the same as no answer
 
       const accounts = await recordAccounts(db, built.accounts);
@@ -123,6 +124,17 @@ async function slateRef(db: Db, slate: Awaited<ReturnType<typeof loadSlate>>): P
 async function approvedHandles(db: Db): Promise<Set<string>> {
   const { rows } = await db.query<{ handle: string }>(`select handle from x_accounts where status = 'approved'`);
   return new Set(rows.map((r) => r.handle));
+}
+
+/**
+ * Trust is copied onto a signal when it is stored, so rejecting (or un-approving) an account must reach the signals already stored:
+ * any attributed X signal whose account isn't approved any more goes back to unreviewed, whether or not tonight's search returns the post again.
+ */
+async function withdrawUnapproved(db: Db): Promise<void> {
+  await db.query(
+    `update signals set trust = 'unreviewed'
+      where source = $1 and trust = 'attributed'
+        and coalesce(evidence->>'handle', '') not in (select handle from x_accounts where status = 'approved')`, [SOURCE]);
 }
 
 /**
