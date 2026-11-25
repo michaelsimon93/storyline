@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { whyNotPublishable, storylineTypeOf, type LiveMarket } from "../src/domain/publishRules.js";
-import { publishPostChunks } from "../src/lib/publishText.js";
+import { cardEmbed, cardMessages } from "../src/lib/publishText.js";
+import type { PublishedCard } from "../src/jobs/publish.js";
 import type { CardBlurb, CitedSignal } from "../src/domain/blurbRules.js";
 
 const rules = { bandMin: 25, bandMax: 75, maxChars: 200 };
@@ -48,15 +49,41 @@ test("storyline type: known angles map, a new one is 'other' (so a new detector 
   assert.equal(storylineTypeOf("something_new"), "other");
 });
 
-test("#testing post: a short set is flagged 'Short: 3 of 5', a full one is not; an approved post's link is shown", () => {
+const cards = (n: number, signals: CitedSignal[] = [sig()]): PublishedCard[] => Array.from({ length: n }, (_, i) => ({
+  cardId: `c${i}`, storyId: `${i}`, playerName: `P${i}`, blurb: `Per @ShamsCharania, P${i} is back.`, facts: blurb("", signals).facts,
+  strike: 25, yesPriceCents: 40, noPriceCents: 62, tipOffAt: "2026-11-25T00:30:00Z",
+}));
+
+test("#testing deck: one embed per card with market, blurb, Yes %, No %, payout per $1 and tip-off in ET", () => {
+  const e = cardEmbed(cards(1)[0]!, "2026-11-24");
+  assert.equal(e.title, "P0 · points 25+");
+  assert.equal(e.description, "Per @ShamsCharania, P0 is back.");
+  const f = Object.fromEntries(e.fields.map((x) => [x.name, x.value]));
+  assert.deepEqual(f, { Yes: "40%", No: "62%", "Pays per $1": "Yes $2.50 · No $1.61", "Tip-off": "7:30 PM ET" });   // 00:30Z is 7:30 PM the evening before, EST
+  assert.equal(e.footer.text, "Storylines for Tue, Nov 24");
+  assert.equal(cardEmbed({ ...cards(1)[0]!, noPriceCents: null }, "2026-11-24").fields[1]!.value, "n/a");
+});
+
+test("#testing deck: an approved post's link is shown with its card", () => {
   const post = sig({ trust: "attributed", url: "https://x.com/ShamsCharania/status/1" });
-  const card = (i: number) => ({ cardId: `c${i}`, storyId: `${i}`, playerName: `P${i}`, blurb: `Per @ShamsCharania, P${i} is back.`, facts: blurb("", [post]).facts, strike: 25, yesPriceCents: 50 });
-  const base = { slateDate: "2026-11-24", curationRunId: 1, skipped: [] };
-  const short = publishPostChunks({ ...base, asked: 5, published: [card(1), card(2), card(3)] }).join("\n");
-  assert.match(short, /Short: 3 of 5/);
-  assert.match(short, /> Per @ShamsCharania, P1 is back\./);
-  assert.match(short, /source: <https:\/\/x\.com\/ShamsCharania\/status\/1>/);
-  assert.doesNotMatch(publishPostChunks({ ...base, asked: 2, published: [card(1), card(2)] }).join("\n"), /Short/);
+  assert.match(cardEmbed(cards(1, [post])[0]!, "2026-11-24").description, /source: <https:\/\/x\.com\/ShamsCharania\/status\/1>/);
+});
+
+test("#testing deck: up to 10 embeds per message, every message headed by the slate day, a short set flagged on the first", () => {
+  const msgs = cardMessages(cards(12), "2026-11-24", "**Short: 12 of 15**");
+  assert.deepEqual(msgs.map((m) => m.embeds.length), [10, 2]);
+  assert.equal(msgs[0]!.content, "**Storylines for Tue, Nov 24** · **Short: 12 of 15**");
+  assert.equal(msgs[1]!.content, "**Storylines for Tue, Nov 24**");
+  assert.deepEqual(cardMessages([], "2026-11-24"), []);
+});
+
+test("#testing deck: long text is clipped and a message never carries more embed text than Discord allows", () => {
+  const long = cards(10).map((c) => ({ ...c, playerName: "N".repeat(400), blurb: "b".repeat(3000) }));
+  for (const m of cardMessages(long, "2026-11-24")) {
+    assert.ok(m.embeds.length >= 1 && m.embeds.length <= 10);
+    assert.ok(m.embeds.every((e) => e.title.length <= 256 && e.description.length <= 1500));
+    assert.ok(m.embeds.reduce((a, e) => a + e.title.length + e.description.length + e.footer.text.length + e.fields.reduce((n, f) => n + f.name.length + f.value.length, 0), 0) <= 6000);
+  }
 });
 
 // Attacks: trust is checked as a deny-list, so a stored signal with a trust level publish doesn't know (missing, mis-cased) goes live.

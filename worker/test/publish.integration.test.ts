@@ -5,6 +5,7 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import type { Db } from "../src/lib/db.js";
 import { runPublish } from "../src/jobs/publish.js";
+import { publishJob } from "../src/jobs/index.js";
 import { freshDb } from "./helpers/testDb.js";
 
 const skip = !process.env.TEST_DATABASE_URL && "set TEST_DATABASE_URL to run integration tests";
@@ -244,4 +245,33 @@ test("a stored pick whose blurbFacts describe a different line than its market i
   const r = await runPublish(db!, { alert: async () => {}, date: DAY });
   assert.equal(r.status, "ok");
   assert.equal((await q<{ n: string }>(`select count(*) n from cards where player_id = $1`, [P[2]]))[0]!.n, "0");
+});
+
+// STO-67: the cards the run just published, with the tip-off and No price the deck post shows.
+test("the published cards carry the tip-off and No price, and a re-run posts nothing again", { skip }, async () => {
+  await q(`update markets set no_ask_cents = 52 where id = $1`, [markets[0]]);
+  await storePicks([{ i: 0 }, { i: 1 }]);
+  const posted: { content: string; embeds?: object[] }[] = [];
+  const feed = { post: async (content: string, embeds?: object[]) => { posted.push({ content, embeds }); } };
+  const job = publishJob(alerts().alert, feed, DAY);
+  const r = await job.run(db!) as { published: number };
+  assert.equal(r.published, 2);
+  assert.equal(posted.length, 1);
+  const first = posted[0]!.embeds![0] as { fields: { name: string; value: string }[] };
+  assert.equal(first.fields.find((f) => f.name === "No")!.value, "52%");
+  assert.match(first.fields.find((f) => f.name === "Tip-off")!.value, /^\d{1,2}:\d\d [AP]M ET$/);
+  assert.equal(posted[0]!.embeds!.length, 2);
+  await job.run(db!);
+  assert.equal(posted.length, 1, "already published: nothing is posted again");
+});
+
+test("a failing test feed never fails or undoes the publish", { skip }, async () => {
+  await storePicks([{ i: 0 }]);
+  const quiet = console.error; console.error = () => {};
+  try {
+    const r = await publishJob(alerts().alert, { post: async () => { throw new Error("discord down"); } }, DAY).run(db!) as { status: string };
+    assert.equal(r.status, "ok");
+  } finally { console.error = quiet; }
+  assert.equal(await cardCount(), 1);
+  assert.equal((await q<{ status: string }>(`select status from pipeline_runs where job = 'publish'`))[0]!.status, "ok");
 });

@@ -4,6 +4,7 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { testFeed } from "../src/lib/testFeed.js";
+import { postPublish } from "../src/lib/publishText.js";
 import { webhookAlert } from "../src/lib/alert.js";
 import { ingestSummaryText, storySummaryMessages } from "../src/lib/feedText.js";
 import type { StorySummary } from "../src/jobs/stories.js";
@@ -183,4 +184,35 @@ test("story summary: an empty day says so and posts one message", () => {
   const msgs = storySummaryMessages(s);
   assert.equal(msgs.length, 1);
   assert.match(msgs[0]!, /No stories found today\./);
+});
+
+// ---------------------------------------------------------------- the deck post (STO-67)
+
+test("the deck post sends embeds with mentions off, pauses between messages, and a failing webhook never throws", async () => {
+  const card = { cardId: "c", storyId: "1", playerName: "@everyone", blurb: "@everyone", facts: { signals: [], market: { stat: "points" } } as any, strike: 25, yesPriceCents: 40, noPriceCents: 62, tipOffAt: "2026-11-25T00:30:00Z" };
+  const summary = { slateDate: "2026-11-24", curationRunId: 1, asked: 12, published: Array.from({ length: 11 }, () => card), skipped: [{ storyId: "9", reason: "out_of_band" as const, detail: "76c" }] };
+  const posts = captureFetch();
+  const pauses: number[] = [];
+  await postPublish(testFeed({ DISCORD_TEST_WEBHOOK_URL: TEST_URL }, () => {}), summary, async (ms) => { pauses.push(ms); });
+  assert.deepEqual(posts.map((p) => p.body.embeds?.length), [10, 1, undefined]);
+  assert.ok(posts.every((p) => p.body.allowed_mentions.parse.length === 0));
+  assert.match(posts[2]!.body.content, /^Left out/);
+  assert.deepEqual(pauses, [500, 500], "a pause before each message after the first");
+  restore();
+
+  const many = { ...summary, published: [card], asked: 1, skipped: Array.from({ length: 60 }, (_, i) => ({ storyId: `${i}`, reason: "out_of_band" as const, detail: "x".repeat(100) })) };
+  const longPosts = captureFetch();
+  await postPublish(testFeed({ DISCORD_TEST_WEBHOOK_URL: TEST_URL }, () => {}), many, async () => {});
+  const left = longPosts.slice(1).map((p) => p.body.content as string);
+  assert.ok(left.length > 1 && left.every((c) => c.length <= 1800), "a long left-out list continues in more messages");
+  assert.equal(left.join("\n").match(/story \d+/g)!.length, 60, "none dropped");
+  restore();
+
+  const quiet = console.error; console.error = () => {};
+  try {
+    const m = installFetch(() => json({ message: "rate limited" }, 429, { "retry-after": "1" }));
+    restore = m.restore;
+    await assert.doesNotReject(postPublish(testFeed({ DISCORD_TEST_WEBHOOK_URL: TEST_URL }, () => {}), { ...summary, skipped: [] }, async () => {}));
+    assert.equal(m.calls.length, 2, "each message tried once, none retried");
+  } finally { console.error = quiet; }
 });
