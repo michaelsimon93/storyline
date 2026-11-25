@@ -96,3 +96,15 @@ test("the ESPN context settings come through typed", () => {
     [5, 250, 5, 5, 1, "30 9 * * *"]);
   assert.throws(() => parseConfig(without("espn_pause_ms")), /missing espn_pause_ms/);
 });
+
+// ---------------------------------------------------------------- job schedules: their own loader (STO-112, STO-117)
+
+test("a job's schedule row parses to its cron pattern; missing, mistyped or unparseable rows say why", async () => {
+  const { parseSchedule } = await import("../src/lib/jobSchedules.js");
+  assert.deepEqual(parseSchedule("story_schedule_et", [{ key: "story_schedule_et", value: "45 9 * * *" }], "story"), { ok: true, pattern: "45 9 * * *" });
+  assert.deepEqual(parseSchedule("story_schedule_et", [], "story"), { ok: false, problem: "missing story_schedule_et" });
+  const wrongType = parseSchedule("story_schedule_et", [{ key: "story_schedule_et", value: 5 }], "story");
+  assert.ok(!wrongType.ok && /should be a cron string/.test(wrongType.problem));
+  const badCron = parseSchedule("story_schedule_et", [{ key: "story_schedule_et", value: "99 99 * * *" }], "story");
+  assert.ok(!badCron.ok && /story_schedule_et/.test(badCron.problem));
+});

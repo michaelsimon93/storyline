@@ -7,7 +7,7 @@
 //    never add cards past the deck size or change a line people already have picks on (the database also refuses to move a line:
 //    migration 20261124180000).
 //  - No games that day: nothing is read or written. No finished curation run: an alert, nothing published.
-//  - Scheduling is STO-117; this runs on demand: npm run job -- publish.
+//  - Scheduled daily after curate (STO-117); also on demand: npm run job -- publish.
 
 import { withRun, type Db } from "../lib/db.js";
 import { loadCurationConfig, ConfigError } from "../lib/config.js";

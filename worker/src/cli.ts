@@ -9,7 +9,7 @@ import { webhookAlert } from "./lib/alert.js";
 import { testFeed } from "./lib/testFeed.js";
 import { alertText } from "./lib/alertText.js";
 import { waitForSchema } from "./lib/schema.js";
-import { ingestJob, scheduledJobs, onDemandJobs } from "./jobs/index.js";
+import { ingestJob, scheduledJobs, optionalScheduledJobs, onDemandJobs } from "./jobs/index.js";
 import { runJob, startScheduler, type RunOutcome } from "./scheduler.js";
 
 const [command, arg] = process.argv.slice(2);
@@ -30,7 +30,7 @@ async function main() {
   switch (command) {
     case "run": {
       const config = await loadConfig(db);
-      const scheduler = startScheduler(db, scheduledJobs(config, feed, alert), alert);
+      const scheduler = startScheduler(db, [...scheduledJobs(config, feed, alert), ...await optionalScheduledJobs(db, feed, alert)], alert);
       for (const { job, next } of scheduler.nextRuns()) {
         console.log(`scheduled ${job}: next run ${next?.toISOString() ?? "never"}`);
       }
