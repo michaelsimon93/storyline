@@ -8,8 +8,7 @@ import type { Job, Scheduled } from "../scheduler.js";
 import type { Db } from "../lib/db.js";
 import { loadOptionalSchedules } from "../lib/jobSchedules.js";
 import { alertText } from "../lib/alertText.js";
-import { resolveSlateDate } from "./ingest.js";
-import { ingest } from "./ingest.js";
+import { ingest, resolveSlateDate } from "./ingest.js";
 import { pollPrices } from "./poller.js";
 import { runEspnContext, JOB as CONTEXT_ESPN_JOB, type ContextRunResult } from "./contextEspn.js";
 import type { Alert } from "../lib/alert.js";
@@ -117,7 +116,8 @@ export function publishJob(alert: Alert, feed: TestFeed, date?: string): Job {
 
 /**
  * The scheduled curate run refuses to start unless today's latest story run succeeded (STO-117): curating a stale or missing
- * shortlist would publish yesterday's idea of the day. It alerts and publishes nothing. Not applied to `npm run job -- curate`.
+ * shortlist would publish yesterday's idea of the day. It alerts and publishes nothing. A refused run writes no pipeline_runs row;
+ * the alert is its only trace. Not applied to `npm run job -- curate`.
  */
 export function afterStory(inner: Job, alert: Alert, date?: string): Job {
   return {

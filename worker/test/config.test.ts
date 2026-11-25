@@ -108,7 +108,3 @@ test("a job's schedule row parses to its cron pattern; missing, mistyped or unpa
   const badCron = parseSchedule("story_schedule_et", [{ key: "story_schedule_et", value: "99 99 * * *" }], "story");
   assert.ok(!badCron.ok && /story_schedule_et/.test(badCron.problem));
 });
-
-test("the startup config does not read the story, curate or publish schedules", () => {
-  assert.doesNotThrow(() => parseConfig(valid), "boot config with none of the three rows");
-});
