@@ -252,3 +252,14 @@ test("a NUL character in a post excerpt doesn't crash the run", { skip }, async 
   const r = await run().catch((e: Error) => ({ status: `threw: ${e.message}` }));
   assert.ok(r.status === "ok" || r.status === "source_down", r.status);
 });
+
+// Follow-up from the eng-lead review: the downgrade must not depend on X being switched on.
+test("rejecting an account still withdraws its stored posts after X is switched off", { skip }, async () => {
+  await live();
+  await db!.query(`insert into x_accounts (handle, status) values ('inquirersports', 'approved')`);
+  const n = grok(recorded()); restore = n.restore;
+  await run();
+  await db!.query(`update x_accounts set status = 'rejected' where handle = 'inquirersports'; update feature_flags set enabled = false where key = 'context_x'`);
+  assert.equal((await run()).status, "off");
+  assert.deepEqual([...new Set((await signals()).filter((s) => s.evidence.handle === "inquirersports").map((s) => s.trust))], ["unreviewed"]);
+});

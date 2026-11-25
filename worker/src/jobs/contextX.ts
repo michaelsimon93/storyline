@@ -56,6 +56,8 @@ class SourceDown extends Error {}
 
 export async function runXContext(db: Db, opts: XRunOptions): Promise<XRunResult> {
   const slateDate = await resolveSlateDate(db, opts.date);
+  // Before the flag check on purpose: rejecting an account must reach stored signals even if X has since been switched off.
+  await withdrawUnapproved(db);
   if (!(await flagOn(db, FLAG))) return { status: "off", slateDate };
   if (!opts.apiKey) {
     const error = `${KEY_ENV} is not set`;
@@ -77,7 +79,6 @@ export async function runXContext(db: Db, opts: XRunOptions): Promise<XRunResult
       } catch (e) { throw new SourceDown(e instanceof Error ? e.message : String(e)); }
 
       const approved = await approvedHandles(db);
-      await withdrawUnapproved(db);
       let built;
       try {
         built = buildX({ answer: got.answer, ref, approved, observedAt: (opts.now?.() ?? new Date()).toISOString(), maxStories: cfg.xMaxStories, maxPosts: cfg.xMaxPostsPerRun, citedIds: got.citedStatusIds });
