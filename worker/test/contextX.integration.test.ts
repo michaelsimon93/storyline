@@ -205,3 +205,50 @@ test("the job posts the account review to #testing and logs counts, not account 
   assert.deepEqual([out.accounts, out.newAccounts], [3, 3]);
   assert.equal(await contextXJob(alert, { post: async () => { throw new Error("discord down"); } }, DAY, { XAI_API_KEY: "k" }).run(db!).then(() => "ok"), "ok", "a feed failure never fails the run");
 });
+
+/** The recorded response with `extra` posts added to its first story (Detroit Pistons), citations left as recorded. */
+const recordedWith = (extra: { url: string; handle: string; excerpt: string }[]) => {
+  const r = recorded() as { output: { type: string; content?: { text: string }[] }[] };
+  const c = r.output.find((o) => o.type === "message")!.content![0]!;
+  const answer = JSON.parse(c.text);
+  answer.stories[0].posts.push(...extra);
+  c.text = JSON.stringify(answer);
+  return r;
+};
+
+// Attacks "a claim without a post is dropped": the recorded response lists every post the search fetched as url_citations (24 posts
+// fetched, 24 citations). A post URL Grok wrote that the search never fetched is a claim with no post behind it, and here it would
+// become attributed reporting from an approved account.
+test("a post the search never fetched (not among the response's citations) is not stored", { skip }, async () => {
+  await live();
+  await db!.query(`insert into x_accounts (handle, status) values ('inquirersports', 'approved')`);
+  const n = grok(recordedWith([{ url: "https://x.com/inquirersports/status/1999999999999999999", handle: "@inquirersports", excerpt: "Cade Cunningham is out tonight" }]));
+  restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  assert.deepEqual((await signals()).filter((s) => s.key === "x:1999999999999999999").map((s) => s.trust), [], "an invented post must not reach curation");
+});
+
+// Attacks "status is the only thing that makes a post quotable": rejecting an account that was approved earlier in the day must stop
+// its posts being quoted tonight, even if the next run doesn't happen to return the same post (trust is copied onto the signal).
+test("rejecting an approved account stops tonight's stored posts from it being attributed", { skip }, async () => {
+  await live();
+  await db!.query(`insert into x_accounts (handle, status) values ('inquirersports', 'approved')`);
+  const n = grok(recorded()); restore = n.restore;
+  await run();
+  assert.ok((await signals()).some((s) => s.evidence.handle === "inquirersports" && s.trust === "attributed"), "precondition");
+  await db!.query(`update x_accounts set status = 'rejected' where handle = 'inquirersports'`);
+  restore();
+  const n2 = grok(xaiResponse({ stories: [story("Nikola Jokic", "player", [["someone", "42", "Jokic is cooking"]])] })); restore = n2.restore;
+  await runXContext(db!, { alert, date: DAY, apiKey: "k", now: () => new Date(`${DAY}T23:30:00Z`) });
+  assert.deepEqual((await signals()).filter((s) => s.evidence.handle === "inquirersports").map((s) => s.trust), ["unreviewed"]);
+});
+
+// Attacks "a failed Grok call is reported and curation continues": Postgres text can't hold NUL, so an excerpt with \u0000 in Grok's
+// JSON makes the run throw a raw database error instead of being dropped or reported as an unreadable answer.
+test("a NUL character in a post excerpt doesn't crash the run", { skip }, async () => {
+  await live();
+  const n = grok(xaiResponse({ stories: [story("Nikola Jokic", "player", [["a", "9", "Jokic\u0000 is cooking"]])] })); restore = n.restore;
+  const r = await run().catch((e: Error) => ({ status: `threw: ${e.message}` }));
+  assert.ok(r.status === "ok" || r.status === "source_down", r.status);
+});

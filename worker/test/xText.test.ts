@@ -59,3 +59,10 @@ test("many accounts continue in more messages, each under Discord's 2000 charact
 test("no accounts: the post says so instead of an empty list", () => {
   assert.match(xSummaryMessages(summary([]))[0]!, /No accounts this run/);
 });
+
+// Attacks: the header isn't chunked and a dropped story's subject is Grok's text, unbounded. Five long subjects push the first
+// message over Discord's 2000-character limit, so the whole account review post is rejected.
+test("long dropped-story subjects still keep every message under Discord's 2000 characters", () => {
+  const dropped = Array.from({ length: 5 }, (_, i) => ({ story: `Story ${i} ` + "about a player and another player ".repeat(15), reason: "player not on tonight's slate" }));
+  for (const m of xSummaryMessages(summary([line({ handle: "a" })], { dropped }))) assert.ok(m.length <= 2000, `${m.length}`);
+});

@@ -39,6 +39,8 @@ select as_user('a9400000-0000-0000-0000-0000000000f1');
 select t_err('x accounts: a signed-in user can''t read the list', $q$select * from x_accounts$q$, 'permission denied%');
 select t_err('x accounts: a signed-in user can''t approve an account', $q$update x_accounts set status = 'approved' where handle = 'some_bot'$q$, 'permission denied%');
 select t_err('x accounts: a signed-in user can''t add an account', $q$insert into x_accounts (handle) values ('sneaky')$q$, 'permission denied%');
+-- Attacks the review decision by deletion: a deleted rejected account would come back unreviewed on the next run.
+select t_err('x accounts: a signed-in user can''t delete an account', $q$delete from x_accounts where handle = 'some_bot'$q$, 'permission denied%');
 reset role;
 select t_eq('x accounts: nothing a user tried changed the list', (select count(*)::int from x_accounts where handle in ('sneaky') or (handle = 'some_bot' and status <> 'rejected')), 0);
 

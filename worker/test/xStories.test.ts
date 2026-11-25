@@ -178,3 +178,32 @@ test("the client fails loudly and never retries a paid call: 429, 5xx, an error 
     try { await assert.rejects(askGrok(opts, call), pat); assert.equal(n.calls.length, 1, "one attempt only"); } finally { n.restore(); }
   }
 });
+
+// ---------------------------------------------------------------- trust: who a post is credited to (QA, STO-75)
+
+// Attacks: X ignores the handle segment of a status URL, so the URL's handle is only Grok's word. When one answer credits the same
+// post to two accounts, Grok has mixed up authors, and neither may be quoted as an approved account's reporting.
+test("the same post credited to two accounts in one answer is never attributed", () => {
+  const a = { stories: [
+    story("Detroit Pistons", "team", [["randomfan", "555", "Cade is out tonight"]]),
+    story("Boston Celtics", "team", [["shams", "555", "Cade is out tonight"]]),
+  ] };
+  const b = buildX({ ...base, approved: new Set(["shams"]), answer: a });
+  assert.deepEqual(b.signals.filter((s) => s.key === "x:555" && s.trust === "attributed").map((s) => s.evidence.handle), [],
+    "post 555 is credited to @randomfan and @shams in the same answer, so it can't be @shams's reporting");
+});
+
+// Attacks: Grok's two fields for the author disagree (URL says @shams, handle says @realreporter). The URL is no more verified than
+// the handle field, so a disagreement means Grok doesn't know who wrote it: don't credit an approved account.
+test("a post whose URL and handle name different accounts is never attributed", () => {
+  const a = { stories: [{ ...story("Detroit Pistons", "team", []), posts: [{ url: "https://x.com/shams/status/111", handle: "@realreporter", excerpt: "Cade is out" }] }] };
+  const b = buildX({ ...base, approved: new Set(["shams"]), answer: a });
+  assert.equal(b.signals[0]?.trust, "unreviewed");
+});
+
+// Attacks: x.com/i/status/<id> is X's author-less post link (the recorded citations all use it). It must not become an account "@i"
+// that is listed for review and could be approved (publishRules already refuses "i" as an account; the parser should too).
+test("an author-less x.com/i/status link is not credited to an account named i", () => {
+  const p = parsePost({ url: "https://x.com/i/status/2125447623779705198", excerpt: "x" });
+  assert.ok(p === null || p.handle !== "i", JSON.stringify(p));
+});
