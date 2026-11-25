@@ -61,8 +61,10 @@ export function cardMessages(cards: PublishedCard[], slateDate: string, note = "
   return groups.map((embeds, i) => ({ content: i === 0 && note ? `${header} · ${note}` : header, embeds }));
 }
 
+const defaultPause = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 /** Post these cards to the test feed. Never throws (the feed doesn't); pauses between messages to stay under the rate limit. */
-export async function postCards(feed: TestFeed, cards: PublishedCard[], slateDate: string, note = "", pause: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))): Promise<void> {
+export async function postCards(feed: TestFeed, cards: PublishedCard[], slateDate: string, note = "", pause: (ms: number) => Promise<void> = defaultPause): Promise<void> {
   const messages = cardMessages(cards, slateDate, note);
   for (const [i, m] of messages.entries()) {
     if (i > 0) await pause(PAUSE_MS);
@@ -74,7 +76,14 @@ export async function postCards(feed: TestFeed, cards: PublishedCard[], slateDat
 export async function postPublish(feed: TestFeed, s: PublishSummary, pause?: (ms: number) => Promise<void>): Promise<void> {
   const n = s.published.length;
   await postCards(feed, s.published, s.slateDate, n < s.asked ? `**Short: ${n} of ${s.asked}**` : "", pause);
-  if (s.skipped.length) {
-    await feed.post(clip(`Left out (${slateLabel(s.slateDate)}): ${s.skipped.map((k) => `story ${k.storyId} (${k.reason}: ${k.detail})`).join("; ")}`, MAX_TEXT));
+  // What was left out can run long on a bad day; it continues in more messages rather than losing its tail.
+  const lines = s.skipped.map((k) => `story ${k.storyId} (${k.reason}: ${k.detail})`);
+  let cur = `Left out (${slateLabel(s.slateDate)}):`, first = true;
+  const send = async () => { if (!first || n > 0) await (pause ?? defaultPause)(PAUSE_MS); first = false; await feed.post(cur); };
+  for (const l of lines) {
+    const line = clip(l, MAX_TEXT - 60);
+    if (cur.length + line.length + 3 > MAX_TEXT) { await send(); cur = `Left out (continued):`; }
+    cur += `\n- ${line}`;
   }
+  if (lines.length) await send();
 }

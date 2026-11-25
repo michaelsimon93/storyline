@@ -197,7 +197,15 @@ test("the deck post sends embeds with mentions off, pauses between messages, and
   assert.deepEqual(posts.map((p) => p.body.embeds?.length), [10, 1, undefined]);
   assert.ok(posts.every((p) => p.body.allowed_mentions.parse.length === 0));
   assert.match(posts[2]!.body.content, /^Left out/);
-  assert.deepEqual(pauses, [500], "one pause, between the two card messages");
+  assert.deepEqual(pauses, [500, 500], "a pause before each message after the first");
+  restore();
+
+  const many = { ...summary, published: [card], asked: 1, skipped: Array.from({ length: 60 }, (_, i) => ({ storyId: `${i}`, reason: "out_of_band" as const, detail: "x".repeat(100) })) };
+  const longPosts = captureFetch();
+  await postPublish(testFeed({ DISCORD_TEST_WEBHOOK_URL: TEST_URL }, () => {}), many, async () => {});
+  const left = longPosts.slice(1).map((p) => p.body.content as string);
+  assert.ok(left.length > 1 && left.every((c) => c.length <= 1800), "a long left-out list continues in more messages");
+  assert.equal(left.join("\n").match(/story \d+/g)!.length, 60, "none dropped");
   restore();
 
   const quiet = console.error; console.error = () => {};
