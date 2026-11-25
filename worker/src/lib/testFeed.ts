@@ -10,8 +10,8 @@ export const ENABLED_ENV = "DISCORD_TEST_FEED_ENABLED";
 const OFF = new Set(["false", "0", "off", "no"]);
 
 export interface TestFeed {
-  /** Post one message. Never throws, never retries. */
-  post(content: string): Promise<void>;
+  /** Post one message, optionally with embeds. Never throws, never retries. */
+  post(content: string, embeds?: object[]): Promise<void>;
 }
 
 export function testFeed(env: NodeJS.ProcessEnv = process.env, log: (line: string) => void = console.log): TestFeed {
@@ -23,9 +23,9 @@ export function testFeed(env: NodeJS.ProcessEnv = process.env, log: (line: strin
   }
   log("discord test feed on");
   return {
-    async post(content) {
+    async post(content, embeds) {
       // allowed_mentions: a name or blurb containing "@everyone" must not ping the channel.
-      await postWebhook("test", url, { content, allowed_mentions: { parse: [] } }, content.split("\n")[0]!);
+      await postWebhook("test", url, { content, ...(embeds?.length ? { embeds } : {}), allowed_mentions: { parse: [] } }, content.split("\n")[0]!);
     },
   };
 }

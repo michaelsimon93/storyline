@@ -21,7 +21,7 @@ export const JOB = "publish";
 
 interface StoredPick { storyId: string; marketId: string; blurb: string; blurbFacts: BlurbFacts }
 
-export interface PublishedCard { cardId: string; storyId: string; playerName: string; blurb: string; facts: BlurbFacts; strike: number; yesPriceCents: number }
+export interface PublishedCard { cardId: string; storyId: string; playerName: string; blurb: string; facts: BlurbFacts; strike: number; yesPriceCents: number; noPriceCents: number | null; tipOffAt: string }
 export interface PublishSummary { slateDate: string; curationRunId: number; asked: number; published: PublishedCard[]; skipped: Skip[] }
 
 export type PublishResult =
@@ -81,7 +81,7 @@ export async function runPublish(db: Db, opts: { alert: Alert; date?: string }):
           [slateDate, picks.map((p) => p.storyId)]);
         const storyOf = new Map(stories.rows.map((r) => [r.id as string, r]));
         const mk = await client.query(
-          `select m.id, m.status::text as status, m.yes_ask_cents, m.game_id, m.player_id, m.strike::float8 as strike, p.full_name,
+          `select m.id, m.status::text as status, m.yes_ask_cents, m.game_id, m.player_id, m.strike::float8 as strike, m.no_ask_cents, g.tip_off_at, p.full_name,
                   (g.tip_off_at <= now() or g.status::text <> 'scheduled') as started
              from markets m join games g on g.id = m.game_id left join players p on p.id = m.player_id where m.id = any($1::uuid[])`,
           [picks.map((p) => p.marketId)]);
@@ -105,7 +105,8 @@ export async function runPublish(db: Db, opts: { alert: Alert; date?: string }):
               `insert into cards (slate_date, sort_key, game_id, subject, player_id, team_id, market_id, blurb, blurb_facts, storyline_type, curation_run_id)
                values ($1, $2, $3, 'player', $4, $5, $6, $7, $8, $9, $10) returning id`,
               [slateDate, published.length + 1, story.game_id, story.player_id, story.team_id, p.marketId, p.blurb, JSON.stringify(p.blurbFacts), storylineTypeOf(story.angle), curationRunId]);
-            published.push({ cardId: ins.rows[0].id, storyId: p.storyId, playerName: m!.full_name, blurb: p.blurb, facts: p.blurbFacts, strike: Number(m!.strike), yesPriceCents: m!.yes_ask_cents });
+            published.push({ cardId: ins.rows[0].id, storyId: p.storyId, playerName: m!.full_name, blurb: p.blurb, facts: p.blurbFacts, strike: Number(m!.strike), yesPriceCents: m!.yes_ask_cents,
+              noPriceCents: m!.no_ask_cents ?? null, tipOffAt: new Date(m!.tip_off_at).toISOString() });
             await client.query("release savepoint card");
           } catch (e) {
             await client.query("rollback to savepoint card");
