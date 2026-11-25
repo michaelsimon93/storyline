@@ -34,6 +34,7 @@ How the backend runs in production: the schema on **Supabase**, the worker on **
 | `DATABASE_URL` | The session pooler string from above, with the password filled in and ending in `?uselibpqcompat=true&sslmode=require` |
 | `ALERT_WEBHOOK_URL` | The Discord alerts channel's webhook URL |
 | `ANTHROPIC_API_KEY` | The worker's Anthropic API key, from the Anthropic Console. Curation (`npm run job -- curate`) calls Claude with it and fails with an authentication error without it. Needs billing or credit on the account. Never in the repo or in chat |
+| `XAI_API_KEY` | The worker's xAI API key (console.x.ai). The X search (`npm run job -- context:x`) calls Grok with it; unset, the job alerts and skips, and curation is unaffected. Needs credit on the account (about $0.14 per search). Never in the repo or in chat |
 | `DISCORD_TEST_WEBHOOK_URL` | Optional. The Discord `#testing` channel's webhook URL: each ingest posts a summary there. Unset = off. Never the alerts URL |
 | `DISCORD_TEST_FEED_ENABLED` | Optional. `false` turns the test feed off but keeps its URL. Takes effect when Railway applies the variable change (it restarts the same build; no code change or PR) |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `120` (time between SIGTERM and SIGKILL; Railway's default is 0) |

@@ -12,6 +12,8 @@ import { ingest, resolveSlateDate } from "./ingest.js";
 import { pollPrices } from "./poller.js";
 import { runEspnContext, JOB as CONTEXT_ESPN_JOB, type ContextRunResult } from "./contextEspn.js";
 import type { Alert } from "../lib/alert.js";
+import { runXContext, JOB as CONTEXT_X_JOB, KEY_ENV as XAI_KEY_ENV } from "./contextX.js";
+import { xSummaryMessages } from "../lib/xText.js";
 import { runStories, JOB as STORY_JOB } from "./stories.js";
 import { runCuration, JOB as CURATE_JOB } from "./curate.js";
 import { postCuration } from "../lib/curationText.js";
@@ -47,6 +49,27 @@ export function contextEspnJob(alert: Alert, date?: string): Job {
       if (r.status !== "fallback") return r;
       const dates = r.signals.map((s) => s.evidence.observedAt).sort();   // how stale the stand-in is, for whoever reads the log
       return { ...r, signals: r.signals.length, oldestObservedAt: dates[0] ?? null, newestObservedAt: dates[dates.length - 1] ?? null };
+    },
+  };
+}
+
+/**
+ * The X search (STO-75): Grok proposes stories; the accounts it pulled from go to #testing for review. Run on demand while the
+ * approved list is built: `npm run job -- context:x`. Scheduling comes when the flag is turned on for real.
+ */
+export function contextXJob(alert: Alert, feed: TestFeed, date?: string, env: NodeJS.ProcessEnv = process.env): Job {
+  return {
+    name: CONTEXT_X_JOB,
+    run: async (db) => {
+      const r = await runXContext(db, { alert, date, apiKey: env[XAI_KEY_ENV]?.trim() || undefined });
+      if (r.status !== "ok") return r;
+      try {
+        for (const m of xSummaryMessages(r.summary)) await feed.post(m);
+      } catch (err) {
+        console.error(`test feed: could not post X summary: ${err instanceof Error ? err.message : err}`);
+      }
+      const { accounts, stories: _stories, ...counts } = r.summary;   // the log keeps the counts; the accounts live in x_accounts
+      return { ...counts, accounts: accounts.length, newAccounts: accounts.filter((a) => a.isNew).length };
     },
   };
 }
@@ -140,7 +163,7 @@ export function afterStory(inner: Job, alert: Alert, date?: string): Job {
 
 /** Jobs that run only when asked (`npm run job -- <name>`), not on a schedule. */
 export function onDemandJobs(feed: TestFeed, alert: Alert): Job[] {
-  return [storyJob(alert, feed), curateJob(alert, feed), publishJob(alert, feed)];
+  return [contextXJob(alert, feed), storyJob(alert, feed), curateJob(alert, feed), publishJob(alert, feed)];
 }
 
 export function scheduledJobs(config: Config, feed: TestFeed, alert: Alert): Scheduled[] {
