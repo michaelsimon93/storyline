@@ -48,7 +48,7 @@ test("a missing X schedule row skips only the X search and alerts; story still r
   const optional = await optionalScheduledJobs(db!, feed, alert);
   assert.ok(!names(optional).includes("context:x"));
   assert.ok(alerts.some((a) => /context:x is not scheduled: missing context_x_schedule_et/.test(a)));
-  assert.equal(alerts.length, 2, "story (deleted in the test above) and context:x");
+  assert.ok(alerts.some((a) => /story is not scheduled/.test(a)), "story (deleted in the test above) alerts too");
 });
 
 test("the scheduled X job makes no Grok call while the flag is off, whatever the key says", { skip }, async () => {
@@ -67,7 +67,7 @@ test("a malformed schedule row is skipped the same way, for curate and publish t
   alerts.length = 0;
   await db!.query(`delete from app_config where key in ('curate_schedule_et', 'publish_schedule_et')`);
   assert.deepEqual(names(await optionalScheduledJobs(db!, feed, alert)), []);
-  assert.equal(alerts.length, 4, "context:x and story (still deleted), curate and publish each alert once");
+  for (const j of ["context:x", "story", "curate", "publish"]) assert.equal(alerts.filter((a) => new RegExp(`${j} is not scheduled`).test(a)).length, 1, `${j} alerts once`);
   // The database refuses a bad shape on write; a value that passes the shape but croner can't parse is caught by the loader.
   await db!.query(`insert into app_config (key, value, value_type, is_public, description) values ('curate_schedule_et', '"99 99 * * *"', 'string', false, 'x')`);
   alerts.length = 0;

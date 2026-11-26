@@ -28,7 +28,7 @@ export function accountLine(a: ReviewLine): string {
 /** One proposed story: what it is about (our player, team or game), why care, the chatter, and which accounts it came from. */
 export function storyLine(s: XSummary["stories"][number]): string {
   const from = s.handles.map((h) => `@${h}`).join(", ");
-  return `• **${clip(clean(s.subject), 60)}** (${s.kind}) · chatter: ${s.chatter}\n  ${clip(clean(s.whyCare), 200)}\n  from ${clip(from, 120)}`;
+  return `• **${clip(clean(s.subject), 60)}** (${s.kind}) · chatter: ${clean(s.chatter)}\n  ${clip(clean(s.whyCare), 200)}\n  from ${clip(from, 120)}`;
 }
 
 export function xSummaryMessages(s: XSummary): string[] {
