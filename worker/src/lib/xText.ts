@@ -25,6 +25,12 @@ export function accountLine(a: ReviewLine): string {
   return `• \`@${a.handle}\` · ${tag} · <https://x.com/${a.handle}> · cited by ${a.storiesCiting} ${a.storiesCiting === 1 ? "story" : "stories"}\n  "${clip(clean(a.sampleExcerpt), MAX_SAMPLE)}" <${a.sampleUrl}>`;
 }
 
+/** One proposed story: what it is about (our player, team or game), why care, the chatter, and which accounts it came from. */
+export function storyLine(s: XSummary["stories"][number]): string {
+  const from = s.handles.map((h) => `@${h}`).join(", ");
+  return `• **${clip(clean(s.subject), 60)}** (${s.kind}) · chatter: ${s.chatter}\n  ${clip(clean(s.whyCare), 200)}\n  from ${clip(from, 120)}`;
+}
+
 export function xSummaryMessages(s: XSummary): string[] {
   const mode = s.mode === "report_only" ? "**report only**: nothing here reaches a card" : "live";
   const drops = s.dropped.length ? `; dropped ${s.dropped.length} (${[...new Set(s.dropped.map((d) => d.reason))].join(", ")})` : "";
@@ -41,8 +47,16 @@ export function xSummaryMessages(s: XSummary): string[] {
   const foot = todo.length ? `To approve (edit the list first): \`${approveStatement(todo)}\`` : "";
 
   const msgs: string[] = [];
-  let cur: string[] = [head, `**Accounts pulled from (${sorted.length})**: reply approved or not for each`];
+  let cur: string[] = [head, `**Proposed stories (${s.stories.length})**`];
   const flush = () => { if (cur.length) msgs.push(cur.join("\n")); cur = []; };
+  for (const st of s.stories) {
+    const line = storyLine(st);
+    if ([...cur, line].join("\n").length > MAX_CHARS) flush();
+    cur.push(line);
+  }
+  if (s.stories.length === 0) cur.push("No stories this run.");
+  flush();
+  cur = [`**Accounts pulled from (${sorted.length})**: reply approved or not for each`];
   for (const a of sorted) {
     const line = accountLine(a);
     if ([...cur, line].join("\n").length > MAX_CHARS) flush();

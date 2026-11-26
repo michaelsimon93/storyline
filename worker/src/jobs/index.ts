@@ -54,8 +54,9 @@ export function contextEspnJob(alert: Alert, date?: string): Job {
 }
 
 /**
- * The X search (STO-75): Grok proposes stories; the accounts it pulled from go to #testing for review. Run on demand while the
- * approved list is built: `npm run job -- context:x`. Scheduling comes when the flag is turned on for real.
+ * The X search (STO-75): Grok proposes stories; the stories and the accounts it pulled from go to #testing for review.
+ * Scheduled daily through its own tolerant loader (STO-145), before the story step; also runnable by hand: `npm run job -- context:x`.
+ * The `context_x` flag is checked on every run, so switching it off stops the spend without touching the schedule.
  */
 export function contextXJob(alert: Alert, feed: TestFeed, date?: string, env: NodeJS.ProcessEnv = process.env): Job {
   return {
@@ -174,9 +175,10 @@ export function scheduledJobs(config: Config, feed: TestFeed, alert: Alert): Sch
   ];
 }
 
-/** The story, curate and publish steps, each on its own `app_config` schedule; a bad or missing row skips only that job and alerts. */
+/** The X search, story, curate and publish steps, each on its own `app_config` schedule; a bad or missing row skips only that job and alerts. */
 export function optionalScheduledJobs(db: Db, feed: TestFeed, alert: Alert): Promise<Scheduled[]> {
   return loadOptionalSchedules(db, alert, [
+    { key: "context_x_schedule_et", job: contextXJob(alert, feed) },
     { key: "story_schedule_et", job: storyJob(alert, feed) },
     { key: "curate_schedule_et", job: afterStory(curateJob(alert, feed), alert) },
     { key: "publish_schedule_et", job: publishJob(alert, feed) },

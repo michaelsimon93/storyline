@@ -201,6 +201,7 @@ test("the job posts the account review to #testing and logs counts, not account 
   const posted: string[] = [];
   const out = await contextXJob(alert, { post: async (c) => { posted.push(c); } }, DAY, { XAI_API_KEY: " k " }).run(db!) as any;
   assert.match(posted.join("\n"), /@pulssix/);
+  assert.match(posted.join("\n"), /Proposed stories \(3\)[\s\S]*Detroit Pistons[\s\S]*from @/);
   assert.match(posted.join("\n"), /handle in \(/);
   assert.deepEqual([out.accounts, out.newAccounts], [3, 3]);
   assert.equal(await contextXJob(alert, { post: async () => { throw new Error("discord down"); } }, DAY, { XAI_API_KEY: "k" }).run(db!).then(() => "ok"), "ok", "a feed failure never fails the run");

@@ -40,7 +40,7 @@ export interface XSummary {
   slateDate: string; runId: number; mode: "report_only" | "live";
   storiesKept: number; dropped: Dropped[]; postsKept: number; postsOverCap: number; signalsStored: number;
   /** What each kept story says (a lead for tuning the trending angle later). Not stored as signals. */
-  stories: { subject: string; kind: string; whyCare: string; chatter: string; chatterBasis: string; posts: number }[];
+  stories: { subject: string; kind: string; whyCare: string; chatter: string; chatterBasis: string; posts: number; handles: string[] }[];
   /** Spend: xAI's own counter. The dollar figure assumes 1 tick = 1e-10 USD (unverified), so it is an estimate. */
   spend: { costTicks: number; usdEstimate: number; postsFetched: number; searchCalls: number };
   accounts: ReviewLine[];

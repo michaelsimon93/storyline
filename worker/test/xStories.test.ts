@@ -32,6 +32,7 @@ test("recorded answer: stories we can name are kept; two-player stories and play
     ["Victor Wembanyama and De'Aaron Fox", "player not on tonight's slate"],
   ]);
   assert.deepEqual(b.stories.map((s) => s.kind), ["team", "team", "game"]);
+  for (const st of b.stories) assert.ok(st.handles.length > 0 && st.handles.every((h) => b.accounts.some((a) => a.handle === h)), "each story names accounts the review lists");
 });
 
 test("recorded answer: every signal has the post URL and the account handle, and none is trusted yet", () => {
