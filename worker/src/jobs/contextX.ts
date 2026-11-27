@@ -11,10 +11,10 @@ import { withRun, type Db } from "../lib/db.js";
 import { loadXConfig, flagOn, ConfigError } from "../lib/config.js";
 import { alertText } from "../lib/alertText.js";
 import type { Alert } from "../lib/alert.js";
-import { askGrok, ticksToUsd } from "../sources/grok.js";
+import { askGrok, ticksToUsd, XAI_MAX_ALLOWED_HANDLES, type GrokUsage } from "../sources/grok.js";
 import { loadSlate } from "../sources/slate.js";
 import { storeSignals } from "../sources/signals.js";
-import { STORIES_SCHEMA, storiesPrompt, buildX, type XSlateRef, type Dropped } from "../domain/xStories.js";
+import { STORIES_SCHEMA, storiesPrompt, handlesPrompt, buildX, type XSlateRef, type Dropped } from "../domain/xStories.js";
 import { LEAGUE, resolveSlateDate } from "./ingest.js";
 
 export const FLAG = "context_x";
@@ -44,6 +44,8 @@ export interface XSummary {
   /** Spend: xAI's own counter. The dollar figure assumes 1 tick = 1e-10 USD (unverified), so it is an estimate. */
   spend: { costTicks: number; usdEstimate: number; postsFetched: number; searchCalls: number };
   accounts: ReviewLine[];
+  /** The searches limited to approved accounts (STO-144): how many approved handles, searches run, and searches that failed. */
+  handleSearches: { handles: number; calls: number; failed: number };
 }
 
 export type XRunResult =
@@ -72,16 +74,41 @@ export async function runXContext(db: Db, opts: XRunOptions): Promise<XRunResult
       const ref = await slateRef(db, slate);
       const reportOnly = await flagOn(db, REPORT_ONLY_FLAG);
 
+      const grokOpts = { apiKey: opts.apiKey!, model: cfg.xModel, timeoutMs: cfg.xTimeoutMs };
+      const schema = STORIES_SCHEMA as unknown as Record<string, unknown>;
       let got;
       try {
-        got = await askGrok({ apiKey: opts.apiKey!, model: cfg.xModel, timeoutMs: cfg.xTimeoutMs },
-          { input: storiesPrompt(ref, cfg.xMaxStories), schema: STORIES_SCHEMA as unknown as Record<string, unknown>, schemaName: "stories" });
+        got = await askGrok(grokOpts, { input: storiesPrompt(ref, cfg.xMaxStories), schema, schemaName: "stories" });
       } catch (e) { throw new SourceDown(e instanceof Error ? e.message : String(e)); }
 
       const approved = await approvedHandles(db);
+      // The approved accounts are searched on their own (STO-144), so their posts are pulled even when nothing is trending. A failed
+      // or unreadable search is reported and skipped: the open search above already succeeded, so the run goes on without it.
+      const handles = [...approved].sort();
+      const batches: string[][] = [];
+      for (let i = 0; i < handles.length && batches.length < cfg.xMaxHandleSearches; i += XAI_MAX_ALLOWED_HANDLES) batches.push(handles.slice(i, i + XAI_MAX_ALLOWED_HANDLES));
+      const handleStories: unknown[] = [], cited = new Set(got.citedStatusIds);
+      const usage: GrokUsage = { ...got.usage };
+      let failed = 0, handleOk = 0;
+      for (const batch of batches) {
+        try {
+          const r = await askGrok(grokOpts, { input: handlesPrompt(ref, batch, cfg.xMaxStories), schema, schemaName: "stories", allowedHandles: batch });
+          usage.costTicks += r.usage.costTicks; usage.postsFetched += r.usage.postsFetched; usage.searchCalls += r.usage.searchCalls;   // billed even if unreadable
+          const list = (r.answer as { stories?: unknown } | null)?.stories;
+          if (!Array.isArray(list)) throw new Error("answer has no stories list");
+          handleStories.push(...list); r.citedStatusIds.forEach((id) => cited.add(id)); handleOk++;
+        } catch (e) {
+          failed++;
+          await opts.alert(alertText({ severity: "warning", job: JOB, headline: `${JOB}: the search over approved accounts failed (${batch.length} handles)`, error: e, note: "The open X search went on without it." }));
+        }
+      }
+
+      // Approved accounts' stories go first, so when the post cap bites it is the open search's posts that are dropped.
+      const openStories = (got.answer as { stories?: unknown } | null)?.stories;
+      const answer = Array.isArray(openStories) ? { stories: [...handleStories, ...openStories] } : got.answer;
       let built;
       try {
-        built = buildX({ answer: got.answer, ref, approved, observedAt: (opts.now?.() ?? new Date()).toISOString(), maxStories: cfg.xMaxStories, maxPosts: cfg.xMaxPostsPerRun, citedIds: got.citedStatusIds });
+        built = buildX({ answer, ref, approved, observedAt: (opts.now?.() ?? new Date()).toISOString(), maxStories: cfg.xMaxStories * (1 + handleOk), maxPosts: cfg.xMaxPostsPerRun, citedIds: cited });
       } catch (e) { throw new SourceDown(e instanceof Error ? e.message : String(e)); }   // an answer we can't read is the same as no answer
 
       const accounts = await recordAccounts(db, built.accounts);
@@ -90,8 +117,8 @@ export async function runXContext(db: Db, opts: XRunOptions): Promise<XRunResult
         slateDate, runId, mode: reportOnly ? "report_only" : "live",
         storiesKept: built.stories.length, dropped: built.dropped, postsKept: built.signals.length, postsOverCap: built.postsOverCap, signalsStored,
         stories: built.stories,
-        spend: { costTicks: got.usage.costTicks, usdEstimate: Math.round(ticksToUsd(got.usage.costTicks) * 1000) / 1000, postsFetched: got.usage.postsFetched, searchCalls: got.usage.searchCalls },
-        accounts,
+        spend: { costTicks: usage.costTicks, usdEstimate: Math.round(ticksToUsd(usage.costTicks) * 1000) / 1000, postsFetched: usage.postsFetched, searchCalls: usage.searchCalls },
+        accounts, handleSearches: { handles: handles.length, calls: batches.length, failed },
       };
       return summary;
     });

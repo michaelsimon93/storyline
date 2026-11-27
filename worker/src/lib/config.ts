@@ -72,6 +72,7 @@ const X_SPEC = {
   xTimeoutMs:      { key: "x_timeout_ms",        type: "int" },
   xMaxStories:     { key: "x_max_stories",       type: "int" },
   xMaxPostsPerRun: { key: "x_max_posts_per_run", type: "int" },
+  xMaxHandleSearches: { key: "x_max_handle_searches", type: "int" },
 } as const;
 
 type SpecShape = Record<string, { key: string; type: "int" | "string" }>;

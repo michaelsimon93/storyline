@@ -264,3 +264,102 @@ test("rejecting an account still withdraws its stored posts after X is switched 
   assert.equal((await run()).status, "off");
   assert.deepEqual([...new Set((await signals()).filter((s) => s.evidence.handle === "inquirersports").map((s) => s.trust))], ["unreviewed"]);
 });
+
+// ---------------------------------------------------------------- the search over approved accounts (STO-144)
+
+/** Routes api.x.ai: the open search gets `open`, a search limited to handles gets `byHandles`. Records each request body. */
+const grokSplit = (open: unknown, byHandles: unknown | ((handles: string[]) => unknown), status = 200) => {
+  const bodies: any[] = [];
+  const n = installFetch((u) => u.hostname === "api.x.ai" ? json(open, status) : undefined);
+  const inner = globalThis.fetch;
+  globalThis.fetch = (async (input: any, init: any) => {
+    const b = JSON.parse(String(init.body)); bodies.push(b);
+    const handles: string[] | undefined = b.tools?.[0]?.allowed_x_handles;
+    if (!handles) return inner(input, init);
+    const body = typeof byHandles === "function" ? byHandles(handles) : byHandles;
+    return json(body, body === null ? 503 : 200);
+  }) as typeof fetch;
+  return { bodies, restore: () => { globalThis.fetch = inner; n.restore(); } };
+};
+const approve = (...hs: string[]) => db!.query(`insert into x_accounts (handle, status) select h, 'approved' from unnest($1::text[]) h`, [hs]);
+const handleCalls = (bodies: any[]) => bodies.filter((b) => b.tools[0].allowed_x_handles);
+
+test("approved accounts get their own search, limited to their handles; the open search stays unfiltered", { skip }, async () => {
+  await approve("zed", "abe");
+  const n = grokSplit(xaiResponse({ stories: [] }), xaiResponse({ stories: [] })); restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  assert.equal(n.bodies.length, 2);
+  assert.deepEqual(n.bodies[0].tools, [{ type: "x_search" }]);
+  assert.deepEqual(n.bodies[1].tools, [{ type: "x_search", allowed_x_handles: ["abe", "zed"] }]);
+  assert.match(n.bodies[1].input, /@abe, @zed/);
+  assert.deepEqual(r.summary.handleSearches, { handles: 2, calls: 1, failed: 0 });
+});
+
+test("no approved accounts: only the open search runs", { skip }, async () => {
+  const n = grokSplit(xaiResponse({ stories: [] }), xaiResponse({ stories: [] })); restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  assert.equal(n.bodies.length, 1);
+  assert.deepEqual(r.summary.handleSearches, { handles: 0, calls: 0, failed: 0 });
+});
+
+test("an approved account's post is pulled and attributed even when the open search found nothing", { skip }, async () => {
+  await live(); await approve("shams");
+  const n = grokSplit(xaiResponse({ stories: [] }),
+    xaiResponse({ stories: [story("Detroit Pistons", "team", [["shams", "901", "Pistons are shopping a big man"]])] })); restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  const sigs = await signals();
+  assert.deepEqual(sigs.map((s) => [s.evidence.handle, s.trust]), [["shams", "attributed"]]);
+  assert.deepEqual(r.summary.accounts.map((a) => [a.handle, a.status, a.isNew]), [["shams", "approved", false]]);
+});
+
+test("the same post from both searches is one signal, and a re-run adds nothing", { skip }, async () => {
+  await live(); await approve("shams");
+  const both = [story("Detroit Pistons", "team", [["shams", "901", "Pistons are shopping a big man"]])];
+  const n = grokSplit(xaiResponse({ stories: both }), xaiResponse({ stories: both })); restore = n.restore;
+  await run();
+  const first = await signals();
+  await run();
+  assert.equal(first.length, 1);
+  assert.deepEqual((await signals()).map((s) => s.id), first.map((s) => s.id));
+});
+
+test("a failed approved-accounts search is reported and the open search's stories still go through", { skip }, async () => {
+  await live(); await approve("shams");
+  const n = grokSplit(xaiResponse({ stories: [story("Detroit Pistons", "team", [["fan1", "5", "Cade is out"]])] }), null); restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  assert.equal((await signals()).length, 1);
+  assert.deepEqual(r.summary.handleSearches, { handles: 1, calls: 1, failed: 1 });
+  assert.equal(alerts.length, 1); assert.match(alerts[0]!, /approved accounts failed/);
+});
+
+test("an unreadable approved-accounts answer is the same: reported, skipped, but its spend is counted", { skip }, async () => {
+  await approve("shams");
+  const n = grokSplit(xaiResponse({ stories: [] }, { ticks: 100 }), xaiResponse("not json at all", { ticks: 50 })); restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  assert.equal(r.summary.handleSearches.failed, 1);
+  assert.equal(r.summary.spend.costTicks, 150, "a billed call is counted even when we can't use it");
+});
+
+test("handles go to xAI in batches of 10, and x_max_handle_searches caps how many searches one run pays for", { skip }, async () => {
+  await approve(...Array.from({ length: 23 }, (_, i) => `acct${String(i).padStart(2, "0")}`));
+  await db!.query(`update app_config set value = '2' where key = 'x_max_handle_searches'`);
+  const n = grokSplit(xaiResponse({ stories: [] }), xaiResponse({ stories: [] })); restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  assert.deepEqual(handleCalls(n.bodies).map((b) => b.tools[0].allowed_x_handles.length), [10, 10]);
+  assert.deepEqual(r.summary.handleSearches, { handles: 23, calls: 2, failed: 0 });
+  await db!.query(`update app_config set value = '3' where key = 'x_max_handle_searches'`);
+});
+
+test("a rejected or unreviewed account is never searched for", { skip }, async () => {
+  await db!.query(`insert into x_accounts (handle, status) values ('spam', 'rejected'), ('maybe', 'unreviewed')`);
+  await approve("shams");
+  const n = grokSplit(xaiResponse({ stories: [] }), xaiResponse({ stories: [] })); restore = n.restore;
+  await run();
+  assert.deepEqual(handleCalls(n.bodies).map((b) => b.tools[0].allowed_x_handles), [["shams"]]);
+});

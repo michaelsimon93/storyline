@@ -47,6 +47,27 @@ export function storiesPrompt(ref: XSlateRef, maxStories: number): string {
   ].join("\n");
 }
 
+/**
+ * The search over the approved accounts (STO-144). The handles are named in the prompt as well as passed as the search filter:
+ * a prompt that doesn't name them makes Grok ask which account instead of searching (verified 2026-11-27).
+ */
+export function handlesPrompt(ref: XSlateRef, handles: readonly string[], maxStories: number): string {
+  const name = (id: number) => ref.teams.find((t) => t.id === id)?.name ?? `team ${id}`;
+  const games = ref.games.map((g) => `- ${name(g.awayTeamId)} at ${name(g.homeTeamId)}`);
+  return [
+    `Search the latest posts from these X accounts only: ${handles.map((h) => `@${h}`).join(", ")}.`,
+    "Find posts from them (today and the last day or two) about the NBA players, teams or games below. Tonight's games:",
+    ...games,
+    "",
+    `Return up to ${maxStories} stories, about tonight's games only. Rules:`,
+    "- One subject per story: one player's full name, one team's name, or one game written \"Away vs Home\". Never two players in one story.",
+    "- Every story needs at least one supporting post. For each post give its exact x.com URL, the account handle, and a short excerpt copied from the post. Do not include a claim you cannot point to a post for.",
+    "- why_care: one sentence on what the posts say. No numbers or facts that are not in a post.",
+    "- chatter: low, medium or high, and chatter_basis says how you judged it.",
+    "- If none of these accounts posted about tonight's games, return an empty list.",
+  ].join("\n");
+}
+
 // ---------------------------------------------------------------- parsing
 
 /** `claimedHandle` is what Grok wrote beside the URL; it is only compared with the URL's handle, never used as the author. */
