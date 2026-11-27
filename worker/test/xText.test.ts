@@ -3,7 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { approveStatement, accountLine, xSummaryMessages } from "../src/lib/xText.js";
+import { approveStatement, accountLine, storyLine, xSummaryMessages } from "../src/lib/xText.js";
 import type { XSummary, ReviewLine } from "../src/jobs/contextX.js";
 
 const line = (o: Partial<ReviewLine> & { handle: string }): ReviewLine => ({ status: "unreviewed", isNew: true, storiesCiting: 1, sampleUrl: `https://x.com/${o.handle}/status/1`, sampleExcerpt: "Cade is out tonight", ...o });
@@ -37,7 +37,7 @@ test("a sample post can't break the message: backticks and newlines are flattene
 });
 
 test("unreviewed accounts come first, then approved, then rejected; the approve statement lists only the unreviewed", () => {
-  const [m] = xSummaryMessages(summary([line({ handle: "zed", status: "approved", isNew: false }), line({ handle: "bot", status: "rejected", isNew: false }), line({ handle: "new1" })]));
+  const m = xSummaryMessages(summary([line({ handle: "zed", status: "approved", isNew: false }), line({ handle: "bot", status: "rejected", isNew: false }), line({ handle: "new1" })])).join("\n");
   assert.ok(m!.indexOf("@new1") < m!.indexOf("@zed") && m!.indexOf("@zed") < m!.indexOf("@bot"));
   assert.match(m!, /handle in \('new1'\)/);
   assert.doesNotMatch(m!, /handle in \([^)]*zed/);
@@ -57,7 +57,25 @@ test("many accounts continue in more messages, each under Discord's 2000 charact
 });
 
 test("no accounts: the post says so instead of an empty list", () => {
-  assert.match(xSummaryMessages(summary([]))[0]!, /No accounts this run/);
+  assert.match(xSummaryMessages(summary([])).join("\n"), /No accounts this run/);
+  assert.match(xSummaryMessages(summary([])).join("\n"), /No stories this run/);
+});
+
+const story = (o: Partial<XSummary["stories"][number]> = {}) => ({ subject: "Cade Cunningham", kind: "player", whyCare: "Listed questionable with a sore ankle", chatter: "high", chatterBasis: "12 posts", posts: 2, handles: ["shams", "wojespn"], ...o });
+
+test("a proposed story shows our subject, why care, the chatter and which accounts it came from", () => {
+  const t = storyLine(story());
+  assert.match(t, /Cade Cunningham/); assert.match(t, /\(player\)/); assert.match(t, /Listed questionable/); assert.match(t, /chatter: high/); assert.match(t, /from @shams, @wojespn/);
+  const all = xSummaryMessages(summary([line({ handle: "shams" })], { stories: [story()] }));
+  assert.match(all[0]!, /Proposed stories \(1\)/);
+});
+
+test("Grok's story text can't break the post: flattened, clipped, and every message stays under 2000 characters", () => {
+  const long = Array.from({ length: 30 }, (_, i) => story({ subject: `S${i} \`x\`\n` + "p".repeat(200), whyCare: "w".repeat(600), handles: Array.from({ length: 30 }, (_, j) => `acct_${j}`) }));
+  const ms = xSummaryMessages(summary([line({ handle: "a" })], { stories: long }));
+  for (const m of ms) assert.ok(m.length <= 2000, `${m.length}`);
+  assert.equal(storyLine(story({ subject: "a\n`b`" })).split("\n").length, 3);
+  assert.equal(ms.join("\n").match(/^• \*\*S\d+/gm)!.length, 30, "every story appears once");
 });
 
 // Attacks: the header isn't chunked and a dropped story's subject is Grok's text, unbounded. Five long subjects push the first

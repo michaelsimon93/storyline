@@ -16,7 +16,7 @@ import { alertText } from "./alertText.js";
  * Timestamp of the newest file in supabase/migrations. A unit test fails if this falls behind,
  * so every migration PR updates it.
  */
-export const REQUIRED_MIGRATION = "20261125200000";
+export const REQUIRED_MIGRATION = "20261126180000";
 
 /**
  * How long startup waits for the migrate job. Hard-coded on purpose, not in app_config (ADR-018):

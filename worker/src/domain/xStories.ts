@@ -139,7 +139,7 @@ export interface XBuild {
   signals: SignalDraft[];
   accounts: AccountPull[];
   /** What each kept story says, for the run log (the "why care" text is a lead for tuning; it is not stored as a signal). */
-  stories: { subject: string; kind: string; whyCare: string; chatter: Chatter; chatterBasis: string; posts: number }[];
+  stories: { subject: string; kind: string; whyCare: string; chatter: Chatter; chatterBasis: string; posts: number; handles: string[] }[];
   dropped: Dropped[];
   postsOverCap: number;
 }
@@ -183,7 +183,7 @@ export function buildX(a: { answer: unknown; ref: XSlateRef; approved: ReadonlyS
       const cur = accounts.get(h);
       accounts.set(h, { handle: h, storiesCiting: (cur?.storiesCiting ?? 0) + 1, sampleUrl: cur?.sampleUrl ?? first.url, sampleExcerpt: cur?.sampleExcerpt ?? first.excerpt });
     }
-    kept.push({ subject: s.subject, kind: s.kind, whyCare: s.whyCare, chatter: s.chatter, chatterBasis: s.chatterBasis, posts: posts.length });
+    kept.push({ subject: s.subject, kind: s.kind, whyCare: s.whyCare, chatter: s.chatter, chatterBasis: s.chatterBasis, posts: posts.length, handles: [...new Set(posts.map((p) => p.handle))] });
   }
   return { signals: [...signals.values()], accounts: [...accounts.values()], stories: kept, dropped, postsOverCap };
 }
