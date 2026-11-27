@@ -45,10 +45,17 @@ reset role;
 select t_eq('x accounts: nothing a user tried changed the list', (select count(*)::int from x_accounts where handle in ('sneaky') or (handle = 'some_bot' and status <> 'rejected')), 0);
 
 -- ---------------------------------------------------------------- settings and switches
-select t_eq('x cfg: the four settings are typed rows the app never sees',
-  (select count(*)::int from app_config where key in ('x_model', 'x_timeout_ms', 'x_max_stories', 'x_max_posts_per_run') and not is_public), 4);
+select t_eq('x cfg: the five settings are typed rows the app never sees',
+  (select count(*)::int from app_config where key in ('x_model', 'x_timeout_ms', 'x_max_stories', 'x_max_posts_per_run', 'x_max_handle_searches') and not is_public), 5);
 select t_err('x cfg: zero posts per run is rejected', $q$update app_config set value = '0' where key = 'x_max_posts_per_run'$q$, '%invalid config%');
 select t_err('x cfg: a timeout under 5 seconds is rejected', $q$update app_config set value = '1000' where key = 'x_timeout_ms'$q$, '%invalid config%');
 select t_err('x cfg: zero stories is rejected', $q$update app_config set value = '0' where key = 'x_max_stories'$q$, '%invalid config%');
 select t_eq('x flags: X is off, and report-only is on, until someone decides otherwise',
   (select array[(select enabled::text from feature_flags where key = 'context_x'), (select enabled::text from feature_flags where key = 'context_x_report_only')]), array['false', 'true']);
+select t_err('x cfg: zero handle searches is rejected', $q$update app_config set value = '0' where key = 'x_max_handle_searches'$q$, '%invalid config%');
+
+-- ---------------------------------------------------------------- the seeded approved list (STO-144)
+select t_eq('x seed: the nine national reporters and commentators are approved and dated',
+  (select count(*)::int from x_accounts where reviewed_at is not null and status = 'approved'
+     and handle in ('shamscharania', 'thesteinline', 'windhorstespn', 'zachlowe_nba', 'billsimmons', 'nekiasnba', 'sheaserrano', 'netw3rk', 'stephenasmith')), 9);
+select t_eq('x seed: official team accounts are not seeded', (select count(*)::int from x_accounts where handle in ('lakers', 'celtics', 'warriors')), 0);

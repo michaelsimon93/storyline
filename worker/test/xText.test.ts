@@ -9,7 +9,7 @@ import type { XSummary, ReviewLine } from "../src/jobs/contextX.js";
 const line = (o: Partial<ReviewLine> & { handle: string }): ReviewLine => ({ status: "unreviewed", isNew: true, storiesCiting: 1, sampleUrl: `https://x.com/${o.handle}/status/1`, sampleExcerpt: "Cade is out tonight", ...o });
 const summary = (accounts: ReviewLine[], o: Partial<XSummary> = {}): XSummary => ({
   slateDate: "2026-11-25", runId: 1, mode: "report_only", storiesKept: 3, dropped: [], postsKept: 4, postsOverCap: 0, signalsStored: 0, stories: [],
-  spend: { costTicks: 1361488000, usdEstimate: 0.136, postsFetched: 24, searchCalls: 3 }, accounts, ...o,
+  spend: { costTicks: 1361488000, usdEstimate: 0.136, postsFetched: 24, searchCalls: 3 }, accounts, handleSearches: { handles: 9, calls: 1, failed: 0 }, ...o,
 });
 
 test("approveStatement builds an update for valid handles only", () => {
@@ -83,4 +83,9 @@ test("Grok's story text can't break the post: flattened, clipped, and every mess
 test("long dropped-story subjects still keep every message under Discord's 2000 characters", () => {
   const dropped = Array.from({ length: 5 }, (_, i) => ({ story: `Story ${i} ` + "about a player and another player ".repeat(15), reason: "player not on tonight's slate" }));
   for (const m of xSummaryMessages(summary([line({ handle: "a" })], { dropped }))) assert.ok(m.length <= 2000, `${m.length}`);
+});
+
+test("the header says how many approved accounts were searched and how the pulled accounts split, and flags a failed search", () => {
+  const m = xSummaryMessages(summary([line({ handle: "shams", status: "approved", isNew: false }), line({ handle: "tout" }), line({ handle: "fan" })], { handleSearches: { handles: 12, calls: 2, failed: 1 } }))[0]!;
+  assert.match(m, /Approved accounts searched: 12 in 2 searches \(1 failed\) · pulled from 1 approved, 2 to review/);
 });

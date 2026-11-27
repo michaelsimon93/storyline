@@ -5,8 +5,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "./helpers/mockFetch.js";
 import { story } from "./helpers/xai.js";
-import { parsePost, parseStories, resolveSubject, buildX, storiesPrompt, type XSlateRef } from "../src/domain/xStories.js";
-import { askGrok } from "../src/sources/grok.js";
+import { parsePost, parseStories, resolveSubject, buildX, storiesPrompt, handlesPrompt, type XSlateRef } from "../src/domain/xStories.js";
+import { askGrok, XAI_MAX_ALLOWED_HANDLES } from "../src/sources/grok.js";
 
 // Tonight's slate as the recorded answer needs it: Pistons-Celtics, Mavericks-Nuggets. Ids are made up.
 const ref: XSlateRef = {
@@ -207,4 +207,36 @@ test("a post whose URL and handle name different accounts is never attributed", 
 test("an author-less x.com/i/status link is not credited to an account named i", () => {
   const p = parsePost({ url: "https://x.com/i/status/2125447623779705198", excerpt: "x" });
   assert.ok(p === null || p.handle !== "i", JSON.stringify(p));
+});
+
+// ---------------------------------------------------------------- the search over approved accounts (STO-144)
+
+test("the handle search sends allowed_x_handles, and the prompt names the accounts (a vague prompt made Grok ask which account)", async () => {
+  const n = stub(new Response(JSON.stringify(fixture("xai-x-search-handles-2026-11-27.json"))));
+  try {
+    const handles = ["shamscharania", "windhorstespn"];
+    await askGrok(opts, { ...call, input: handlesPrompt(ref, handles, 5), allowedHandles: handles });
+    const body = JSON.parse(String(n.calls[0]!.init.body));
+    assert.deepEqual(body.tools, [{ type: "x_search", allowed_x_handles: handles }]);
+    assert.match(body.input, /@shamscharania, @windhorstespn/);
+    assert.match(body.input, /Boston Celtics at Detroit Pistons|Dallas Mavericks at Denver Nuggets/);
+  } finally { n.restore(); }
+});
+
+test("the recorded handle-filtered response (strict schema) reads: an empty story list is a valid answer, citations and spend still read", async () => {
+  const n = stub(new Response(JSON.stringify(fixture("xai-x-search-handles-2026-11-27.json"))));
+  try {
+    const r = await askGrok(opts, { ...call, allowedHandles: ["shamscharania"] });
+    assert.deepEqual(r.answer, { stories: [] });
+    assert.deepEqual([r.usage.searchCalls, r.usage.postsFetched, r.citedStatusIds.size > 0], [2, 6, true]);
+    assert.deepEqual(buildX({ ...base, answer: r.answer }).stories, []);
+  } finally { n.restore(); }
+});
+
+test("the client refuses 0 or more than xAI's 10 handles before spending anything", async () => {
+  const n = stub(new Response("{}"));
+  try {
+    for (const h of [[], Array.from({ length: XAI_MAX_ALLOWED_HANDLES + 1 }, (_, i) => `h${i}`)]) await assert.rejects(askGrok(opts, { ...call, allowedHandles: h }), /1 to 10 handles/);
+    assert.equal(n.calls.length, 0);
+  } finally { n.restore(); }
 });

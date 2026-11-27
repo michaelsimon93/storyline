@@ -1,0 +1,257 @@
+{
+ "created_at": 1795801651,
+ "completed_at": 1795801668,
+ "id": "f1cf9275-1e16-9d47-b5e8-895fa6a31c81",
+ "max_output_tokens": null,
+ "model": "grok-4.3",
+ "object": "response",
+ "output": [
+  {
+   "id": "rs_f1cf9275-1e16-9d47-b5e8-895fa6a31c81",
+   "summary": [
+    {
+     "text": "Searching the latest posts from the nine specified X accounts.\n\nChecking for tonight's Miami Heat versus New York Knicks and San Antonio Spurs versus Los Angeles Lakers posts. Each story will cover one player, team, or game, with exact URLs and excerpts from supporting posts.\n\nI'll use x_keyword_search with from:username operators to find recent posts from each account. If none mention tonight's games, I'll return an empty list.\n\nI'll run parallel searches across the nine accounts using a since:2026-11-25 filter. The queries will target \"Heat at Knicks\" and \"Spurs at Lakers\" to find tonight's games.",
+     "type": "summary_text"
+    }
+   ],
+   "type": "reasoning",
+   "status": "completed"
+  },
+  {
+   "call_id": "xs_call-703ad731-cb06-45b5-92bc-2b866443d97f-0",
+   "input": "{\"query\":\"(from:shamscharania OR from:thesteinline OR from:windhorstespn OR from:zachlowe_nba OR from:billsimmons OR from:nekiasnba OR from:sheaserrano OR from:netw3rk OR from:stephenasmith) (Heat OR Knicks OR Spurs OR Lakers) since:2026-11-25\",\"limit\":\"10\",\"mode\":\"Latest\"}",
+   "name": "x_keyword_search",
+   "type": "custom_tool_call",
+   "id": "ctc_f1cf9275-1e16-9d47-b5e8-895fa6a31c81_call-703ad731-cb06-45b5-92bc-2b866443d97f-0",
+   "status": "completed"
+  },
+  {
+   "call_id": "xs_call-703ad731-cb06-45b5-92bc-2b866443d97f-1",
+   "input": "{\"query\":\"(from:shamscharania OR from:thesteinline OR from:windhorstespn OR from:zachlowe_nba OR from:billsimmons OR from:nekiasnba OR from:sheaserrano OR from:netw3rk OR from:stephenasmith) (\\\"Heat at Knicks\\\" OR \\\"Spurs at Lakers\\\" OR \\\"Miami Heat\\\" OR \\\"New York Knicks\\\" OR \\\"San Antonio Spurs\\\" OR \\\"Los Angeles Lakers\\\") since:2026-11-25\",\"limit\":\"10\",\"mode\":\"Latest\"}",
+   "name": "x_keyword_search",
+   "type": "custom_tool_call",
+   "id": "ctc_f1cf9275-1e16-9d47-b5e8-895fa6a31c81_call-703ad731-cb06-45b5-92bc-2b866443d97f-1",
+   "status": "completed"
+  },
+  {
+   "id": "tco_f1cf9275-1e16-9d47-b5e8-895fa6a31c81_call-703ad731-cb06-45b5-92bc-2b866443d97f-0",
+   "summary": [],
+   "type": "reasoning",
+   "status": "completed"
+  },
+  {
+   "id": "tco_f1cf9275-1e16-9d47-b5e8-895fa6a31c81_call-703ad731-cb06-45b5-92bc-2b866443d97f-1",
+   "summary": [],
+   "type": "reasoning",
+   "status": "completed"
+  },
+  {
+   "content": [
+    {
+     "type": "output_text",
+     "text": "{\n  \"stories\": []\n}",
+     "logprobs": [],
+     "annotations": [
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2126342991946096985",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2126342991946096985"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2126091710707236919",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2126091710707236919"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2126100355372998744",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2126100355372998744"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2126343058723598503",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2126343058723598503"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2126091999686365255",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2126091999686365255"
+      },
+      {
+       "type": "url_citation",
+       "url": "https://x.com/i/status/2125591983620313280",
+       "start_index": 0,
+       "end_index": 0,
+       "title": "https://x.com/i/status/2125591983620313280"
+      }
+     ]
+    }
+   ],
+   "id": "msg_f1cf9275-1e16-9d47-b5e8-895fa6a31c81",
+   "role": "assistant",
+   "type": "message",
+   "status": "completed"
+  }
+ ],
+ "parallel_tool_calls": true,
+ "previous_response_id": null,
+ "reasoning": {
+  "effort": "low",
+  "summary": "detailed"
+ },
+ "temperature": 0.7,
+ "text": {
+  "format": {
+   "type": "json_schema",
+   "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "stories"
+    ],
+    "properties": {
+     "stories": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "subject",
+        "kind",
+        "why_care",
+        "chatter",
+        "chatter_basis",
+        "posts"
+       ],
+       "properties": {
+        "subject": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "player",
+          "team",
+          "game"
+         ]
+        },
+        "why_care": {
+         "type": "string"
+        },
+        "chatter": {
+         "type": "string",
+         "enum": [
+          "low",
+          "medium",
+          "high"
+         ]
+        },
+        "chatter_basis": {
+         "type": "string"
+        },
+        "posts": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+           "url",
+           "handle",
+           "excerpt"
+          ],
+          "properties": {
+           "url": {
+            "type": "string"
+           },
+           "handle": {
+            "type": "string"
+           },
+           "excerpt": {
+            "type": "string"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "tool_choice": "auto",
+ "tools": [
+  {
+   "type": "x_search",
+   "allowed_x_handles": [
+    "shamscharania",
+    "thesteinline",
+    "windhorstespn",
+    "zachlowe_nba",
+    "billsimmons",
+    "nekiasnba",
+    "sheaserrano",
+    "netw3rk",
+    "stephenasmith"
+   ]
+  }
+ ],
+ "top_p": 0.95,
+ "usage": {
+  "input_tokens": 6584,
+  "input_tokens_details": {
+   "cached_tokens": 2304
+  },
+  "output_tokens": 1377,
+  "output_tokens_details": {
+   "reasoning_tokens": 1155
+  },
+  "total_tokens": 7961,
+  "num_sources_used": 0,
+  "num_server_side_tools_used": 2,
+  "cost_in_usd_ticks": 392533000,
+  "server_side_tool_usage_details": {
+   "web_search_calls": 0,
+   "x_search_calls": 2,
+   "x_posts_fetched": 6,
+   "x_users_fetched": 0,
+   "code_interpreter_calls": 0,
+   "file_search_calls": 0,
+   "mcp_calls": 0,
+   "document_search_calls": 0,
+   "image_generation_calls": 0
+  },
+  "context_details": {
+   "input_tokens": 4619,
+   "output_tokens": 575
+  }
+ },
+ "user": null,
+ "incomplete_details": null,
+ "status": "completed",
+ "store": true,
+ "metadata": {
+  "system_fingerprint": "fp_eb3c003fc66c14ed"
+ },
+ "background": false,
+ "service_tier": "default",
+ "truncation": "disabled",
+ "top_logprobs": 0,
+ "presence_penalty": 0.0,
+ "frequency_penalty": 0.0,
+ "prompt_cache_key": null,
+ "max_tool_calls": null,
+ "safety_identifier": null,
+ "error": null,
+ "instructions": null
+}

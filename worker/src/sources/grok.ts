@@ -6,10 +6,17 @@
 // NOT verified: that a tick is 1e-10 USD. It is inferred (1,361,488,000 ticks for a call that fetched 24 posts = $0.136), so the
 // dollar figure is labelled an estimate wherever it is shown.
 //
+// Handle filter, verified against real calls on 2026-11-27: `allowed_x_handles` (max 10) limits the search to those accounts; a call
+// with one handle returned only that account's posts. The prompt must still NAME the accounts: with a vague prompt ("latest posts
+// from this account") Grok asked which account instead of searching. Recorded: test/fixtures/xai-x-search-handles-2026-11-27.json.
+//
 // No retry: every attempt is billed, and a failed call is reported while curation goes on without X (ticket). So a 429 or 5xx
 // throws like any other failure, instead of paying again behind our back.
 
 export const XAI_URL = "https://api.x.ai/v1/responses";
+
+/** xAI's own limit on `allowed_x_handles` per search (their API limit, not a tunable). Callers batch to it. */
+export const XAI_MAX_ALLOWED_HANDLES = 10;
 
 export class GrokError extends Error {
   constructor(message: string, readonly status?: number) { super(message); this.name = "GrokError"; }
@@ -39,7 +46,9 @@ export interface GrokAnswer {
 export const ticksToUsd = (ticks: number) => ticks / 1e10;
 
 /** One X search that answers in JSON matching `schema`. Throws GrokError on any failure; the answer is parsed JSON, or the raw text if it isn't JSON. */
-export async function askGrok(opts: GrokOptions, call: { input: string; schema: Record<string, unknown>; schemaName: string }): Promise<GrokAnswer> {
+export async function askGrok(opts: GrokOptions, call: { input: string; schema: Record<string, unknown>; schemaName: string; allowedHandles?: string[] }): Promise<GrokAnswer> {
+  const handles = call.allowedHandles;
+  if (handles && (handles.length === 0 || handles.length > XAI_MAX_ALLOWED_HANDLES)) throw new GrokError(`allowed_x_handles takes 1 to ${XAI_MAX_ALLOWED_HANDLES} handles, got ${handles.length}`);
   let res: Response;
   try {
     res = await fetch(XAI_URL, {
@@ -48,7 +57,7 @@ export async function askGrok(opts: GrokOptions, call: { input: string; schema: 
       body: JSON.stringify({
         model: opts.model,
         input: call.input,
-        tools: [{ type: "x_search" }],
+        tools: [handles ? { type: "x_search", allowed_x_handles: handles } : { type: "x_search" }],
         text: { format: { type: "json_schema", name: call.schemaName, strict: true, schema: call.schema } },
       }),
       signal: AbortSignal.timeout(opts.timeoutMs),
