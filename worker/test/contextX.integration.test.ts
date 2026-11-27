@@ -363,3 +363,11 @@ test("a rejected or unreviewed account is never searched for", { skip }, async (
   await run();
   assert.deepEqual(handleCalls(n.bodies).map((b) => b.tools[0].allowed_x_handles), [["shams"]]);
 });
+
+test("an unreadable open answer doesn't lose the stories the approved-accounts search returned", { skip }, async () => {
+  await live(); await approve("shams");
+  const n = grokSplit(xaiResponse("not json"), xaiResponse({ stories: [story("Detroit Pistons", "team", [["shams", "901", "Pistons are shopping a big man"]])] })); restore = n.restore;
+  const r = await run();
+  assert.ok(r.status === "ok");
+  assert.deepEqual((await signals()).map((s) => s.evidence.handle), ["shams"]);
+});

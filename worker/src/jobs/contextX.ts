@@ -105,10 +105,10 @@ export async function runXContext(db: Db, opts: XRunOptions): Promise<XRunResult
 
       // Approved accounts' stories go first, so when the post cap bites it is the open search's posts that are dropped.
       const openStories = (got.answer as { stories?: unknown } | null)?.stories;
-      const answer = Array.isArray(openStories) ? { stories: [...handleStories, ...openStories] } : got.answer;
+      const answer = Array.isArray(openStories) ? { stories: [...handleStories, ...openStories] } : handleStories.length ? { stories: handleStories } : got.answer;   // an unreadable open answer doesn't lose the billed handle stories
       let built;
       try {
-        built = buildX({ answer, ref, approved, observedAt: (opts.now?.() ?? new Date()).toISOString(), maxStories: cfg.xMaxStories * (1 + handleOk), maxPosts: cfg.xMaxPostsPerRun, citedIds: cited });
+        built = buildX({ answer, ref, approved, observedAt: (opts.now?.() ?? new Date()).toISOString(), maxStories: cfg.xMaxStories * (1 + handleOk) /* each successful handle search may add up to x_max_stories; approved stories are first, so the open search's are cut first */, maxPosts: cfg.xMaxPostsPerRun, citedIds: cited });
       } catch (e) { throw new SourceDown(e instanceof Error ? e.message : String(e)); }   // an answer we can't read is the same as no answer
 
       const accounts = await recordAccounts(db, built.accounts);
